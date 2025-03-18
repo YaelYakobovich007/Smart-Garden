@@ -1,6 +1,7 @@
-# hardware/relay_controller.py
-import hid  # Library for USB HID (Human Interface Device) communication
-import time  # For sleep/delay operations
+SIMULATION_MODE = True
+
+if not SIMULATION_MODE:
+    import hid
 
 class RelayController:
     def __init__(self, vendor_id=0x16C0, product_id=0x05DF):
