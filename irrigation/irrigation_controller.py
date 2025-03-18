@@ -1,6 +1,5 @@
 # controllers/irrigation_controller.py
 from hardware.relay_controller import RelayController
-import threading
 import time
 
 
