@@ -2,8 +2,8 @@ import schedule
 from datetime import datetime
 
 class IrrigationSchedule:
-    def __init__(self, plant_id, schedule_data, irrigation_controller):
-        self.plant_id = plant_id
+    def __init__(self, plant, schedule_data, irrigation_controller):
+        self.plant = plant
         self.schedule_data = schedule_data
         self.irrigation_controller = irrigation_controller
         self.setup_schedules()
@@ -32,5 +32,7 @@ class IrrigationSchedule:
             print(f"Scheduled irrigation: {day} at {time_str} for {duration} seconds on valve {valve_number}.")
 
     def irrigate(self, valve_number, duration):
-        print(f" Running irrigation for {duration} seconds on valve {valve_number}!")
-        self.irrigation_controller.activate_irrigation(valve_number, duration)
+        print(f"Running irrigation for {duration} seconds on valve {valve_number}!")
+        # If the irrigation is necessary, call the method activate_irrigation
+        #self.irrigation_controller.activate_irrigation(valve_number, duration)
+        # Change the plant's humidity according to watering
