@@ -33,3 +33,4 @@ class IrrigationSchedule:
 
     def start_irrigation_thread(self, valve_number):
         threading.Thread(target=self.irrigation_algorithm.irrigate, args=(valve_number,), daemon=True).start()
+
