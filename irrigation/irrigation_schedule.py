@@ -2,12 +2,12 @@ import threading
 import schedule
 
 class IrrigationSchedule:
-    def __init__(self, plant_id, schedule_data, irrigation_controller, irrigation_algorithm):
+    def __init__(self, plant_id, schedule_data, irrigation_algorithm):
         self.plant_id = plant_id
         self.schedule_data = schedule_data
-        self.irrigation_controller = irrigation_controller
         self.irrigation_algorithm = irrigation_algorithm
-        self.setup_schedules()
+        if  not schedule_data:
+            self.setup_schedules()
 
     def setup_schedules(self):
         for schedule_item in self.schedule_data:

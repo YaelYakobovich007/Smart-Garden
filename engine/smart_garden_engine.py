@@ -1,8 +1,8 @@
 import time
 
 from irrigation.irrigation_controller import IrrigationController
-from irrigation_settings.impl.plant_impl import PlantImpl
-from valves.valves_manager import ValvesManager
+from hardware.impl.plant_impl import PlantImpl
+from hardware.valves.valves_manager import ValvesManager
 
 
 class SmartGardenEngine:

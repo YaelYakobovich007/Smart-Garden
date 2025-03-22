@@ -4,7 +4,10 @@ if not SIMULATION_MODE:
     import hid
 
 class RelayController:
-    def __init__(self, vendor_id=0x16C0, product_id=0x05DF):
+    def __init__(self,simulation_mode=True, vendor_id=0x16C0, product_id=0x05DF):
+        self.valves = {}
+        self.simulation_mode = simulation_mode
+
         """
         Initializes a connection to the HID Relay device via USB.
 
@@ -12,14 +15,25 @@ class RelayController:
             vendor_id (hex): USB Vendor ID (manufacturer identifier)
             product_id (hex): USB Product ID (product/model identifier)
         """
-        try:
-            self.device = hid.device()  # Create an HID device object
-            self.device.open(vendor_id, product_id)  # Establish connection using provided IDs
-            self.device.set_nonblocking(1)  # Set the device to non-blocking mode
-            print("HID Relay connected successfully!")
-        except Exception as e:
-            print(f"Unable to connect to HID Relay: {e}")
-            self.device = None  # Set device to None if connection fails
+        self.simulation_mode = simulation_mode
+        self.device = None
+
+        self.initialize_hardware(vendor_id, product_id)
+
+
+    def initialize_hardware(self,vendor_id,product_id):
+        if self.simulation_mode:
+            print("[SIMULATION] RelayController running in simulation mode.")
+        else:
+            try:
+                import hid
+                self.device = hid.device()
+                self.device.open(self.vendor_id, self.product_id)
+                self.device.set_nonblocking(1)
+                print("HID Relay connected successfully!")
+            except Exception as e:
+                print(f" Unable to connect to HID Relay: {e}")
+                self.device = None
 
     def turn_on(self, valve_number: int):
         """

@@ -39,10 +39,3 @@ class SensorReader:
 
     def simulated_data(self):
         return round(random.uniform(20.0, 80.0), 2)
-
-if __name__ == "__main__":
-    sensor = SensorReader()
-    while True:
-        data = sensor.read_sensor_data()
-        print(str(data) + "%")
-        time.sleep(2)
