@@ -1,39 +1,36 @@
 # services/weather_service.py
+import datetime
 import requests
 
 class WeatherService:
-    def __init__(self, api_key: str, units: str = "metric"):
-        self.api_key = api_key
-        self.units = units
-        self.base_url = "http://api.openweathermap.org/data/2.5/weather"
+    def __init__(self):
+        self.api_key = "לשאול את אליזבט"
+        self.api_url = "https://api.openweathermap.org/data/3.0/onecall"
 
-    def get_weather(self, city: str):
-        """
-        Fetches weather data for the specified city.
-
-        :param city: Name of the city (e.g., 'Tel Aviv')
-        :return: Dictionary containing weather information
-        """
+    def will_rain_today(self, lat, lon):
         params = {
-            "q": city,
+            "lat": lat,
+            "lon": lon,
             "appid": self.api_key,
-            "units": self.units
+            "exclude": "minutely,hourly,alerts",
+            "units": "metric"
         }
 
         try:
-            response = requests.get(self.base_url, params=params)
-            response.raise_for_status()
+            response = requests.get(self.api_url, params=params)
+            response.raise_for_status()  # תזרוק שגיאה אם יש תקלה
             data = response.json()
+            print(data)
 
-            weather_info = {
-                "city": city,
-                "temperature": data["main"]["temp"],
-                "humidity": data["main"]["humidity"],
-                "weather_description": data["weather"][0]["description"],
-                "rain": data.get("rain", {}).get("1h", 0)
-            }
-            return weather_info
+            today_weather = data['daily'][0]
+            weather_main = today_weather['weather'][0]['main'].lower()
+            rain_amount = today_weather.get('rain', 0)
 
-        except requests.RequestException as e:
-            print(f"Error fetching weather data for {city}: {e}")
-            return None
+            if 'rain' in weather_main or rain_amount > 0:
+                return True
+
+        except Exception as e:
+            print(f"Error checking rain forecast: {e}")
+
+        return False
+
