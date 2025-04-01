@@ -15,14 +15,14 @@ def test_valves(controller):
         print("❌ Cannot test valves: device not connected.")
         return
 
-    for i in range(1, 2):
+    for i in range(2, 3):
         print(f"Turning ON valve {i}...")
         controller.turn_on(i)
         time.sleep(0.5)  # give time for relay click
 
     time.sleep(2)
 
-    for i in range(1,2):
+    for i in range(2,3):
         print(f"Turning OFF valve {i}...")
         controller.turn_off(i)
         time.sleep(0.5)
