@@ -5,27 +5,28 @@ class IrrigationAlgorithm:
         self.water_per_pulse = 0.03  # Liter
         self.pause_between_pulses = 10 #seconds
 
-    def irrigate(self, plant):
+    def irrigate(self, plant: "Plant") -> None:
         current_moisture = plant.get_moisture()
+
         if self.is_overwatered(plant,current_moisture):
-            plant.valve.block()
+            plant.valve.block() # בתוך הפונקציה הזאת  נוסיף זריקת אקספשיין
             # ולשלוח הודעת שגיאה ללקוח צריך לעצור את הברז
             print("need to diactivate valve")
             return
+
         if self.should_irrigate(plant,current_moisture):
             self.perform_irrigation(plant)
 
-    def is_overwatered(self, plant, current_moisture):
+    def is_overwatered(self, plant: "Plant", current_moisture: float) -> bool:
         if plant.last_irrigation_time and (time.time() - plant.last_irrigation_time) > 86400:
             if current_moisture > plant.desired_moisture + 10:
                 return True
         return False
 
-
-    def should_irrigate(self, plant, current_moisture):
+    def should_irrigate(self, plant: "Plant", current_moisture: float) -> bool:
         return current_moisture < plant.desired_moisture
 
-    def perform_irrigation(self, plant):
+    def perform_irrigation(self, plant: "Plant") -> None:
         current_moisture = plant.sensor.read_moisture()
         print(f" Plant {plant.plant_id} Initial Moisture: {current_moisture}%")
 

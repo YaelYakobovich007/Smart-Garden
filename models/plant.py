@@ -1,24 +1,31 @@
+from typing import Optional, List, Dict
+from datetime import datetime
+from hardware.sensors.sensor import Sensor
+from hardware.valves.valve import Valve
 from irrigation.irrigation_schedule import IrrigationSchedule
-from services.sensor_reader import SensorReader
+
 class Plant:
-    def __init__(self, plant_id,desired_moisture, sensor,valve, schedule_data= None):
-        self.plant_id = plant_id
-        self.sensor = sensor
-        self.desired_moisture = desired_moisture
-        self.schedule_data = schedule_data
-        self.valve = valve
-        self.moisture_level = None
-        self.last_irrigation_time = None
+    def __init__(self, plant_id: int, desired_moisture: float, sensor: "Sensor", valve: "Valve",
+                 schedule_data: Optional[List[Dict[str, str]]] = None) -> None:
+
+        self.plant_id: int = plant_id
+        self.desired_moisture: float = desired_moisture
+        self.sensor: Sensor = sensor
+        self.valve: Valve = valve
+        self.schedule_data: Optional[List[Dict[str, str]]] = schedule_data
+        self.moisture_level: Optional[float] = None
+        self.last_irrigation_time: Optional[datetime] = None
 
         #for schedule_item in self.schedule_data:
         #    schedule_item["valve_number"] = self.valve.get_valve_id() # או ישירות את הdatamember עצמו לבדוק איך נהוג בפייתון
-        #if not schedule_data:
-        #    self.schedule = IrrigationSchedule(self,schedule_data)
 
-    def get_moisture(self):
+        if  schedule_data:
+            self.schedule = IrrigationSchedule(self,schedule_data)
+
+    def get_moisture(self) -> Optional[float]:
         return self.sensor.read_moisture()
 
-    def update_moisture(self):
+    def update_moisture(self) -> None:
         self.moisture_level = self.sensor.read_moisture()
         print(f"Updated moisture for Plant {self.plant_id}: {self.moisture_level}%")
 
@@ -34,5 +41,5 @@ class Plant:
         print(f"Watering Plant {self.plant_id} through Valve {self.valve.get_valve_id()} for {duration} seconds\n")
         self.irrigation_controller.activate_valve(self.valve.get_valve_id(), duration)
 
-    def get_valve_id(self):
+    def get_valve_id(self) -> int:
         return self.valve_id

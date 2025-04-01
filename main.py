@@ -14,8 +14,8 @@ if __name__ == "__main__":
     sensor2 = Sensor(sensor_id=2, plant_id=102)
 
     # יצירת ברזים
-    valve1 = Valve(valve_id=1, plant_id=101, pipe_diameter=10, water_limit=5, flow_rate=0.4, relay_controller=relay_controller)
-    valve2 = Valve(valve_id=2, plant_id=102, pipe_diameter=15, water_limit=5, flow_rate=1.0, relay_controller=relay_controller)
+    valve1 = Valve(valve_id=1, pipe_diameter=10, water_limit=5, flow_rate=0.4, relay_controller=relay_controller)
+    valve2 = Valve(valve_id=2, pipe_diameter=15, water_limit=5, flow_rate=1.0, relay_controller=relay_controller)
 
     # יצירת צמחים עם חיישנים וברזים
     plant1 = Plant(plant_id=101, desired_moisture=80, sensor=sensor1, valve=valve1)

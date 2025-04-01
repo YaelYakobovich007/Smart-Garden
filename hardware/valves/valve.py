@@ -1,53 +1,49 @@
-from datetime import time
-
+from typing import Optional
+from datetime import datetime
 
 class Valve:
-    def __init__(self, valve_id, plant_id, pipe_diameter,water_limit, flow_rate , relay_controller,simulation_mode=True):
-        self.valve_id = valve_id
-        self.plant_id = plant_id
-        self.pipe_diameter = pipe_diameter
-        self.water_limit = water_limit
-        self.flow_rate = flow_rate
-        self.last_irrigation_time = None
-        self.is_blocked = False
-        self.relay_controller = relay_controller
-        self.simulation_mode = simulation_mode
+    def __init__(self, valve_id: int, pipe_diameter: float, water_limit: float,
+                 flow_rate: float, relay_controller: Optional[object], simulation_mode: bool = True) -> None:
+        self.valve_id: int = valve_id
+        self.pipe_diameter: float = pipe_diameter
+        self.water_limit: float = water_limit
+        self.flow_rate: float = flow_rate
+        self.last_irrigation_time: Optional[datetime] = None
+        self.is_blocked: bool = False
+        self.relay_controller: Optional["RelayController"] = relay_controller
+        self.simulation_mode: bool = simulation_mode
 
+    def calculate_open_time(self, water_amount: float) -> float:
+        return water_amount / self.flow_rate
 
-
-    def calculate_open_time(self, water_amount): #חלוקה באפס צריך לבדוק
-        open_time = water_amount / self.flow_rate  #seconds
-        return open_time
-
-    def request_open(self):
+    def request_open(self) -> None:
         if self.is_blocked:
-            raise RuntimeError(f" Error: Valve {self.valve_id} is BLOCKED and cannot be opened!")
+            raise RuntimeError(f"Error: Valve {self.valve_id} is BLOCKED!")
 
         if self.simulation_mode:
-            print(f" [SIMULATION] Valve {self.valve_id} ON (simulated)")
+            print(f"[SIMULATION] Valve {self.valve_id} ON")
         elif self.relay_controller:
-            self.relay_controller.open_valve(self.valve_id)
+            self.relay_controller.turn_on(self.valve_id)
         else:
-            raise RuntimeError(f" Error: No RelayController connected to Valve {self.valve_id}!")
+            raise RuntimeError(f"Error: No RelayController connected to Valve {self.valve_id}!")
 
-        self.last_irrigation_time = time()
+        self.last_irrigation_time = datetime.now()
 
-    def request_close(self):
+    def request_close(self) -> None:
         if self.simulation_mode:
-            print(f" [SIMULATION] Valve {self.valve_id} OFF (simulated)")
+            print(f"[SIMULATION] Valve {self.valve_id} OFF")
         elif self.relay_controller:
-            self.relay_controller.close_valve(self.valve_id)
+            self.relay_controller.turn_off(self.valve_id)
         else:
-            raise RuntimeError(f" Error: No RelayController connected to Valve {self.valve_id}!")
+            raise RuntimeError(f"Error: No RelayController connected to Valve {self.valve_id}!")
 
-
-    def block(self):
+    def block(self) -> None:
         self.is_blocked = True
-        print(f" Valve {self.valve_id} has been BLOCKED due to an error!")
+        print(f"Valve {self.valve_id} has been BLOCKED!")
 
-    def unblock(self):
+    def unblock(self) -> None:
         self.is_blocked = False
-        print(f" Valve {self.valve_id} has been UNBLOCKED and can now operate normally.")
+        print(f"Valve {self.valve_id} has been UNBLOCKED!")
 
     def get_valve_id(self):
         return self.valve_id
