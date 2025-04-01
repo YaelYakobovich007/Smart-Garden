@@ -17,14 +17,15 @@ def test_valves():
         print("❌ Cannot test valves: device not connected.")
         return
 
-    for i in range(1, 5):
-        controller.turn_on(i)
+    for j in range(1,20):
+        for i in range(1, 5):
+            controller.turn_on(i)
 
-    import time
-    time.sleep(10)
+        import time
+        time.sleep(10)
 
-    for i in range(1, 5):
-        controller.turn_off(i)
+        for i in range(1, 5):
+            controller.turn_off(i)
 
     controller.close()
 
