@@ -33,7 +33,8 @@ class Sensor:
         if self.simulated_moisture:
             return self.simulated_moisture
         else:
-            return self.read_from_hardware()
+            self.scan_registers()
+#            return self.read_from_hardware()
 
     def read_from_hardware(self):
         try:
@@ -58,3 +59,23 @@ class Sensor:
         if self.simulation_mode:
             self.simulated_moisture = min(100.0, self.simulated_moisture + amount)  # לא מעבר ל-100%
             print(f"🌱 [SIMULATION] Sensor {self.sensor_id} moisture updated: {self.simulated_moisture}%")
+
+
+    def scan_registers(port="/dev/ttyUSB0", baudrate=9600, unit_id=1, start=0x0000, end=0x0010):
+        client = ModbusClient(method='rtu', port=port, baudrate=baudrate, timeout=1)
+        client.connect()
+
+        print(f"🔍 Scanning registers 0x{start:04X} to 0x{end - 1:04X} for Modbus device ID {unit_id}...")
+
+        for address in range(start, end):
+            try:
+                response = client.read_holding_registers(address, 1, unit=unit_id)
+                if not response.isError():
+                    value = response.registers[0]
+                    print(f"✅ Register 0x{address:04X} = {value}")
+                else:
+                    print(f"❌ Register 0x{address:04X} gave no response or error")
+            except Exception as e:
+                print(f"❗ Exception at register 0x{address:04X}: {e}")
+
+        client.close()
