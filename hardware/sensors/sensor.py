@@ -2,7 +2,7 @@ import random
 import time
 
 try:
-    from pymodbus.client.sync import ModbusSerialClient as ModbusClient
+    from pymodbus.client import ModbusSerialClient as ModbusClient
 except ImportError:
     ModbusClient = None
 
