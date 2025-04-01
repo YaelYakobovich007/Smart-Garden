@@ -69,7 +69,7 @@ class Sensor:
 
         for address in range(start, end):
             try:
-                response = client.read_holding_registers(address, 1, unit=unit_id)
+                response = client.read_holding_registers(address, 1, slave=unit_id)
                 if not response.isError():
                     value = response.registers[0]
                     print(f"✅ Register 0x{address:04X} = {value}")
