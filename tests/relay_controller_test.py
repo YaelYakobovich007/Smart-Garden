@@ -7,7 +7,7 @@ def test_connection(controller):
     else:
         print("❌ Failed to initialize RelayController.")
 
-def test_valves():
+def test_valves(controller):
     print("\n--- Valve Test ---")
 
     if not controller.device:
