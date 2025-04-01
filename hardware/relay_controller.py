@@ -1,7 +1,3 @@
-SIMULATION_MODE = false
-
-if not SIMULATION_MODE:
-    import hid
 
 class RelayController:
     def __init__(self,simulation_mode=True, vendor_id=0x16C0, product_id=0x05DF):
