@@ -1,4 +1,4 @@
-SIMULATION_MODE = True
+SIMULATION_MODE = false
 
 if not SIMULATION_MODE:
     import hid
