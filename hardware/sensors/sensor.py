@@ -39,15 +39,15 @@ class Sensor:
         try:
             response = self.client.read_holding_registers(MOISTURE_REGISTER, 1, unit=self.modbus_id)
             if response.isError():
-                print(f"❌ Modbus error reading sensor {self.sensor_id}")
+                print(f"❌ Modbus error reading sensor")
                 return None
             raw_value = response.registers[0]
             # You can adjust this conversion depending on how your sensor scales the value
             moisture = raw_value / 10.0 if raw_value > 100 else raw_value
-            print(f"🌱 Sensor {self.sensor_id} reports {moisture:.1f}% moisture")
+            print(f"🌱 Sensor  reports {moisture:.1f}% moisture")
             return moisture
         except Exception as e:
-            print(f"Error reading sensor {self.sensor_id}: {e}")
+            print(f"Error reading sensor")
             return None
 
     def simulated_data(self):
