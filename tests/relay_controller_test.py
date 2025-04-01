@@ -1,4 +1,5 @@
 from hardware.relay_controller import RelayController
+import time
 
 def test_connection(controller):
     print("\n--- Connection Test ---")
@@ -14,19 +15,20 @@ def test_valves(controller):
         print("❌ Cannot test valves: device not connected.")
         return
 
-    for j in range(1,20):
-        for i in range(1, 5):
-            controller.turn_on(i)
+    for i in range(1, 2):
+        print(f"Turning ON valve {i}...")
+        controller.turn_on(i)
+        time.sleep(0.5)  # give time for relay click
 
-        import time
-        time.sleep(10)
+    time.sleep(2)
 
-        for i in range(1, 5):
-            controller.turn_off(i)
-
-    controller.close()
+    for i in range(1, 2):
+        print(f"Turning OFF valve {i}...")
+        controller.turn_off(i)
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     controller = RelayController(simulation_mode=False)
     test_connection(controller)
     test_valves(controller)
+    controller.close()
