@@ -39,6 +39,7 @@ class Sensor:
         try:
             response = self.client.read_input_registers(MOISTURE_REGISTER, 1, unit=self.modbus_id)
             if response.isError():
+                print(response)
                 print(f"❌ Modbus error reading sensor")
                 return None
             raw_value = response.registers[0]
