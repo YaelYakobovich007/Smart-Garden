@@ -21,7 +21,7 @@ def test_valves():
         controller.turn_on(i)
 
     import time
-    time.sleep(5)
+    time.sleep(10)
 
     for i in range(1, 5):
         controller.turn_off(i)
