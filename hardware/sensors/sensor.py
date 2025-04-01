@@ -52,6 +52,8 @@ class Sensor:
             print(f"Error reading sensor")
             return None
 
+
+
     def simulated_data(self):
         return round(random.uniform(20.0, 80.0), 2)
 
@@ -79,3 +81,24 @@ class Sensor:
                 print(f"❗ Exception at register 0x{address:04X}: {e}")
 
         client.close()
+
+
+def find_any_register(port="/dev/ttyUSB0", baudrate=9600, id_start=1, id_end=20, reg_start=0x0000, reg_end=0x0010):
+    client = ModbusClient(method='rtu', port=port, baudrate=baudrate, timeout=1)
+    client.connect()
+
+    for unit_id in range(id_start, id_end):
+        print(f"\n📡 Checking ID {unit_id}")
+        for reg in range(reg_start, reg_end):
+            try:
+                response = client.read_input_registers(address=reg, count=1, unit=unit_id)
+                if not response.isError():
+                    print(f"✅ ID {unit_id} Register 0x{reg:04X} = {response.registers[0]}")
+                    client.close()
+                    return unit_id, reg
+            except Exception:
+                continue
+
+    client.close()
+    print("🚫 No working sensor or register found.")
+    return None, None
