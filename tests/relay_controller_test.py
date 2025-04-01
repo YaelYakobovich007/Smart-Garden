@@ -1,17 +1,14 @@
 from hardware.relay_controller import RelayController
 
-def test_connection():
+def test_connection(controller):
     print("\n--- Connection Test ---")
-    controller = RelayController(simulation_mode=False)
     if controller.device:
         print("✅ RelayController initialized successfully (real device).")
     else:
         print("❌ Failed to initialize RelayController.")
-    controller.close()
 
 def test_valves():
     print("\n--- Valve Test ---")
-    controller = RelayController(simulation_mode=False)
 
     if not controller.device:
         print("❌ Cannot test valves: device not connected.")
@@ -30,5 +27,6 @@ def test_valves():
     controller.close()
 
 if __name__ == "__main__":
-    test_connection()
-    test_valves()
+    controller = RelayController(simulation_mode=False)
+    test_connection(controller)
+    test_valves(controller)
