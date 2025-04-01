@@ -3,6 +3,8 @@ class RelayController:
     def __init__(self,simulation_mode=True, vendor_id=0x16C0, product_id=0x05DF):
         self.valves = {}
         self.simulation_mode = simulation_mode
+        self.vendor_id = vendor_id
+        self.product_id = product_id
 
         """
         Initializes a connection to the HID Relay device via USB.
@@ -14,10 +16,10 @@ class RelayController:
         self.simulation_mode = simulation_mode
         self.device = None
 
-        self.initialize_hardware(vendor_id, product_id)
+        self.initialize_hardware()
 
 
-    def initialize_hardware(self,vendor_id,product_id):
+    def initialize_hardware(self):
         if self.simulation_mode:
             print("[SIMULATION] RelayController running in simulation mode.")
         else:
