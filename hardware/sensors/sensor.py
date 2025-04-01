@@ -37,7 +37,7 @@ class Sensor:
 
     def read_from_hardware(self):
         try:
-            response = self.client.read_input_registers(MOISTURE_REGISTER, 1, unit=self.modbus_id)
+            response = self.client.read_input_registers(MOISTURE_REGISTER, 2, slave=self.modbus_id)
             if response.isError():
                 print(response)
                 print(f"❌ Modbus error reading sensor")
