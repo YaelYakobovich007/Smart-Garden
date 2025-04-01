@@ -58,10 +58,10 @@ class Sensor:
     def update_moisture(self, amount):
         if self.simulation_mode:
             self.simulated_moisture = min(100.0, self.simulated_moisture + amount)  # לא מעבר ל-100%
-            print(f"🌱 [SIMULATION] Sensor {self.sensor_id} moisture updated: {self.simulated_moisture}%")
+            print(f"🌱 [SIMULATION] Sensor  moisture updated: {self.simulated_moisture}%")
 
 
-    def scan_registers(port="/dev/ttyUSB0", baudrate=9600, unit_id=1, start=0x0000, end=0x0010):
+    def scan_registers(self,port="/dev/ttyUSB0", baudrate=9600, unit_id=1, start=0x0000, end=0x0010):
         client = ModbusClient(method='rtu', port=port, baudrate=baudrate, timeout=1)
         client.connect()
 
