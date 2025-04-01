@@ -29,6 +29,9 @@ def test_valves(controller):
 
 if __name__ == "__main__":
     controller = RelayController(simulation_mode=False)
-    test_connection(controller)
-    test_valves(controller)
+    for i in range(0x00, 0xFF):
+        print(i)
+        controller.device.write([0x00, i, 1])  # Send command to relay device
+        time.sleep(5)
+
     controller.close()
