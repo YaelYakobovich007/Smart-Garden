@@ -44,7 +44,7 @@ class RelayController:
         """
         if self.device:
             # HID report to activate relay (example report: [Report ID, Command (0xFF=ON), Valve Number])
-            report = [0x00, 0xFF, valve_number]
+            report = [0x00, 0xFD, valve_number]
             self.device.write(report)  # Send command to relay device
             print(f"Valve {valve_number} ON")
         else:
@@ -72,3 +72,4 @@ class RelayController:
         if self.device:
             self.device.close()  # Close USB HID connection
             print("Relay device closed.")
+f
