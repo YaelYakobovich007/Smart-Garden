@@ -72,4 +72,3 @@ class RelayController:
         if self.device:
             self.device.close()  # Close USB HID connection
             print("Relay device closed.")
-f
