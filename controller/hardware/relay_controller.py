@@ -61,7 +61,7 @@ class RelayController:
         """
         if self.device:
             # HID report to deactivate relay (example report: [Report ID, Command (0x00=OFF), Valve Number])
-            report = [0x00, 0x00, valve_number]
+            report = [0x00, 0xFD, valve_number]
             self.device.write(report)  # Send command to relay device
             print(f"Valve {valve_number} OFF")
         else:

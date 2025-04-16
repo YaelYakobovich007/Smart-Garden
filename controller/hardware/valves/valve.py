@@ -1,6 +1,8 @@
 from typing import Optional
 from datetime import datetime
 
+from controller.hardware.relay_controller import RelayController
+
 class Valve:
     def __init__(self, valve_id: int, pipe_diameter: float, water_limit: float,
                  flow_rate: float, relay_controller: Optional[object], simulation_mode: bool = True) -> None:
