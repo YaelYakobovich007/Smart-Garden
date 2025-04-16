@@ -1,61 +1,90 @@
+from datetime import datetime
 import time
+from controller.irrigation.irrigation_result import IrrigationResult
+from controller.models.plant import Plant
 
 class IrrigationAlgorithm:
     def __init__(self):
-        self.water_per_pulse = 0.03  # Liter
-        self.pause_between_pulses = 10 #seconds
+        self.water_per_pulse = 0.03     # Liter
+        self.pause_between_pulses = 10  #seconds
 
-    def irrigate(self, plant: "Plant") -> None:
+    def irrigate(self, plant: "Plant") -> IrrigationResult:
         current_moisture = plant.get_moisture()
+        print(f"Initial moisture for plant {plant.plant_id}: {current_moisture}%")
 
+        # Case 1: Overwatered — block and stop
         if self.is_overwatered(plant,current_moisture):
-            plant.valve.block() # בתוך הפונקציה הזאת  נוסיף זריקת אקספשיין
-            # ולשלוח הודעת שגיאה ללקוח צריך לעצור את הברז
-            print("need to diactivate valve")
-            return
+            plant.valve.block()
+            return IrrigationResult(
+                status="error",
+                reason="overwatered",
+                moisture=current_moisture
+            )
+        
+        # Case 2: Already moist — no need to water
+        if not self.should_irrigate(plant, current_moisture):
+            return IrrigationResult(
+                status="skipped",
+                reason="already moist",
+                moisture=current_moisture
+            )
+        
+        # Case 3: Proceed with irrigation
+        return self.perform_irrigation(plant, current_moisture)
 
-        if self.should_irrigate(plant,current_moisture):
-            self.perform_irrigation(plant)
-
-    def is_overwatered(self, plant: "Plant", current_moisture: float) -> bool:
-        if plant.last_irrigation_time and (time.time() - plant.last_irrigation_time) > 86400:
-            if current_moisture > plant.desired_moisture + 10:
+    def is_overwatered(self, plant: "Plant", moisture: float) -> bool:
+        if plant.last_irrigation_time:
+            time_since = time.time() - plant.last_irrigation_time.timestamp()
+            if time_since > 86400 and moisture > plant.desired_moisture + 10: #86400 = 60 * 60 * 24 = 1 day in seconds
                 return True
         return False
 
     def should_irrigate(self, plant: "Plant", current_moisture: float) -> bool:
         return current_moisture < plant.desired_moisture
 
-    def perform_irrigation(self, plant: "Plant") -> None:
-        current_moisture = plant.sensor.read_moisture()
-        print(f" Plant {plant.plant_id} Initial Moisture: {current_moisture}%")
+    def perform_irrigation(self, plant: "Plant", initial_moisture: float) -> IrrigationResult:
+        total_water: float = 0.0
+        pulse_time: float = plant.valve.calculate_open_time(self.water_per_pulse)
+        water_limit: float = plant.valve.water_limit
 
-        total_water_added = 0
-        water_limit = plant.valve.water_limit
-        pulse_time = plant.valve.calculate_open_time(self.water_per_pulse)
+        while total_water < water_limit:
+            current_moisture: float = plant.get_moisture()
+            if current_moisture >= plant.desired_moisture:
+                break
 
-        while current_moisture < plant.desired_moisture and total_water_added < water_limit:
+            print(f"Watering {plant.plant_id}... ({total_water:.2f}L so far)")
             plant.valve.request_open()
             time.sleep(pulse_time)
             plant.valve.request_close()
 
-            total_water_added += self.water_per_pulse
-            print(f" {total_water_added * 1000:.0f} mL added")
+            total_water += self.water_per_pulse
 
             if plant.sensor.simulation_mode:
-                plant.sensor.update_moisture(5)  # עלייה של 5% אחרי כל פולס
-
-            current_moisture = plant.sensor.read_moisture()
-            print(f" Plant {plant.plant_id} - New Moisture: {current_moisture}%, Total Water Added: {total_water_added * 1000:.0f} mL")
-
-            if current_moisture >= plant.desired_moisture:
-                print(f" Target moisture reached for Plant {plant.plant_id}. Total water added: {total_water_added * 1000:.0f} mL")
-                return
-
-            if total_water_added >= water_limit:
-                #צריך לעצור את הברז ולשלוח הודעת שגה ללקוח
-                print(f" Water limit reached for Plant {plant.plant_id}. Final Moisture: {current_moisture}%")
-                return
+                plant.sensor.update_moisture(5) # 5% increase after each pulse
 
             time.sleep(self.pause_between_pulses)
 
+        final_moisture: float = plant.get_moisture()
+
+        # Fault detection: watered full session but still dry
+        if total_water >= water_limit and final_moisture < plant.desired_moisture:
+            print(f"Sensor or irrigation error — watered {total_water:.2f}L but moisture is still low!")
+            plant.valve.block()
+            return IrrigationResult(
+                status="error",
+                reason="sensor mismatch or irrigation fault",
+                moisture=initial_moisture,
+                final_moisture=final_moisture,
+                water_added_liters=total_water,
+                irrigation_time=datetime.now()
+            )
+
+        plant.last_irrigation_time = datetime.now()
+
+        return IrrigationResult(
+            status="done",
+            moisture=initial_moisture,
+            final_moisture=final_moisture,
+            water_added_liters=total_water,
+            irrigation_time=plant.last_irrigation_time
+        )
