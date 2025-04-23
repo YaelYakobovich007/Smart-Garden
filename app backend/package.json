@@ -11,6 +11,8 @@
   "description": "",
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "dotenv": "^16.5.0",
+    "google-auth-library": "^9.15.1",
     "ws": "^8.18.1"
   }
 }

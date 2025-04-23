@@ -1,6 +1,7 @@
-const WebSocket = require('ws');
+require('dotenv').config();
 
 // Start WebSocket server for communication with clients
+const WebSocket = require('ws');
 const wss = new WebSocket.Server({ port: 8080 });
 const { handleAuthMessage } = require('./controllers/authController');
 
@@ -23,11 +24,11 @@ wss.on('connection', (ws) => {
   
       console.log('Message:', data);
 
-      if (data.type === 'REGISTER') {
+      if (['REGISTER', 'LOGIN', 'LOGIN_GOOGLE'].includes(data.type)) {
         handleAuthMessage(data, ws);
         return;
       }
-
+      
       if (data.type === 'HELLO_PI') {
         piClients.add(ws);
         ws.send(JSON.stringify({ type: 'WELCOME', message: 'Hello, Raspberry Pi!' }));

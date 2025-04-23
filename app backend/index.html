@@ -2,12 +2,13 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Smart Garden - Register Only</title>
+  <title>Smart Garden – Register + Google Login</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <h1>🌿 Smart Garden – Register</h1>
 
-  <h2>🆕 Register</h2>
+  <h2>🆕 Register with Email</h2>
   <input id="email" type="email" placeholder="Email" />
   <input id="password" type="password" placeholder="Password" />
   <br><br>
@@ -15,6 +16,23 @@
 
   <hr>
 
+  <h2>🔐 Or continue with Google</h2>
+
+  <!-- Google Sign-In -->
+  <div id="g_id_onload"
+       data-client_id="PASTE_YOUR_CLIENT_ID_HERE"
+       data-callback="handleGoogleLogin">
+  </div>
+
+  <div class="g_id_signin"
+       data-type="standard"
+       data-size="large"
+       data-theme="outline"
+       data-text="continue_with"
+       data-shape="rectangular">
+  </div>
+
+  <hr>
   <pre id="log"></pre>
 
   <script>
@@ -54,9 +72,20 @@
       log('📤 Sent register request');
     }
 
+    function handleGoogleLogin(response) {
+      const idToken = response.credential;
+
+      socket.send(JSON.stringify({
+        type: 'LOGIN_GOOGLE',
+        googleToken: idToken
+      }));
+
+      log('📤 Sent Google login token to server');
+    }
+
     function log(msg) {
       document.getElementById('log').textContent += msg + '\n';
     }
   </script>
 </body>
-</html>
+</
