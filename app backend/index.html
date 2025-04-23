@@ -2,23 +2,32 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Smart Garden – Register + Google Login</title>
+  <title>Smart Garden – Register + Login</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-  <h1>🌿 Smart Garden – Register</h1>
+  <h1>🌿 Smart Garden</h1>
 
+  <!-- REGISTER -->
   <h2>🆕 Register with Email</h2>
-  <input id="email" type="email" placeholder="Email" />
-  <input id="password" type="password" placeholder="Password" />
+  <input id="register-email" type="email" placeholder="Email" />
+  <input id="register-password" type="password" placeholder="Password" />
   <br><br>
   <button onclick="register()">Register</button>
 
   <hr>
 
-  <h2>🔐 Or continue with Google</h2>
+  <!-- LOGIN -->
+  <h2>🔐 Login with Email</h2>
+  <input id="login-email" type="email" placeholder="Email" />
+  <input id="login-password" type="password" placeholder="Password" />
+  <br><br>
+  <button onclick="login()">Login</button>
 
-  <!-- Google Sign-In -->
+  <hr>
+
+  <!-- GOOGLE LOGIN -->
+  <h2>🔓 Or continue with Google</h2>
   <div id="g_id_onload"
        data-client_id="PASTE_YOUR_CLIENT_ID_HERE"
        data-callback="handleGoogleLogin">
@@ -56,8 +65,8 @@
     };
 
     function register() {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
+      const email = document.getElementById('register-email').value;
+      const password = document.getElementById('register-password').value;
 
       if (!email || !password) {
         log('⚠️ Please enter both email and password.');
@@ -70,6 +79,23 @@
         password
       }));
       log('📤 Sent register request');
+    }
+
+    function login() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      if (!email || !password) {
+        log('⚠️ Please enter both email and password.');
+        return;
+      }
+
+      socket.send(JSON.stringify({
+        type: 'LOGIN',
+        email,
+        password
+      }));
+      log('📤 Sent login request');
     }
 
     function handleGoogleLogin(response) {
@@ -88,4 +114,4 @@
     }
   </script>
 </body>
-</
+</html>

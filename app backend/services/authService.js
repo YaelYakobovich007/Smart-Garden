@@ -10,6 +10,14 @@ async function register(email, password) {
   return userModel.createUser(email, hashed);
 }
 
+async function login(email, password) {
+  const user = userModel.getUser(email);
+  if (!user || !user.password) return false;
+
+  const match = await bcrypt.compare(password, user.password);
+  return match ? user : false;
+}
+
 async function verifyGoogleToken(token) {
   const ticket = await client.verifyIdToken({
     idToken: token,
@@ -25,5 +33,6 @@ async function verifyGoogleToken(token) {
 
 module.exports = {
   register,
+  login,
   verifyGoogleToken
 };

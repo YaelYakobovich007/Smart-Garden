@@ -29,6 +29,23 @@ async function handleAuthMessage(data, ws) {
     }
   }
 
+  if (data.type === 'LOGIN') {
+    try {
+      const user = await authService.login(data.email, data.password);
+  
+      if (user) {
+        ws.send(JSON.stringify({type: 'LOGIN_SUCCESS',userId: user.email}));
+      } else {ws.send(JSON.stringify({type: 'LOGIN_FAIL',reason: 'Invalid email or password'}));
+      }
+  
+    } catch (err) {
+      console.error('LOGIN error:', err);
+  
+      ws.send(JSON.stringify({type: 'LOGIN_FAIL',reason: 'Something went wrong during login'}));
+    }
+  }
+  
+
   if (data.type === 'LOGIN_GOOGLE') {
     if (!data.googleToken) {
       sendError(ws, 'LOGIN_FAIL', 'Google token is required');
