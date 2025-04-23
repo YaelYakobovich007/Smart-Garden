@@ -1,7 +1,7 @@
 const authService = require('../services/authService');
 const userModel = require('../models/userModel');
 
-async function handleAuthMessage(data, ws) {
+async function handleAuthMessage(data, ws, loggedInUsers) {
   if (data.type === 'REGISTER') {
     if (!data.email || !data.password) {
       sendError(ws, 'REGISTER_FAIL', 'Email and password are required');
@@ -34,6 +34,7 @@ async function handleAuthMessage(data, ws) {
       const user = await authService.login(data.email, data.password);
   
       if (user) {
+        loggedInUsers.set(ws, user.email);
         ws.send(JSON.stringify({type: 'LOGIN_SUCCESS',userId: user.email}));
       } else {ws.send(JSON.stringify({type: 'LOGIN_FAIL',reason: 'Invalid email or password'}));
       }
@@ -60,7 +61,8 @@ async function handleAuthMessage(data, ws) {
         await userModel.createUser(userData.email, null); // No password needed for Google login
         user = await userModel.getUser(userData.email);
       }
-
+      
+      loggedInUsers.set(ws, user.email);
       sendSuccess(ws, 'LOGIN_SUCCESS', {
         userId: userData.email,
         name: userData.name,
