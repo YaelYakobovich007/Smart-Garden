@@ -27,7 +27,7 @@ class SmartGardenEngine:
         valve_id = self.valves_manager.assign_valve(plant_id)
         sensor_id = self.sensor_manager.assign_sensor(plant_id)
 
-        valve = Valve(valve_id, pipe_diameter, water_limit, flow_rate, self.irrigation_controller)
+        valve = Valve(valve_id, pipe_diameter, water_limit, flow_rate, self.irrigation_controller)# need to delete the iirigatoion controller 
         sensor = Sensor(simulation_mode=True, modbus_id=sensor_id)
 
         plant = Plant(plant_id, desired_moisture, sensor, valve, schedule_data)
@@ -40,6 +40,7 @@ class SmartGardenEngine:
         del self.plants[plant_id]
         print(f"Removed Plant {plant_id}")
 
+    # no water class need to delete 
     def water_plant(self, plant_id: str, duration: int) -> None:
         plant = self._get_plant_or_raise(plant_id)
         valve_id = self.valves_manager.get_valve(plant_id)
