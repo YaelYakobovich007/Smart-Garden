@@ -18,21 +18,7 @@ async function login(email, password) {
   return match ? user : false;
 }
 
-async function verifyGoogleToken(token) {
-  const ticket = await client.verifyIdToken({
-    idToken: token,
-    audience: process.env.GOOGLE_CLIENT_ID,
-  });
-
-  const payload = ticket.getPayload();
-  return {
-    email: payload.email,
-    name: payload.name,
-  };
-}
-
 module.exports = {
   register,
   login,
-  verifyGoogleToken
 };

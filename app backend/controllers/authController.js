@@ -1,6 +1,8 @@
 const authService = require('../services/authService');
 const userModel = require('../models/userModel');
-const { verifyGoogleToken } = require('../services/authService'); // אם היא שם
+const { verifyGoogleToken } = require('../services/authService'); 
+const { isValidEmail } = require('../utils/validators');
+const { sendSuccess, sendError } = require('../utils/wsResponses');
 
 const authHandlers = {
   REGISTER: handleRegister,
@@ -80,18 +82,6 @@ async function handleGoogleLogin(data, ws, loggedInUsers) {
     console.error('Google login failed:', err);
     return sendError(ws, 'LOGIN_FAIL', 'Google authentication failed');
   }
-}
-
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function sendSuccess(ws, type, payload) {
-  ws.send(JSON.stringify({ type, ...payload }));
-}
-
-function sendError(ws, type, reason) {
-  ws.send(JSON.stringify({ type, reason }));
 }
 
 module.exports = {
