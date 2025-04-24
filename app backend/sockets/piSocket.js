@@ -1,4 +1,6 @@
 const { sendSuccess, sendError } = require('../utils/wsResponses');
+const {handleSensorAssigned, handleValveAssigned} = require('../controllers/plantAssignmentController');
+
 let piSocket = null;
 
 function handlePiSocket(ws) {
@@ -10,12 +12,18 @@ function handlePiSocket(ws) {
     try {
       data = JSON.parse(msg);
     } catch {
-      return;
+      return sendError(ws, 'INVALID_JSON', 'Invalid JSON format');
     }
 
     if (data.type === 'SENSOR_ASSIGNED') {
-      // תטפלי כאן בעדכון הצמח
+      return handleSensorAssigned(data, ws);
     }
+
+    if (data.type === 'VALVE_ASSIGNED') {
+      return handleValveAssigned(data, ws);
+    }
+
+    sendError(ws, 'UNKNOWN_TYPE', `Unknown message type: ${data.type}`);
   });
 
   ws.on('close', () => {
@@ -27,4 +35,7 @@ function getPiSocket() {
   return piSocket;
 }
 
-module.exports = handlePiSocket;
+module.exports = {
+  getPiSocket,
+  handlePiSocket
+}

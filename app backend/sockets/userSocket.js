@@ -1,8 +1,7 @@
 const { handleAuthMessage } = require('../controllers/authController');
 const { handlePlantMessage } = require('../controllers/plantController');
 const { sendError } = require('../utils/wsResponses');
-
-const loggedInUsers = new Map();
+const {removeUserSession} = require('../models/userSessions');
 
 function handleUserSocket(ws) {
   console.log('New USER connected');
@@ -18,16 +17,18 @@ function handleUserSocket(ws) {
     }
 
     if (['REGISTER', 'LOGIN', 'LOGIN_GOOGLE'].includes(data.type)) {
-      handleAuthMessage(data, ws, loggedInUsers);
+      handleAuthMessage(data, ws);
     } else {
-      handlePlantMessage(data, ws, loggedInUsers);
+      handlePlantMessage(data, ws);
     }
   });
 
   ws.on('close', () => {
     console.log('USER disconnected');
-    loggedInUsers.delete(ws);
+    removeUserSession(ws);
   });
 }
 
-module.exports = handleUserSocket;
+module.exports = {
+  handleUserSocket
+};

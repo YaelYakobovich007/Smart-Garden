@@ -1,5 +1,5 @@
-const handleUserSocket = require('./userSocket');
-const handlePiSocket = require('./piSocket');
+const { handleUserSocket } = require('./userSocket');
+const { handlePiSocket } = require('./piSocket');
 
 function handleSocketConnection(ws, firstMessage) {
   if (firstMessage.type === 'HELLO_PI') {
@@ -12,4 +12,4 @@ function handleSocketConnection(ws, firstMessage) {
   }
 }
 
-module.exports = { handleSocketConnection };
+module.exports = {handleSocketConnection };

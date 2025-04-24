@@ -3,6 +3,7 @@ const userModel = require('../models/userModel');
 const { verifyGoogleToken } = require('../services/googleService'); 
 const { isValidEmail } = require('../utils/validators');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
+const { addUserSession } = require('../models/userSessions');
 
 const authHandlers = {
   REGISTER: handleRegister,
@@ -10,16 +11,16 @@ const authHandlers = {
   LOGIN_GOOGLE: handleGoogleLogin,
 };
 
-async function handleAuthMessage(data, ws, loggedInUsers) {
+async function handleAuthMessage(data, ws) {
   const handler = authHandlers[data.type];
   if (handler) {
-    await handler(data, ws, loggedInUsers);
+    await handler(data, ws);
   } else {
     ws.send(JSON.stringify({ type: 'UNKNOWN_TYPE', reason: `Unknown message type: ${data.type}` }));
   }
 }
 
-async function handleRegister(data, ws, loggedInUsers) {
+async function handleRegister(data, ws) {
   if (!data.email || !data.password) {
     return sendError(ws, 'REGISTER_FAIL', 'Email and password are required');
   }
@@ -43,12 +44,12 @@ async function handleRegister(data, ws, loggedInUsers) {
   }
 }
 
-async function handleLogin(data, ws, loggedInUsers) {
+async function handleLogin(data, ws) {
   try {
     const user = await authService.login(data.email, data.password);
 
     if (user) {
-      loggedInUsers.set(ws, user.email);
+      addUserSession(ws, user.email);
       return sendSuccess(ws, 'LOGIN_SUCCESS', { userId: user.email });
     } else {
       return sendError(ws, 'LOGIN_FAIL', 'Invalid email or password');
@@ -59,7 +60,7 @@ async function handleLogin(data, ws, loggedInUsers) {
   }
 }
 
-async function handleGoogleLogin(data, ws, loggedInUsers) {
+async function handleGoogleLogin(data, ws) {
   if (!data.googleToken) {
     return sendError(ws, 'LOGIN_FAIL', 'Google token is required');
   }
@@ -73,11 +74,8 @@ async function handleGoogleLogin(data, ws, loggedInUsers) {
       user = await userModel.getUser(userData.email);
     }
 
-    loggedInUsers.set(ws, user.email);
-    return sendSuccess(ws, 'LOGIN_SUCCESS', {
-      userId: userData.email,
-      name: userData.name,
-    });
+    addUserSession(ws, user.email);
+    return sendSuccess(ws, 'LOGIN_SUCCESS', {userId: userData.email, name: userData.name,});
   } catch (err) {
     console.error('Google login failed:', err);
     return sendError(ws, 'LOGIN_FAIL', 'Google authentication failed');
