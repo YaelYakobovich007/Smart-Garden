@@ -7,7 +7,6 @@ const wss = new WebSocket.Server({ port: 8080 });
 const { handleAuthMessage } = require('./controllers/authController');
 const { handlePlantMessage } = require('./controllers/plantController');
 
-
 console.log('WebSocket server running on ws://localhost:8080');
 
 const piClients = new Set();

@@ -1,10 +1,9 @@
-function sendSuccess(ws, type, payload) {
-    ws.send(JSON.stringify({ type, ...payload }));
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
   
-function sendError(ws, type, reason) {
-    ws.send(JSON.stringify({ type, reason }));
-}  
+module.exports = {
+    isValidEmail
+}; 
   
-module.exports = { sendSuccess, sendError };
   

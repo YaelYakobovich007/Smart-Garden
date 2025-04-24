@@ -1,6 +1,6 @@
 const authService = require('../services/authService');
 const userModel = require('../models/userModel');
-const { verifyGoogleToken } = require('../services/authService'); 
+const { verifyGoogleToken } = require('../services/googleService'); 
 const { isValidEmail } = require('../utils/validators');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 
