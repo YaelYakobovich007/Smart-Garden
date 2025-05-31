@@ -2,11 +2,10 @@ import time
 from typing import Dict, List, Optional
 from controller.hardware.sensors.sensor_manager import SensorManager
 from controller.hardware.valves.valve import Valve
+from controller.hardware.valves.valves_manager import ValvesManager
 from controller.irrigation.irrigation_algorithm import IrrigationAlgorithm
+from controller.irrigation.irrigation_controller import IrrigationController
 from controller.models.plant import Plant
-from hardware.sensors.sensor import Sensor
-from irrigation.irrigation_controller import IrrigationController
-from hardware.valves.valves_manager import ValvesManager
 
 class SmartGardenEngine:
     def __init__(self, total_valves: int = 2, total_sensors: int = 2):
@@ -28,7 +27,7 @@ class SmartGardenEngine:
         sensor_id = self.sensor_manager.assign_sensor(plant_id)
 
         valve = Valve(valve_id, pipe_diameter, water_limit, flow_rate, self.irrigation_controller)
-        sensor = Sensor(simulation_mode=True, modbus_id=sensor_id)
+        sensor = sensor(simulation_mode=True, initial_moisture=30.0, modbus_id=sensor_id)
 
         plant = Plant(plant_id, desired_moisture, sensor, valve, schedule_data)
         self.plants[plant_id] = plant

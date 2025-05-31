@@ -1,5 +1,6 @@
-from hardware.relay_controller import RelayController
 import time
+
+from controller.hardware.relay_controller import RelayController
 
 SIMULATION_MODE = True
 

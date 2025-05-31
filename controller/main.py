@@ -1,46 +1,29 @@
-import json
-import time
-from websocket import WebSocketApp
-from engine import SmartGardenEngine
-from handlers.add_plant_handler import handle as handle_add_plant
-
-# יצירת אובייקט הבקר הראשי
-smart_engine = SmartGardenEngine()
-
-def on_open(ws):
-    print("✅ Connected to server.")
-    ws.send(json.dumps({"type": "register_pi"}))
-
-def on_message(ws, message):
-    try:
-        data = json.loads(message)
-        msg_type = data.get("type")
-
-        if msg_type == "add_plant":
-            handle_add_plant(data, ws, smart_engine)
-        else:
-            print(f"⚠️ Unknown message type: {msg_type}")
-
-    except Exception as e:
-        print(f"❌ Error while handling message: {e}")
-
-def on_close(ws, close_status_code, close_msg):
-    print("🔌 Disconnected from server.")
-
-def on_error(ws, error):
-    print(f"❗ WebSocket error: {error}")
+from hardware.sensors.sensor import Sensor
+from hardware.valves.valve import Valve
+from irrigation.irrigation_algorithm import IrrigationAlgorithm
 
 if __name__ == "__main__":
-    while True:
-        try:
-            ws = WebSocketApp(
-                "ws://YOUR_SERVER_IP:3000",  # ← החליפי בכתובת האמיתית
-                on_open=on_open,
-                on_message=on_message,
-                on_close=on_close,
-                on_error=on_error
-            )
-            ws.run_forever()
-        except Exception as e:
-            print(f"🔁 Reconnecting after error: {e}")
-            time.sleep(5)
+    from hardware.relay_controller import RelayController
+    from models.plant import Plant
+
+    # יצירת בקר ממסר
+    relay_controller = RelayController(simulation_mode=False)
+
+    # יצירת חיישני לחות
+    sensor1 = Sensor(sensor_id=1, plant_id=101)
+    sensor2 = Sensor(sensor_id=2, plant_id=102)
+
+    # יצירת ברזים
+    valve1 = Valve(valve_id=1, pipe_diameter=10, water_limit=5, flow_rate=0.4, relay_controller=relay_controller)
+    valve2 = Valve(valve_id=2, pipe_diameter=15, water_limit=5, flow_rate=1.0, relay_controller=relay_controller)
+
+    # יצירת צמחים עם חיישנים וברזים
+    plant1 = Plant(plant_id=101, desired_moisture=80, sensor=sensor1, valve=valve1)
+    plant2 = Plant(plant_id=102, desired_moisture=80, sensor=sensor2, valve=valve2)
+
+    # יצירת אלגוריתם השקיה
+    irrigation_algorithm = IrrigationAlgorithm()
+
+    # הפעלת השקיה לצמחים
+    irrigation_algorithm.irrigate(plant1)
+    irrigation_algorithm.irrigate(plant2)

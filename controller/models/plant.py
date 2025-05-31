@@ -1,8 +1,9 @@
 from typing import Optional, List, Dict
 from datetime import datetime
-from hardware.sensors.sensor import Sensor
-from hardware.valves.valve import Valve
-from irrigation.irrigation_schedule import IrrigationSchedule
+
+from controller.hardware.sensors.sensor import Sensor
+from controller.hardware.valves.valve import Valve
+
 
 class Plant:
     def __init__(self, plant_id: int, desired_moisture: float, sensor: "Sensor", valve: "Valve",

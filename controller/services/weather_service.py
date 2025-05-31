@@ -1,6 +1,5 @@
 # services/weather_service.py
 import datetime
-import requests
 
 class WeatherService:
     def __init__(self):
@@ -16,21 +15,21 @@ class WeatherService:
             "units": "metric"
         }
 
-        try:
-            response = requests.get(self.api_url, params=params)
-            response.raise_for_status()  # תזרוק שגיאה אם יש תקלה
-            data = response.json()
-            print(data)
+        #try:
+            #response = requests.get(self.api_url, params=params)
+            #response.raise_for_status()  # תזרוק שגיאה אם יש תקלה
+            #data = response.json()
+            #print(data)
 
-            today_weather = data['daily'][0]
-            weather_main = today_weather['weather'][0]['main'].lower()
-            rain_amount = today_weather.get('rain', 0)
+            #today_weather = data['daily'][0]
+            #weather_main = today_weather['weather'][0]['main'].lower()
+            #rain_amount = today_weather.get('rain', 0)
 
-            if 'rain' in weather_main or rain_amount > 0:
-                return True
+            #if 'rain' in weather_main or rain_amount > 0:
+            #    return True
 
-        except Exception as e:
-            print(f"Error checking rain forecast: {e}")
+        #except Exception as e:
+        #    print(f"Error checking rain forecast: {e}")
 
         return False
 
