@@ -1,5 +1,6 @@
-from hardware.relay_controller import RelayController
 import time
+from controller.hardware.relay_controller import RelayController
+
 
 def test_connection(controller):
     print("\n--- Connection Test ---")
