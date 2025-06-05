@@ -1,7 +1,0 @@
-{
-    "python.analysis.extraPaths": [
-        "./controller/irrigation/irrigation_",
-        "./controller/irrigation/irrigation_"
-    ],
-    "python.envFile": "${workspaceFolder}/.env"
-}
