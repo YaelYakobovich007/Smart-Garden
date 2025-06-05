@@ -1,65 +1,81 @@
-import random
-import time
 import asyncio
+import random
 from pymodbus.client import AsyncModbusSerialClient
 from pymodbus.exceptions import ModbusException
 
-try:
-    from pymodbus.client import ModbusSerialClient as ModbusClient
-except ImportError:
-    ModbusClient = None
-
-SERIAL_PORT = "/dev/ttyUSB0"
-BAUD_RATE = 9600
+# Constants for Modbus communication
 DEFAULT_MODBUS_ID = 1
-MOISTURE_REGISTER = 0x0001  # You can change this if needed
-
-
+DEFAULT_PORT = "/dev/ttyUSB0"
+DEFAULT_BAUDRATE = 9600
+REGISTER_START_ADDRESS = 0x0000  # Start register address for humidity
 
 class Sensor:
-    def __init__(self,simulation_mode = True, initial_moisture = 30.0,modbus_id=DEFAULT_MODBUS_ID):
-#        self.sensor_id = sensor_id
-#        self.plant_id = plant_id
+    def __init__(
+        self,
+        simulation_mode=True,
+        initial_moisture=30.0,
+        modbus_id=DEFAULT_MODBUS_ID,
+        port=DEFAULT_PORT,
+        baudrate=DEFAULT_BAUDRATE
+    ):
         self.simulation_mode = simulation_mode
-        self.simulated_moisture = initial_moisture if simulation_mode else None
+        self.simulated_value  = initial_moisture
         self.modbus_id = modbus_id
-        self.client = None
+        self.port = port
+        self.baudrate = baudrate
 
-        if not self.simulation_mode:
-            if ModbusClient is None:
-                raise ImportError("Missing 'pymodbus'. Install with: pip install pymodbus")
-            self.client = AsyncModbusSerialClient(
-            port="COM3",        # Update if needed
-            baudrate=4800,
+    async def read(self):
+        if self.simulation_mode:
+            return self.simulated_value
+        
+        return await self._read_modbus_data()
+        
+   
+    async def _read_modbus_data(self):
+        client = AsyncModbusSerialClient(
+            port=self.port,
+            baudrate=self.baudrate,
             parity='N',
             stopbits=1,
             bytesize=8,
             timeout=2,
         )
-            if not self.client.connect():
-                raise ConnectionError(" Could not connect to Modbus sensor.")
 
-    def read_moisture(self):
-        if self.simulated_moisture:
-            return self.simulated_moisture
-        else:
-            self.scan_registers()
-            return self.read_from_hardware()
+        # Connect to the Modbus client
+        async with client as modbus_client:
+            if not modbus_client.connected:
+                print("Could not connect to Modbus sensor.")
+                return None
+            
+            try:
+                # Read two registers starting from address 0x0000
+                result = await modbus_client.read_input_registers(
+                    address=REGISTER_START_ADDRESS,
+                    count=2,
+                    slave=self.modbus_id
+                )
 
-     
-    
+                if result.isError():
+                    print(f"Modbus error: {result}")
+                    return None
 
+                humidity = result.registers[0] / 10.0
+                temperature = result.registers[1] / 10.0
+                print(f"🌱 Sensor {self.modbus_id} - Humidity: {humidity}%, Temperature: {temperature}°C")
+                return humidity, temperature
+            
+            except ModbusException as e:
+                print(f"Modbus exception: {e}")
+                return None
+            
 
-
-    def simulated_data(self):
-        return round(random.uniform(20.0, 80.0), 2)
-
-    def update_moisture(self, amount):
+    def update_simulated_value(self, amount):
         if self.simulation_mode:
-            self.simulated_moisture = min(100.0, self.simulated_moisture + amount)  # לא מעבר ל-100%
-            print(f"🌱 [SIMULATION] Sensor  moisture updated: {self.simulated_moisture}%")
+            self.simulated_value = min(100.0, self.simulated_value + amount)  
+            print(f"🌱 [SIMULATION] Sensor moisture updated: {self.simulated_value}%")
 
-
+    def generate_random_simulated_value(self):
+        return round(random.uniform(20.0, 80.0), 2)
  
 
 
