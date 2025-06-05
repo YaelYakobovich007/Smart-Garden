@@ -27,7 +27,7 @@ class Plant:
             
 
     def get_moisture(self) -> Optional[float]:
-        return self.sensor.read_moisture()
+        return self.sensor.read()
 
     def update_moisture(self) -> None:
-        self.moisture_level = self.sensor.read_moisture()
+        self.moisture_level = self.sensor.read()

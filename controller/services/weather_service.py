@@ -7,14 +7,36 @@ env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 class WeatherService:
+    """
+    Service for retrieving weather forecast data using OpenWeather's One Call API.
+
+    This class is used to determine if rain is expected today at a given location
+    (based on latitude and longitude coordinates).
+    """
+
     def __init__(self):
+        """
+        Initializes the weather service by loading the API key from environment variables.
+        
+        Raises:
+            ValueError: If the API key is not found in the environment.
+        """
         self.api_key = os.getenv("OPEN_WEATHER_API_KEY")  # Load the API key from the environment variables
         self.api_url = "https://api.openweathermap.org/data/3.0/onecall" # The URL of the OpenWeather One Call API
         if not self.api_key:
             raise ValueError("API key for OpenWeather is not set. Please set the OPEN_WEATHER_API_KEY environment variable.")
         
     def will_rain_today(self, lat, lon):
-        # Prepare the request parameters
+        """
+        Checks if rain is expected today at the given location.
+
+        Args:
+            lat (float): Latitude of the plant's location.
+            lon (float): Longitude of the plant's location.
+
+        Returns:
+            bool: True if rain is expected, False otherwise.
+        """
         params = {
             "lat": lat,                           # Latitude of the location
             "lon": lon,                           # Longitude of the location

@@ -134,7 +134,7 @@ class IrrigationAlgorithm:
 
         final_moisture: float = plant.get_moisture()
 
-        # Fault detection: watered full session but still dry
+        # Fault detection: watered but moisture didn’t rise
         if total_water >= water_limit and final_moisture < plant.desired_moisture:
             print(f"Sensor or irrigation error — watered {total_water:.2f}L but moisture is still low!")
             plant.valve.block()
@@ -146,8 +146,9 @@ class IrrigationAlgorithm:
                 water_added_liters=total_water,
                 irrigation_time=datetime.now()
             )
-
-        plant.last_irrigation_time = datetime.now()
+        
+        # Update last irrigation time
+        plant.last_irrigation_time = datetime.now() 
 
         return IrrigationResult(
             status="done",
