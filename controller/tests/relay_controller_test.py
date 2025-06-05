@@ -4,15 +4,15 @@ import time
 def test_connection(controller):
     print("\n--- Connection Test ---")
     if controller.device:
-        print("✅ RelayController initialized successfully (real device).")
+        print(" RelayController initialized successfully (real device).")
     else:
-        print("❌ Failed to initialize RelayController.")
+        print(" Failed to initialize RelayController.")
 
 def test_valves(controller):
     print("\n--- Valve Test ---")
 
     if not controller.device:
-        print("❌ Cannot test valves: device not connected.")
+        print(" Cannot test valves: device not connected.")
         return
 
     for i in range(2, 3):

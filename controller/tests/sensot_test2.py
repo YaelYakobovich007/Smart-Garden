@@ -2,7 +2,6 @@ from pymodbus.client import ModbusSerialClient
 import time
 
 
-# List of common baud rates to try
 BAUD_RATES = [9600, 19200, 115200, 4800]
 
 def test_connection(port, baudrate=9600, slave_id=1):
@@ -10,19 +9,18 @@ def test_connection(port, baudrate=9600, slave_id=1):
     client = ModbusSerialClient(method='rtu', port=port, baudrate=baudrate, timeout=1)
 
     if not client.connect():
-        print(f"❌ Could not connect to port {port}")
+        print(f" Could not connect to port {port}")
         client.close()
         return False
 
-    print(f"✅ Connected to port {port}")
+    print(f" Connected to port {port}")
 
-    # Try reading the first few registers
     for register in range(0, 10):
         try:
             # Try reading holding registers
             response = client.read_holding_registers(register, 1, slave=slave_id)
             if not response.isError():
-                print(f"✅ Successfully read holding register {register}: {response.registers[0]}")
+                print(f" successfully read holding register {register}: {response.registers[0]}")
                 client.close()
                 return True
         except Exception:
@@ -32,13 +30,13 @@ def test_connection(port, baudrate=9600, slave_id=1):
             # Try reading input registers
             response = client.read_input_registers(register, 1, slave=slave_id)
             if not response.isError():
-                print(f"✅ Successfully read input register {register}: {response.registers[0]}")
+                print(f" Successfully read input register {register}: {response.registers[0]}")
                 client.close()
                 return True
         except Exception:
             pass
 
-    print(f"❌ Connected but couldn't read any registers with slave ID {slave_id}")
+    print(f" Connected but couldn't read any registers with slave ID {slave_id}")
     client.close()
     return False
 
@@ -48,7 +46,6 @@ def scan_for_device():
     for baudrate in BAUD_RATES:
         for slave_id in range(1, 16):  # Most Modbus devices use IDs 1-15
             if test_connection(port, baudrate, slave_id):
-                print(f"\n🎉 SUCCESS! Found device at:")
                 print(f"PORT: {port}")
                 print(f"BAUD RATE: {baudrate}")
                 print(f"SLAVE ID: {slave_id}")
@@ -76,15 +73,14 @@ def scan_for_device():
                     client.close()
                     return port, baudrate, slave_id
 
-    print("\n❌ No device found. Please check your connections and try again.")
+    print("\nNo device found. Please check your connections and try again.")
     return None, None, None
 
 if __name__ == "__main__":
-    print("🔍 Scanning for Modbus soil moisture sensor...")
     port, baudrate, slave_id = scan_for_device()
 
     if port:
-        print("\n📝 Configuration for your Sensor class:")
+        print("\n Configuration for your Sensor class:")
         print(f"""
 SERIAL_PORT = "{port}"
 BAUD_RATE = {baudrate}
