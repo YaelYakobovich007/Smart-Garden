@@ -6,6 +6,20 @@ from controller.hardware.valves.valve import Valve
 from controller.irrigation.irrigation_schedule import IrrigationSchedule
 
 class Plant:
+    """
+    Represents a single plant managed by the smart irrigation system.
+
+    Attributes:
+        plant_id (int): Unique identifier for the plant.
+        desired_moisture (float): Target soil moisture level for optimal plant health.
+        sensor (Sensor): Sensor object that measures soil moisture for this plant.
+        valve (Valve): Valve object that controls irrigation for this plant.
+        moisture_level (Optional[float]): Latest measured moisture level (None if not yet measured).
+        last_irrigation_time (Optional[datetime]): Timestamp of the last irrigation (None if never irrigated).
+        schedule (Optional[IrrigationSchedule]): Custom irrigation schedule for this plant (optional).
+        lat (float): Latitude coordinate of the plant’s location.
+        lon (float): Longitude coordinate of the plant’s location.
+    """
     def __init__(
         self,
         plant_id: int,
@@ -27,7 +41,17 @@ class Plant:
             
 
     def get_moisture(self) -> Optional[float]:
+        """
+        Reads and returns the current soil moisture level from the sensor.
+
+        Returns:
+            Optional[float]: Current soil moisture value, or None if unavailable.
+        """
         return self.sensor.read()
 
     def update_moisture(self) -> None:
+        """
+        Updates the plant's internal moisture_level attribute
+        with a new reading from the sensor.
+        """
         self.moisture_level = self.sensor.read()
