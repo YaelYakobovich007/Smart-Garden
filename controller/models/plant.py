@@ -11,7 +11,9 @@ class Plant:
         plant_id: int,
         desired_moisture: float,
         sensor: Sensor,
-        valve: Valve
+        valve: Valve,
+        plant_lat : float,
+        plant_lon : float
     ) -> None:
         self.plant_id: int = plant_id
         self.desired_moisture: float = desired_moisture
@@ -20,6 +22,8 @@ class Plant:
         self.moisture_level: Optional[float] = None
         self.last_irrigation_time: Optional[datetime] = None # chechk why it says optinal here 
         self.schedule: Optional[IrrigationSchedule] = None
+        self.lat : float = plant_lat
+        self.lon : float = plant_lon  
             
 
     def get_moisture(self) -> Optional[float]:

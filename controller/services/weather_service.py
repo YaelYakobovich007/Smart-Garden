@@ -39,19 +39,3 @@ class WeatherService:
 
         return False
         
-if __name__ == "__main__":
-    cities = {
-        "Haifa": (32.7940, 34.9896),
-        "Tel Aviv": (32.0853, 34.7818),
-        "London": (51.5074, -0.1278),
-        "New York": (40.7128, -74.0060)
-    }
-
-    weather = WeatherService()
-
-    for city, (lat, lon) in cities.items():
-        print(f"\nChecking weather for {city}...")
-        if weather.will_rain_today(lat, lon):
-            print(f"It will likely rain today in {city}.")
-        else:
-            print(f"No rain expected today in {city}.")

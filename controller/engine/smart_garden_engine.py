@@ -21,6 +21,8 @@ class SmartGardenEngine:
         plant_id: int,
         desired_moisture: float,
         schedule_data: Optional[List[Dict[str, str]]] = None,
+        plant_lat: float = 32.7940,
+        plant_lon: float = 34.9896,
         pipe_diameter: float = 1.0,
         flow_rate: float = 0.05,
         water_limit: float = 1.0
@@ -34,7 +36,7 @@ class SmartGardenEngine:
         valve = Valve(valve_id, pipe_diameter, water_limit, flow_rate,relay_controller=self.relay_controller, simulation_mode=True)
         sensor = Sensor(simulation_mode=True, modbus_id=sensor_id)
 
-        plant = Plant(plant_id, desired_moisture, sensor, valve)
+        plant = Plant(plant_id, desired_moisture, sensor, valve, plant_lat, plant_lon)
         self.plants[plant_id] = plant
 
         if schedule_data:

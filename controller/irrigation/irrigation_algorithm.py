@@ -2,16 +2,27 @@ from datetime import datetime
 import time
 from controller.dto.irrigation_result import IrrigationResult
 from controller.models.plant import Plant
+from controller.services.weather_service import WeatherService  
 
 class IrrigationAlgorithm:
     def __init__(self):
         self.water_per_pulse : int= 0.03     # Liter
         self.pause_between_pulses: int  = 10  #seconds
-
+        self.weather_service = WeatherService()  
+    
     def irrigate(self, plant: "Plant") -> IrrigationResult:
         current_moisture = plant.get_moisture()
         print(f"Initial moisture for plant {plant.plant_id}: {current_moisture}%")
-
+        
+        # Check for rain forecast
+        if self.weather_service.will_rain_today(plant.lat, plant.lon):
+            print(f"Skipping irrigation for {plant.plant_id} — rain expected today.")
+            return IrrigationResult(
+                status="skipped",
+                reason="rain_expected",
+                moisture=current_moisture
+            )
+        
         # Case 1: Overwatered — block and stop
         if self.is_overwatered(plant,current_moisture):
             plant.valve.block()
