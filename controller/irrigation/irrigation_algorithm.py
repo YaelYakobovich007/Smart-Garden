@@ -82,7 +82,7 @@ class IrrigationAlgorithm:
 
             print(f"Watering {plant.plant_id}... ({total_water:.2f}L so far)")
             plant.valve.request_open()
-            time.sleep(pulse_time)  # If your hardware is async, change to: await asyncio.sleep(pulse_time)
+            time.sleep(pulse_time)
             plant.valve.request_close()
 
             total_water += self.water_per_pulse
@@ -91,7 +91,7 @@ class IrrigationAlgorithm:
                 plant.sensor.update_simulated_value(5)  # 5% increase after each pulse
 
             time.sleep(
-                self.pause_between_pulses)  # If your hardware is async, change to: await asyncio.sleep(self.pause_between_pulses)
+                self.pause_between_pulses)
 
         final_moisture: float = await plant.get_moisture()
 
