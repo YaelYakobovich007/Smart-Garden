@@ -1,41 +1,44 @@
-from typing import Optional
+import asyncio
+from pymodbus.client import AsyncModbusSerialClient
+from pymodbus.exceptions import ModbusException
 
-try:
-    import serial
-except ImportError:
-    serial = None
+async def read_sensor():
+    client = AsyncModbusSerialClient(
+        port="COM3",        # Update if needed
+        baudrate=4800,
+        parity='N',
+        stopbits=1,
+        bytesize=8,
+        timeout=2,
+    )
 
-SERIAL_PORT: str = "/dev/ttyUSB0"
-BAUD_RATE: int = 9600
+    async with client as modbus_client:
+        if not modbus_client.connected:
+            print("Failed to connect.")
+            return
 
-class Sensor:
-    def __init__(self, sensor_id: int, plant_id: int, simulation_mode: bool = True, initial_moisture: float = 30.0) -> None:
-        self.sensor_id: int = sensor_id
-        self.plant_id: int = plant_id
-        self.simulation_mode: bool = simulation_mode
-        self.simulated_moisture: Optional[float] = initial_moisture if simulation_mode else None
-        self.ser:Optional[serial.Serial] = None
+        print("Connected. Reading sensor data...")
 
-        if not self.simulation_mode:
-            if serial is None:
-                raise ImportError("Missing 'pyserial' module. Install it using: pip install pyserial")
-            self.ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-
-    def read_moisture(self) -> Optional[float]:
-        if self.simulation_mode:
-            return self.simulated_moisture
-        return self.read_from_hardware()
-
-    def read_from_hardware(self) -> Optional[float]:
         try:
-            self.ser.write(b"READ\n")
-            raw_data = self.ser.readline().decode("utf-8").strip()
-            return float(raw_data)
-        except Exception as e:
-            print(f"Error reading sensor {self.sensor_id}: {e}")
-            return None
+            # Read 2 registers starting from address 0x0000
+            result = await modbus_client.read_input_registers(address=0x0000, count=2, slave=1)
 
-    def update_moisture(self, amount: float) -> None:
-        if self.simulation_mode and self.simulated_moisture is not None:
-            self.simulated_moisture = min(100.0, self.simulated_moisture + amount)
-            print(f" [SIMULATION] Sensor {self.sensor_id} moisture updated: {self.simulated_moisture}%")
+            if result.isError():
+                print(f"Modbus error: {result}")
+            else:
+                # Assuming register[0] = humidity, register[1] = temperature
+                humidity_raw = result.registers[0]
+                temperature_raw = result.registers[1]
+
+                temperature = temperature_raw / 10.0
+                humidity = humidity_raw / 10.0
+
+                print(f"Temperature: {temperature} °C")
+                print(f"Humidity: {humidity} %")
+
+        except ModbusException as e:
+            print(f"Modbus exception: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(read_sensor())
+
