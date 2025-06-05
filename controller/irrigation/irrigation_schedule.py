@@ -1,6 +1,4 @@
 import threading
-from controller.irrigation.irrigation_algorithm import IrrigationAlgorithm
-from controller.models.plant import Plant
 
 try:
     import schedule
@@ -8,6 +6,7 @@ except ImportError:
     print("The 'schedule' module is not installed. Install it using 'pip install schedule'.")
     raise
 from typing import List, Dict
+
 
 class IrrigationSchedule:
     """
@@ -22,7 +21,7 @@ class IrrigationSchedule:
         irrigation_algorithm (IrrigationAlgorithm): Algorithm to run when scheduled time is reached.
     """
 
-    def __init__(self, plant: Plant, schedule_data: List[Dict[str, str]], irrigation_algorithm: "IrrigationAlgorithm") -> None:
+    def __init__(self, plant: "Plant", schedule_data: List[Dict[str, str]], irrigation_algorithm: "IrrigationAlgorithm") -> None:
         """
         Initializes the irrigation schedule.
 
@@ -31,6 +30,9 @@ class IrrigationSchedule:
             schedule_data (List[Dict[str, str]]): A list of schedule dicts with "day" and "time" keys.
             irrigation_algorithm (IrrigationAlgorithm): The irrigation logic to invoke on schedule.
         """
+        from controller.models.plant import Plant
+
+        from controller.irrigation.irrigation_algorithm import IrrigationAlgorithm
         self.plant: Plant = plant
         self.schedule_data: List[Dict[str, str]] = schedule_data
         self.irrigation_algorithm: IrrigationAlgorithm = irrigation_algorithm

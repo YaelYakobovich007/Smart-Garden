@@ -34,24 +34,24 @@ class Plant:
         self.sensor: Sensor = sensor
         self.valve: Valve = valve
         self.moisture_level: Optional[float] = None
-        self.last_irrigation_time: Optional[datetime] = None # chechk why it says optinal here 
+        self.last_irrigation_time: Optional[datetime] = None
         self.schedule: Optional[IrrigationSchedule] = None
         self.lat : float = plant_lat
         self.lon : float = plant_lon  
             
 
-    def get_moisture(self) -> Optional[float]:
+    async def get_moisture(self) -> Optional[float]:
         """
         Reads and returns the current soil moisture level from the sensor.
 
         Returns:
             Optional[float]: Current soil moisture value, or None if unavailable.
         """
-        return self.sensor.read()
+        return await self.sensor.read()
 
-    def update_moisture(self) -> None:
+    async def update_moisture(self) -> None:
         """
         Updates the plant's internal moisture_level attribute
         with a new reading from the sensor.
         """
-        self.moisture_level = self.sensor.read()
+        self.moisture_level = await self.sensor.read()
