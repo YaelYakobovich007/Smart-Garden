@@ -10,6 +10,18 @@ DEFAULT_BAUDRATE = 9600
 REGISTER_START_ADDRESS = 0x0000  # Start register address for humidity
 
 class Sensor:
+    """
+    Represents a soil moisture and temperature sensor using Modbus RTU protocol.
+    Supports both simulation mode and real hardware communication.
+
+    Attributes:
+        simulation_mode (bool): If True, operates in simulated mode.
+        simulated_value (float): The moisture level used in simulation mode.
+        modbus_id (int): The Modbus slave address of the sensor.
+        port (str): Serial port for Modbus communication (e.g., '/dev/ttyUSB0').
+        baudrate (int): Baud rate (Speed of communication in bits per second) for Modbus communication.
+    """
+
     def __init__(
         self,
         simulation_mode=True,
@@ -25,6 +37,13 @@ class Sensor:
         self.baudrate = baudrate
 
     async def read(self):
+        """
+        Reads moisture (and temperature if not simulated) from the sensor.
+
+        Returns:
+            float | tuple | None: If in simulation mode, returns moisture (float).
+            Otherwise, returns (humidity, temperature) tuple or None on error.
+        """
         if self.simulation_mode:
             return self.simulated_value
         
@@ -32,6 +51,12 @@ class Sensor:
         
    
     async def _read_modbus_data(self):
+        """
+        Reads data from the physical Modbus sensor.
+
+        Returns:
+            tuple[float, float] | None: (humidity, temperature) in real units, or None on failure.
+        """
         client = AsyncModbusSerialClient(
             port=self.port,
             baudrate=self.baudrate,
@@ -61,7 +86,7 @@ class Sensor:
 
                 humidity = result.registers[0] / 10.0
                 temperature = result.registers[1] / 10.0
-                print(f"🌱 Sensor {self.modbus_id} - Humidity: {humidity}%, Temperature: {temperature}°C")
+                print(f"Sensor {self.modbus_id} - Humidity: {humidity}%, Temperature: {temperature}°C")
                 return humidity, temperature
             
             except ModbusException as e:
@@ -70,11 +95,23 @@ class Sensor:
             
 
     def update_simulated_value(self, amount):
+        """
+        Increases the simulated moisture value by the given amount, up to 100%.
+
+        Args:
+            amount (float): The moisture percentage to add.
+        """
         if self.simulation_mode:
             self.simulated_value = min(100.0, self.simulated_value + amount)  
-            print(f"🌱 [SIMULATION] Sensor moisture updated: {self.simulated_value}%")
+            print(f"[SIMULATION] Sensor moisture updated: {self.simulated_value}%")
 
     def generate_random_simulated_value(self):
+        """
+        Generates a random simulated moisture value between 20% and 80%.
+
+        Returns:
+            float: Simulated moisture value.
+        """
         return round(random.uniform(20.0, 80.0), 2)
  
 
