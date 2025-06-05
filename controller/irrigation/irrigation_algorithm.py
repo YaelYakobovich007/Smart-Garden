@@ -1,12 +1,12 @@
 from datetime import datetime
 import time
-from controller.irrigation.irrigation_result import IrrigationResult
+from controller.dto.irrigation_result import IrrigationResult
 from controller.models.plant import Plant
 
 class IrrigationAlgorithm:
     def __init__(self):
-        self.water_per_pulse = 0.03     # Liter
-        self.pause_between_pulses = 10  #seconds
+        self.water_per_pulse : int= 0.03     # Liter
+        self.pause_between_pulses: int  = 10  #seconds
 
     def irrigate(self, plant: "Plant") -> IrrigationResult:
         current_moisture = plant.get_moisture()
