@@ -6,7 +6,7 @@ from pymodbus.exceptions import ModbusException
 # Constants for Modbus communication
 DEFAULT_MODBUS_ID = 1
 DEFAULT_PORT = "/dev/ttyUSB0"
-DEFAULT_BAUDRATE = 9600
+DEFAULT_BAUDRATE = 4800  # Baud rate for Modbus communicatio
 REGISTER_START_ADDRESS = 0x0000  # Start register address for humidity
 
 class Sensor:
