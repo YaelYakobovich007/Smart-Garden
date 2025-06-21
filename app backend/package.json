@@ -1,0 +1,25 @@
+{
+  "name": "app-backend",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "setup-db": "node scripts/setup-database.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.5.0",
+    "google-auth-library": "^9.15.1",
+    "pg": "^8.16.2",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

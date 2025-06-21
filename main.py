@@ -1,16 +1,33 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import asyncio
+from controller.engine.smart_garden_engine import SmartGardenEngine
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+async def main():
+    engine = SmartGardenEngine(total_valves=2, total_sensors=2)
+    engine.add_plant(
+        plant_id=1,
+        desired_moisture=80.0,
+        pipe_diameter=10,
+        flow_rate=0.4,
+        water_limit=5.0,
+        plant_lat=32.7940,
+        plant_lon=34.9896
+    )
+
+    engine.add_plant(
+        plant_id=2,
+        desired_moisture=80.0,
+        pipe_diameter=15,
+        flow_rate=1.0,
+        water_limit=5.0,
+        plant_lat=51.5074,
+        plant_lon=-0.1278
+    )
+
+    await engine.water_plant(2)
+    await engine.water_plant(1)
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+if __name__ == "__main__":
+    asyncio.run(main())
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/

@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 node_modules/
 .env
+<<<<<<< HEAD
 .vscode/
 
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
@@ -43,3 +44,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+=======
+.vscode/
+>>>>>>> 89e73555bb682622347d553d8259c3797bfb36d4
