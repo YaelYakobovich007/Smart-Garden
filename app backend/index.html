@@ -29,7 +29,11 @@
   <!-- GOOGLE LOGIN -->
   <h2>🔓 Or continue with Google</h2>
   <div id="g_id_onload"
+<<<<<<< HEAD
        data-client_id="883722498169-aqp6oi2tmplgecpnus3acde813hp6emg.apps.googleusercontent.com"
+=======
+       data-client_id="PASTE_YOUR_CLIENT_ID_HERE"
+>>>>>>> building_Login_screen
        data-callback="handleGoogleLogin">
   </div>
 
@@ -49,7 +53,10 @@
 
     socket.onopen = () => {
       log('✅ Connected to server');
+<<<<<<< HEAD
       socket.send(JSON.stringify({ type: 'HELLO_USER' }));
+=======
+>>>>>>> building_Login_screen
     };
 
     socket.onmessage = (event) => {
@@ -101,13 +108,23 @@
 
     function handleGoogleLogin(response) {
       const idToken = response.credential;
+<<<<<<< HEAD
+=======
+
+>>>>>>> building_Login_screen
       socket.send(JSON.stringify({
         type: 'LOGIN_GOOGLE',
         googleToken: idToken
       }));
+<<<<<<< HEAD
       log('📤 Sent Google login token to server');
     }
     window.handleGoogleLogin = handleGoogleLogin;
+=======
+
+      log('📤 Sent Google login token to server');
+    }
+>>>>>>> building_Login_screen
 
     function log(msg) {
       document.getElementById('log').textContent += msg + '\n';

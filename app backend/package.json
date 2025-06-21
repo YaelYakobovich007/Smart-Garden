@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
+<<<<<<< HEAD
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js",
     "dev": "nodemon app.js",
     "setup-db": "node scripts/setup-database.js"
+=======
+    "test": "echo \"Error: no test specified\" && exit 1"
+>>>>>>> building_Login_screen
   },
   "keywords": [],
   "author": "",
@@ -16,6 +20,7 @@
     "bcrypt": "^5.1.1",
     "dotenv": "^16.5.0",
     "google-auth-library": "^9.15.1",
+<<<<<<< HEAD
     "pg": "^8.16.2",
     "ws": "^8.18.1"
   },
@@ -23,3 +28,8 @@
     "nodemon": "^3.1.10"
   }
 }
+=======
+    "ws": "^8.18.1"
+  }
+}
+>>>>>>> building_Login_screen
