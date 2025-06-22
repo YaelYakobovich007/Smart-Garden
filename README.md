@@ -43,10 +43,8 @@ The Smart Garden Project is designed to simplify gardening with automated irriga
 -  **Backend**: Node.js + Express and Python for sensor integration.  
 -  **Database**: MySQL for storing sensor and user data.  
 -  **Frontend**: React Native for mobile app development.  
-<<<<<<< HEAD
 -  **APIs**: OpenWeatherMap and Plant.id for weather and plant analysis.  
-=======
--  **APIs**: OpenWeatherMap and Plant.id for weather and plant analysis.
+
 
 ## 🧩 **System Architecture & Components**
 
@@ -87,8 +85,6 @@ This section describes the main components of the Smart Garden system, covering 
 - **SmartGardenEngine**:
     - Central engine managing plant registration, sensor/valve allocation, and invoking irrigation logic.
     - Exposes methods to add/remove plants, start async watering, update all moisture values, and check available resources.
->>>>>>> 89e73555bb682622347d553d8259c3797bfb36d4
-
 
 
 <br/>
