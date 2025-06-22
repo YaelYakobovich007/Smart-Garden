@@ -1,7 +1,9 @@
 const { handleAuthMessage } = require('../controllers/authController');
 const { handlePlantMessage } = require('../controllers/plantController');
+const { handleGetWeather } = require('../controllers/weatherController');
 const { sendError, sendSuccess } = require('../utils/wsResponses');
 const {removeUserSession} = require('../models/userSessions');
+
 
 function handleUserSocket(ws) {
   console.log('New USER connected');
@@ -18,9 +20,11 @@ function handleUserSocket(ws) {
     } catch (e) {
       return sendError(ws, 'ERROR', 'Invalid JSON format');
     }
-
+    
     if (['REGISTER', 'LOGIN', 'LOGIN_GOOGLE'].includes(data.type)) {
       handleAuthMessage(data, ws);
+    } else if (data.type === 'GET_WEATHER') {
+      handleGetWeather(ws); 
     } else {
       handlePlantMessage(data, ws);
     }

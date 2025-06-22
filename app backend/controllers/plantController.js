@@ -31,14 +31,22 @@ function handlePlantMessage(data, ws) {
 }
 
 function handleAddPlant(data, ws, email) {
-    const { plantName, desiredMoisture, irrigationSchedule } = data;
-  
-    if (!plantName || desiredMoisture == null || !irrigationSchedule) {
-      sendError(ws, 'ADD_PLANT_FAIL', 'Missing plant data');
+    const { plantName, desiredMoisture, waterLimit, irrigationSchedule, plantType } = data;
+    
+    if (!plantName || desiredMoisture == null || waterLimit == null) {
+      sendError(ws, 'ADD_PLANT_FAIL', 'Missing required plant data');
       return;
     }
-  
-    const result = addPlant(email, { plantName, desiredMoisture, irrigationSchedule });
+
+    const plantData = {
+      name: plantName,
+      desiredMoisture,
+      waterLimit,
+      irrigationSchedule: irrigationSchedule || null,
+      plantType: plantType || null
+    };
+
+    const result = addPlant(email, plantData);
     if (result.error === 'DUPLICATE_NAME') {
       sendError(ws, 'ADD_PLANT_FAIL', 'You already have a plant with this name');
       return;
