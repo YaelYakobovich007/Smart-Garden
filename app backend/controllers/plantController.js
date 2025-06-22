@@ -1,5 +1,5 @@
 // plantController.js
-const { addPlant, getPlants } = require('../models/plantModel');
+const { addPlant, getPlants, getPlantByName } = require('../models/plantModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getPiSocket } = require('../sockets/piSocket');
 const { getEmailBySocket} = require('../models/userSessions');
@@ -7,7 +7,8 @@ const { getEmailBySocket} = require('../models/userSessions');
 
 const plantHandlers = {
   ADD_PLANT: handleAddPlant,
-  GET_MY_PLANTS: handleGetMyPlants
+  GET_MY_PLANTS: handleGetMyPlants,
+  GET_PLANT_DETAILS: handleGetPlantDetails
 };
 
 function handlePlantMessage(data, ws) {
@@ -30,14 +31,14 @@ function handlePlantMessage(data, ws) {
 }
 
 function handleAddPlant(data, ws, email) {
-    const { name, desiredMoisture, irrigationSchedule } = data;
+    const { plantName, desiredMoisture, irrigationSchedule } = data;
   
-    if (!name || desiredMoisture == null || !irrigationSchedule) {
+    if (!plantName || desiredMoisture == null || !irrigationSchedule) {
       sendError(ws, 'ADD_PLANT_FAIL', 'Missing plant data');
       return;
     }
   
-    const result = addPlant(email, { name, desiredMoisture, irrigationSchedule });
+    const result = addPlant(email, { plantName, desiredMoisture, irrigationSchedule });
     if (result.error === 'DUPLICATE_NAME') {
       sendError(ws, 'ADD_PLANT_FAIL', 'You already have a plant with this name');
       return;
@@ -47,7 +48,7 @@ function handleAddPlant(data, ws, email) {
       return;
     }
 
-    sendSuccess(ws, 'ADD_PLANT_SUCCESS', { plant: result.plant });
+    sendSuccess(ws, 'ADD_PLANT_SUCCESS', { message: 'Plant added successfully' });
     
     //const piSocket = getPiSocket();
 
@@ -56,6 +57,24 @@ function handleAddPlant(data, ws, email) {
     //} else {
       //console.error('Pi socket not connected, unable to send new plant data');
     //}
+}
+
+function handleGetPlantDetails(data, ws, email) {
+  const { plantName } = data;
+  if (!plantName) {
+    sendError(ws, 'GET_PLANT_DETAILS_FAIL', 'Missing plantName');
+    return;
+  }
+  const plant = getPlantByName(email, plantName);
+  if (!plant) {
+    sendError(ws, 'GET_PLANT_DETAILS_FAIL', 'Plant not found');
+    return;
+  }
+
+  const simulatedMoisture = Math.floor(Math.random() * 61) + 20;
+  const plantWithMoisture = { ...plant, currentMoisture: simulatedMoisture };
+
+  sendSuccess(ws, 'PLANT_DETAILS', { plant: plantWithMoisture });
 }
 
 function handleGetMyPlants(data, ws, email) {
