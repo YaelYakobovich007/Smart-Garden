@@ -18,26 +18,10 @@ export const styles = StyleSheet.create({
         paddingTop: 80,
         paddingBottom: 20,
     },
-    titleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
     headerTitle: {
         fontSize: 28,
         fontWeight: 'bold',
         color: '#333',
-    },
-    branchImage: {
-        position: 'absolute',
-        top: 35,
-        right: -15,
-        width: 90,
-        height: 110,
-        resizeMode: 'contain',
-        transform: [{ scaleX: -1 }, { scale: 3 }]
-
-    //transform: [{ rotate: '15deg' }],
     },
     headerSubtitle: {
         fontSize: 14,
@@ -55,7 +39,7 @@ export const styles = StyleSheet.create({
             width: 0,
             height: 2,
         },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
     },
@@ -67,7 +51,11 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E0E0E0',
         paddingHorizontal: 15,
-        marginBottom: 16,
+        marginBottom: 8,
+    },
+    inputError: {
+        borderColor: '#D32F2F',
+        borderWidth: 2,
     },
     inputIcon: {
         marginRight: 10,
@@ -78,6 +66,40 @@ export const styles = StyleSheet.create({
         color: '#333',
         fontSize: 16,
     },
+    pickerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(52, 168, 83, 0.1)',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        paddingHorizontal: 15,
+        marginBottom: 8,
+        minHeight: 50,
+    },
+    pickerWrapper: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    pickerDisplayText: {
+        fontSize: 16,
+        color: '#333',
+        flex: 1,
+    },
+    pickerPlaceholder: {
+        color: '#888',
+    },
+    pickerIcon: {
+        marginLeft: 8,
+    },
+    fieldError: {
+        color: '#D32F2F',
+        fontSize: 12,
+        marginBottom: 8,
+        marginLeft: 5,
+    },
     registerButton: {
         backgroundColor: '#34A853',
         paddingVertical: 15,
@@ -85,21 +107,14 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 10,
     },
+    disabledButton: {
+        backgroundColor: '#CCCCCC',
+        opacity: 0.6,
+    },
     registerButtonText: {
         color: '#fff',
         fontWeight: 'bold',
         fontSize: 16,
-    },
-    message: {
-        marginTop: 16,
-        color: '#D32F2F',
-        fontWeight: 'bold',
-        fontSize: 14,
-        textAlign: 'center',
-    },
-    socialContainer: {
-        alignItems: 'center',
-        marginTop: 20,
     },
     separatorContainer: {
         flexDirection: 'row',
@@ -134,5 +149,50 @@ export const styles = StyleSheet.create({
         color: '#333',
         fontWeight: '600',
         fontSize: 16,
+    },
+    message: {
+        marginTop: 16,
+        color: '#D32F2F',
+        fontWeight: 'bold',
+        fontSize: 14,
+        textAlign: 'center',
+    },
+    branchImage: {
+        position: 'absolute',
+        top: 35,
+        right: -15,
+        width: 90,
+        height: 110,
+        resizeMode: 'contain',
+        transform: [{ scaleX: -1 }, { scale: 3 }]
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#ffffff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingBottom: 20,
+        maxHeight: '70%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2c3e50',
+    },
+    modalPicker: {
+        height: 200,
     },
 }); 

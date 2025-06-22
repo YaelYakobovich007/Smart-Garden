@@ -1,29 +1,37 @@
 {
   "expo": {
-    "name": "client-reactNative",
-    "slug": "client-reactNative",
+    "name": "Smart Garden",
+    "slug": "smart-garden",
+    "owner": "yael.y",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "smartgarden",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "GOOGLE_CLIENT_ID": "883722498169-aqp6oi2tmplgecpnus3acde813hp6emg.apps.googleusercontent.com"
     }
   }
 }

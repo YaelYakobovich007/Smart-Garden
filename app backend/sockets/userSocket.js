@@ -1,11 +1,14 @@
 const { handleAuthMessage } = require('../controllers/authController');
 const { handlePlantMessage } = require('../controllers/plantController');
-const { sendError } = require('../utils/wsResponses');
+const { sendError, sendSuccess } = require('../utils/wsResponses');
 const {removeUserSession} = require('../models/userSessions');
 
 function handleUserSocket(ws) {
   console.log('New USER connected');
   ws.clientType = 'USER';
+  
+  // Send confirmation that user connection is established
+  sendSuccess(ws, 'CONNECTION_SUCCESS', 'User connection established');
 
   ws.on('message', (msg) => {
     let data;

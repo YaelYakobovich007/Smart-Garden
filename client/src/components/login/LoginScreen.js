@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Text,
   View,
@@ -10,16 +10,18 @@ import {
   Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import * as AuthSession from 'expo-auth-session';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useAuthRequest } from 'expo-auth-session/providers/google';
 
 import { styles } from './styles';
 import { connectAndSend } from '../../services/authService';
+import websocketService from '../../services/websocketService';
 import Logo from '../../../assets/images/Smart_Garden_Logo.png';
 import GoogleLogo from '../../../assets/images/Google_Logo.png';
+import Constants from 'expo-constants';
 
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'; // TODO: Replace with your client ID
+const GOOGLE_CLIENT_ID = Constants.expoConfig.extra.GOOGLE_CLIENT_ID;
 
 const LoginScreen = () => {
   // --- STATE MANAGEMENT ---
@@ -29,13 +31,69 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [secureTextEntry, setSecureTextEntry] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const [emailError, setEmailError] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
+  const [emailErrorMessage, setEmailErrorMessage] = useState('');
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
+
+  // Google Auth Request - clean approach
+  const [request, response, promptAsync] = useAuthRequest({
+    clientId: GOOGLE_CLIENT_ID,
+    scopes: ['profile', 'email'],
+  });
+
+  // --- CONNECTION STATUS ---
+  useEffect(() => {
+    // Check initial connection status
+    setIsConnected(websocketService.isConnected());
+    
+    // Listen for connection changes
+    const handleConnectionChange = (connected) => {
+      setIsConnected(connected);
+      if (!connected) {
+        setMessage('Connection lost. Please check your network.');
+      }
+    };
+    
+    websocketService.onConnectionChange(handleConnectionChange);
+  }, []);
+
+  // Handle Google Auth Response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { access_token } = response.params;
+      if (access_token) {
+        connectAndSend({ type: 'LOGIN_GOOGLE', googleToken: access_token }, handleAuthResponse, handleConnectionError);
+      }
+    } else if (response?.type === 'error') {
+      setMessage('Google login was cancelled or failed.');
+    }
+  }, [response]);
+
+  const handleEmailChange = (text) => {
+    setEmail(text);
+    if (emailError) {
+      setEmailError(false);
+      setEmailErrorMessage('');
+    }
+  };
+
+  const handlePasswordChange = (text) => {
+    setPassword(text);
+    if (passwordError) {
+      setPasswordError(false);
+      setPasswordErrorMessage('');
+    }
+  };
 
   // --- AUTHENTICATION LOGIC ---
   // Handles responses from the backend after an auth attempt
   const handleAuthResponse = (data) => {
     if (data.type === 'LOGIN_SUCCESS') {
       setMessage('Login successful!');
-      // TODO: Navigate to the main app screen
+      // Navigate to the main app screen
+      navigation.navigate('Main');
     } else if (data.type === 'LOGIN_FAIL') {
       setMessage(data.reason || 'Login failed.');
     }
@@ -43,40 +101,53 @@ const LoginScreen = () => {
 
   // Handles any WebSocket connection errors
   const handleConnectionError = () => {
-      setMessage('Connection error.');
+      setMessage('Connection error. Please try again.');
   }
 
   // Validates inputs and sends login request to the backend
   const handleLogin = () => {
     setMessage('');
-    if (!email || !password) {
-      setMessage('Please enter both email and password.');
+    let hasError = false;
+
+    // Only validate empty fields locally
+    if (!email.trim()) {
+      setEmailError(true);
+      setEmailErrorMessage('Email field is required');
+      hasError = true;
+    }
+
+    if (!password.trim()) {
+      setPasswordError(true);
+      setPasswordErrorMessage('Password field is required');
+      hasError = true;
+    }
+
+    if (hasError) {
       return;
     }
+
+    if (!isConnected) {
+      setMessage('Not connected to server. Please wait...');
+      return;
+    }
+
+    // Send to server for validation and authentication
     connectAndSend({ type: 'LOGIN', email, password }, handleAuthResponse, handleConnectionError);
   };
 
-  // Initiates Google sign-in flow and sends the token to the backend
+  // Clean Google sign-in flow using useAuthRequest
   const handleGoogleLogin = async () => {
     setMessage('');
+    if (!isConnected) {
+      setMessage('Not connected to server. Please wait...');
+      return;
+    }
+    
     try {
-      const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
-      const result = await AuthSession.startAsync({
-        authUrl:
-          `https://accounts.google.com/o/oauth2/v2/auth?` +
-          `client_id=${GOOGLE_CLIENT_ID}` +
-          `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-          `&response_type=token` +
-          `&scope=profile%20email`,
-      });
-
-      if (result.type === 'success' && result.params.access_token) {
-        connectAndSend({ type: 'LOGIN_GOOGLE', googleToken: result.params.access_token }, handleAuthResponse, handleConnectionError);
-      } else {
-        setMessage('Google login was cancelled or failed.');
-      }
+      await promptAsync({ useProxy: true });
     } catch (error) {
-        setMessage('An error occurred during Google login.');
+      console.error('Google login error:', error);
+      setMessage('An error occurred during Google login.');
     }
   };
 
@@ -99,39 +170,51 @@ const LoginScreen = () => {
             <Text style={styles.welcomeTitle}>Welcome</Text>
             <Text style={styles.welcomeSubtitle}>Sign in to your garden</Text>
 
-            <View style={styles.inputContainer}>
-              <Feather name="mail" size={20} color="#888" style={styles.inputIcon} />
+            <View style={[
+              styles.inputContainer, 
+              emailError && styles.inputError
+            ]}>
+              <Feather name="mail" size={20} color={emailError ? "#D32F2F" : "#888"} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Email address"
                 placeholderTextColor="#888"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={handleEmailChange}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
             </View>
+            {emailErrorMessage ? <Text style={styles.fieldError}>{emailErrorMessage}</Text> : null}
 
-            <View style={styles.inputContainer}>
-                <Feather name="lock" size={20} color="#888" style={styles.inputIcon} />
+            <View style={[
+              styles.inputContainer, 
+              passwordError && styles.inputError
+            ]}>
+                <Feather name="lock" size={20} color={passwordError ? "#D32F2F" : "#888"} style={styles.inputIcon} />
                 <TextInput
                     style={styles.input}
                     placeholder="Password"
                     placeholderTextColor="#888"
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={handlePasswordChange}
                     secureTextEntry={secureTextEntry}
                 />
                 <TouchableOpacity onPress={() => setSecureTextEntry(!secureTextEntry)}>
-                    <Feather name={secureTextEntry ? 'eye-off' : 'eye'} size={20} color="#888" />
+                    <Feather name={secureTextEntry ? 'eye-off' : 'eye'} size={20} color={passwordError ? "#D32F2F" : "#888"} />
                 </TouchableOpacity>
             </View>
+            {passwordErrorMessage ? <Text style={styles.fieldError}>{passwordErrorMessage}</Text> : null}
 
             <TouchableOpacity>
                 <Text style={styles.forgotPassword}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.signInButton} onPress={handleLogin}>
+            <TouchableOpacity 
+              style={[styles.signInButton, !isConnected && styles.disabledButton]} 
+              onPress={handleLogin}
+              disabled={!isConnected}
+            >
                 <Text style={styles.signInButtonText}>Sign In</Text>
             </TouchableOpacity>
 
@@ -141,7 +224,11 @@ const LoginScreen = () => {
                 <View style={styles.separatorLine} />
             </View>
 
-            <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
+            <TouchableOpacity 
+              style={[styles.googleButton, !isConnected && styles.disabledButton]} 
+              onPress={handleGoogleLogin}
+              disabled={!isConnected || !request}
+            >
                 <Image source={GoogleLogo} style={styles.googleIcon} />
                 <Text style={styles.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
