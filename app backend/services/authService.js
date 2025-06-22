@@ -2,9 +2,9 @@
 const bcrypt = require('bcrypt');
 const userModel = require('../models/userModel');
 
-async function register(email, password) {
+async function register(email, password, fullName, country, city) {
   const hashed = await bcrypt.hash(password, 10);
-  return userModel.createUser(email, hashed);
+  return userModel.createUser(email, hashed, fullName, country, city);
 }
 
 async function login(email, password) {

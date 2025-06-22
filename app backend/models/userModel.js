@@ -1,8 +1,8 @@
 const users = new Map()
 
-function createUser(email, hashedPassword) {
+function createUser(email, hashedPassword, fullName, country, city) {
     if (users.has(email)) return false;
-    users.set(email, { email, password: hashedPassword });
+    users.set(email, { email, password: hashedPassword, fullName, country, city });
     return true;
   }
   
