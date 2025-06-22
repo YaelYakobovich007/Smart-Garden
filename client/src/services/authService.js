@@ -1,18 +1,19 @@
-const ws = new WebSocket('ws://172.25.224.1:3000');
+import websocketService from './websocketService';
 
 export const connectAndSend = (payload, onMessage, onError) => {
-  const handleMessage = (e) => {
-    const data = JSON.parse(e.data);
+  // Register message handler for this specific request
+  const messageHandler = (data) => {
     onMessage(data);
   };
 
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    ws.onopen = () => {
-        ws.send(JSON.stringify(payload));
-    }
-    ws.onmessage = handleMessage;
-    ws.onerror = onError;
-  } else {
-    ws.send(JSON.stringify(payload));
-  }
+  // Register handlers for common auth response types
+  websocketService.onMessage('LOGIN_SUCCESS', messageHandler);
+  websocketService.onMessage('LOGIN_FAIL', messageHandler);
+  websocketService.onMessage('REGISTER_SUCCESS', messageHandler);
+  websocketService.onMessage('REGISTER_FAIL', messageHandler);
+
+  // Send the payload
+  websocketService.send(payload);
 }; 
+
+

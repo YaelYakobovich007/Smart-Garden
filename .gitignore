@@ -4,10 +4,7 @@ __pycache__/
 *.pyo
 node_modules/
 .env
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> building_Login_screen
+
 .vscode/
 
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
@@ -47,9 +44,4 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-<<<<<<< HEAD
-=======
-.vscode/
->>>>>>> 89e73555bb682622347d553d8259c3797bfb36d4
-=======
->>>>>>> building_Login_screen
+

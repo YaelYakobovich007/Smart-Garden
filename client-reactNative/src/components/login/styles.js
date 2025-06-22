@@ -18,7 +18,7 @@ export const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 32,
         fontWeight: 'bold',
-        color: '#34A853',
+        color: '#333',
     },
     headerSubtitle: {
         fontSize: 16,
@@ -51,18 +51,6 @@ export const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 24,
     },
-    connectionStatus: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        alignSelf: 'center',
-        marginBottom: 16,
-    },
-    connectionStatusText: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-        fontSize: 12,
-    },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -71,11 +59,7 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E0E0E0',
         paddingHorizontal: 15,
-        marginBottom: 8,
-    },
-    inputError: {
-        borderColor: '#D32F2F',
-        borderWidth: 2,
+        marginBottom: 16,
     },
     inputIcon: {
         marginRight: 10,
@@ -85,12 +69,6 @@ export const styles = StyleSheet.create({
         height: 50,
         color: '#333',
         fontSize: 16,
-    },
-    fieldError: {
-        color: '#D32F2F',
-        fontSize: 12,
-        marginBottom: 8,
-        marginLeft: 5,
     },
     forgotPassword: {
         color: '#2E8B57',
@@ -103,10 +81,6 @@ export const styles = StyleSheet.create({
         paddingVertical: 15,
         borderRadius: 10,
         alignItems: 'center',
-    },
-    disabledButton: {
-        backgroundColor: '#CCCCCC',
-        opacity: 0.6,
     },
     signInButtonText: {
         color: '#fff',
