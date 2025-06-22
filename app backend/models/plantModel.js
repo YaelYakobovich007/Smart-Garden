@@ -1,21 +1,38 @@
+const hardwarePool = require('./hardwarePool');
+
+// This module manages plant data storage and operations
+// It uses in-memory storage for simplicity, but can be replaced with a database in production
 const plantStorage = new Map(); // Map<email, Array<Plant>>
 const plantIdIndex = new Map(); // Map<plantId, { plant, email }>
 
 function addPlant(email, plantData) {
   const userPlants = plantStorage.get(email) || [];
+  if (userPlants.some(plant => plant.name === plantData.name)) {
+    // Check for duplicate plant name
+    return { error: 'DUPLICATE_NAME' };
+  }
+
+  const sensorId = hardwarePool.assignSensor();
+  const valveId = hardwarePool.assignValve();
+
+  if (!sensorId || !valveId) {
+    return { error: 'NO_HARDWARE' };
+  }
 
   const newPlant = {
     id: Date.now(),
-    sensorId: null,
-    valveId: null,
-    ...plantData
+    sensorId,
+    valveId,
+    name: plantData.name,
+    desiredMoisture: plantData.desiredMoisture,
+    irrigationSchedule: plantData.irrigationSchedule
   };
 
   userPlants.push(newPlant);
   plantStorage.set(email, userPlants);
   plantIdIndex.set(newPlant.id, { plant: newPlant, email });
 
-  return newPlant;
+  return { plant: newPlant };
 }
 
 function assignSensor(plantId, sensorId) {

@@ -4,6 +4,7 @@ const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getPiSocket } = require('../sockets/piSocket');
 const { getEmailBySocket} = require('../models/userSessions');
 
+
 const plantHandlers = {
   ADD_PLANT: handleAddPlant,
   GET_MY_PLANTS: handleGetMyPlants
@@ -29,24 +30,32 @@ function handlePlantMessage(data, ws) {
 }
 
 function handleAddPlant(data, ws, email) {
-    const {name, idealMoisture } = data;
+    const { name, desiredMoisture, irrigationSchedule } = data;
   
-    if (!name || idealMoisture == null) {
+    if (!name || desiredMoisture == null || !irrigationSchedule) {
       sendError(ws, 'ADD_PLANT_FAIL', 'Missing plant data');
       return;
     }
   
-    const plant = addPlant(email, { name, idealMoisture });
-    
-    sendSuccess(ws, 'ADD_PLANT_SUCCESS', { plant });
-    
-    const piSocket = getPiSocket();
-
-    if (piSocket) {
-      piSocket.send(JSON.stringify({type: 'REQUEST_SENSOR', plantId: plant.id, needValve: true }));
-    } else {
-      console.error('Pi socket not connected, unable to send new plant data');
+    const result = addPlant(email, { name, desiredMoisture, irrigationSchedule });
+    if (result.error === 'DUPLICATE_NAME') {
+      sendError(ws, 'ADD_PLANT_FAIL', 'You already have a plant with this name');
+      return;
     }
+    if (result.error === 'NO_HARDWARE') {
+      sendError(ws, 'ADD_PLANT_FAIL', 'No available hardware for this plant');
+      return;
+    }
+
+    sendSuccess(ws, 'ADD_PLANT_SUCCESS', { plant: result.plant });
+    
+    //const piSocket = getPiSocket();
+
+    //if (piSocket) {
+      //piSocket.send(JSON.stringify({type: 'REQUEST_SENSOR', plantId: plant.id, needValve: true }));
+    //} else {
+      //console.error('Pi socket not connected, unable to send new plant data');
+    //}
 }
 
 function handleGetMyPlants(data, ws, email) {
