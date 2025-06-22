@@ -35,6 +35,16 @@ function addPlant(email, plantData) {
   return { plant: newPlant };
 }
 
+function getPlantById(plantId) {
+  const record = plantIdIndex.get(plantId);
+  return record ? record.plant : null;
+}
+
+function getPlantByName(email, plantName) {
+  const userPlants = plantStorage.get(email) || [];
+  return userPlants.find(plant => plant.name === plantName) || null;
+}
+
 function assignSensor(plantId, sensorId) {
   const record = plantIdIndex.get(plantId);
   if (!record) return null;
@@ -59,5 +69,7 @@ module.exports = {
   addPlant,
   getPlants,
   assignSensor,
-  assignValve
+  assignValve,
+  getPlantById,
+  getPlantByName
 };
