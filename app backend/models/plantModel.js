@@ -25,9 +25,12 @@ function addPlant(email, plantData) {
     valveId,
     name: plantData.name,
     desiredMoisture: plantData.desiredMoisture,
-    irrigationSchedule: plantData.irrigationSchedule
+    waterLimit: plantData.waterLimit,
+    irrigationSchedule: plantData.irrigationSchedule || null,
+    plantType: plantData.plantType || null
   };
 
+  // Add the new plant to the user's list
   userPlants.push(newPlant);
   plantStorage.set(email, userPlants);
   plantIdIndex.set(newPlant.id, { plant: newPlant, email });
