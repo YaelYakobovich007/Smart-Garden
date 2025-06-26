@@ -59,7 +59,7 @@ async function handleLogin(data, ws) {
 
     if (user) {
       addUserSession(ws, user.email);
-      return sendSuccess(ws, 'LOGIN_SUCCESS', { userId: user.email });
+      return sendSuccess(ws, 'LOGIN_SUCCESS', { userId: user.id, email: user.email, name: user.full_name });
     } else {
       return sendError(ws, 'LOGIN_FAIL', 'Invalid email or password');
     }
@@ -79,12 +79,12 @@ async function handleGoogleLogin(data, ws) {
     let user = await userModel.getUser(userData.email);
 
     if (!user) {
-      await userModel.createUser(userData.email, null); // No password needed for Google login
+      await userModel.createUser(userData.email, null, userData.name, null, null);
       user = await userModel.getUser(userData.email);
     }
 
     addUserSession(ws, user.email);
-    return sendSuccess(ws, 'LOGIN_SUCCESS', {userId: userData.email, name: userData.name,});
+    return sendSuccess(ws, 'LOGIN_SUCCESS', { userId: user.id, email: user.email, name: user.full_name });
   } catch (err) {
     console.error('Google login failed:', err);
     return sendError(ws, 'LOGIN_FAIL', 'Google authentication failed');
