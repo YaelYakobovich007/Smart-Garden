@@ -6,6 +6,7 @@ import LoginScreen from './src/components/login/LoginScreen';
 import RegisterScreen from './src/components/register/RegisterScreen';
 import MainScreen from './src/components/main/MainScreen';
 import PlantDetail from './src/components/main/PlantDetail/PlantDetail';
+import AddPlant from './src/components/main/AddPlant/AddPlant';
 import websocketService from './src/services/websocketService';
 
 const Stack = createNativeStackNavigator();
@@ -17,12 +18,12 @@ export default function App() {
   useEffect(() => {
     // Establish WebSocket connection as soon as the app loads
     websocketService.connect();
-    
+
     // Listen for connection status changes
     websocketService.onConnectionChange((connected) => {
       console.log('WebSocket connection status:', connected ? 'Connected' : 'Disconnected');
       setIsConnected(connected);
-      
+
       // Navigate to main screen when connection is successful
       if (connected && navigationRef.current) {
         navigationRef.current.navigate('Main');
@@ -32,7 +33,7 @@ export default function App() {
 
   return (
     <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator 
+      <Stack.Navigator
         screenOptions={{ headerShown: false }}
         initialRouteName="Login"
       >
@@ -40,6 +41,7 @@ export default function App() {
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Main" component={MainScreen} />
         <Stack.Screen name="PlantDetail" component={PlantDetail} />
+        <Stack.Screen name="AddPlant" component={AddPlant} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -96,13 +96,13 @@ async function handleGetMyPlants(data, ws, email) {
   // Get user to get userId
   const user = await getUser(email);
   if (!user) {
-    return sendError(ws, 'MY_PLANTS_FAIL', 'User not found');
+    return sendError(ws, 'GET_MY_PLANTS_FAIL', 'User not found');
   }
 
   const plants = await getPlants(user.id);
-  sendSuccess(ws, 'MY_PLANTS', { plants });
+  sendSuccess(ws, 'GET_MY_PLANTS_RESPONSE', { plants });
 }
 
 module.exports = {
-  handlePlantMessage 
+  handlePlantMessage
 }; 
