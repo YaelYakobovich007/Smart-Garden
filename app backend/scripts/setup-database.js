@@ -2,21 +2,21 @@ const { pool } = require('../config/database');
 
 async function setupDatabase() {
     try {
-        console.log('🔄 Creating database tables...');
+        console.log('Creating database tables...');
 
         // Users table
         await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
-        password_hash VARCHAR(255),
-        name VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        last_login TIMESTAMP,
-        is_active BOOLEAN DEFAULT TRUE
+        password VARCHAR(255),
+        full_name VARCHAR(255),
+        country VARCHAR(100) NOT NULL,
+        city VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-        console.log('✅ Users table created');
+        console.log('Users table created');
 
         // Create index on email for faster lookups
         await pool.query(`
@@ -26,21 +26,22 @@ async function setupDatabase() {
         // Plants table
         await pool.query(`
       CREATE TABLE IF NOT EXISTS plants (
-        id SERIAL PRIMARY KEY,
+        plant_id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         name VARCHAR(255) NOT NULL,
         ideal_moisture DECIMAL(3,2),
+        water_limit DECIMAL(5,2) NOT NULL,
+        irrigation_schedule VARCHAR(255),
+        plant_type VARCHAR(100),
         sensor_id VARCHAR(100),
         valve_id VARCHAR(100),
-        plant_type VARCHAR(100),
-        location VARCHAR(255),
-        sensor_data JSONB, -- Flexible sensor configuration
+        last_watered TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-        console.log('✅ Plants table created');
+        console.log('Plants table created');
 
         // Create indexes for better performance
         await pool.query(`
@@ -64,7 +65,7 @@ async function setupDatabase() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-        console.log('✅ User sessions table created');
+        console.log('User sessions table created');
 
         // Create indexes for sessions
         await pool.query(`
@@ -77,17 +78,15 @@ async function setupDatabase() {
         // Sensor readings table with JSONB for flexible data
         await pool.query(`
       CREATE TABLE IF NOT EXISTS sensor_readings (
-        id SERIAL PRIMARY KEY,
+        sensor_id SERIAL PRIMARY KEY,
         plant_id INTEGER NOT NULL,
         moisture_level DECIMAL(3,2),
         temperature DECIMAL(4,2),
-        humidity DECIMAL(3,2),
-        additional_data JSONB, -- For any additional sensor data
         reading_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+        FOREIGN KEY (plant_id) REFERENCES plants(plant_id) ON DELETE CASCADE
       )
     `);
-        console.log('✅ Sensor readings table created');
+        console.log('Sensor readings table created');
 
         // Create indexes for sensor readings
         await pool.query(`
@@ -107,10 +106,10 @@ async function setupDatabase() {
         water_amount_ml INTEGER,
         event_data JSONB, -- For additional event metadata
         event_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+        FOREIGN KEY (plant_id) REFERENCES plants(plant_id) ON DELETE CASCADE
       )
     `);
-        console.log('✅ Irrigation events table created');
+        console.log('Irrigation events table created');
 
         // Create indexes for irrigation events
         await pool.query(`
@@ -136,14 +135,14 @@ async function setupDatabase() {
         EXECUTE FUNCTION update_updated_at_column()
     `);
 
-        console.log('🎉 Database setup completed successfully!');
-        console.log('📊 Tables created: users, plants, user_sessions, sensor_readings, irrigation_events');
+        console.log('Database setup completed successfully!');
+        console.log('Tables created: users, plants, user_sessions, sensor_readings, irrigation_events');
 
     } catch (error) {
-        console.error('❌ Database setup failed:', error);
+        console.error('Database setup failed:', error);
     } finally {
         await pool.end();
     }
 }
 
-setupDatabase(); 
+setupDatabase();

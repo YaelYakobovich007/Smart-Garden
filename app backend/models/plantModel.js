@@ -1,78 +1,52 @@
 const hardwarePool = require('./hardwarePool');
+const { pool } = require('../config/database');
 
 // This module manages plant data storage and operations
 // It uses in-memory storage for simplicity, but can be replaced with a database in production
-const plantStorage = new Map(); // Map<email, Array<Plant>>
-const plantIdIndex = new Map(); // Map<plantId, { plant, email }>
+// const plantStorage = new Map(); // Map<email, Array<Plant>>
+// const plantIdIndex = new Map(); // Map<plantId, { plant, email }>
 
-function addPlant(email, plantData) {
-  const userPlants = plantStorage.get(email) || [];
-  if (userPlants.some(plant => plant.name === plantData.name)) {
-    // Check for duplicate plant name
+async function addPlant(userId, plantData) {
+  // Check for duplicate plant name for this user
+  const existing = await pool.query('SELECT plant_id FROM plants WHERE user_id = $1 AND name = $2', [userId, plantData.name]);
+  if (existing.rows.length > 0) {
     return { error: 'DUPLICATE_NAME' };
   }
 
+  // Assign hardware
   const sensorId = hardwarePool.assignSensor();
   const valveId = hardwarePool.assignValve();
-
   if (!sensorId || !valveId) {
     return { error: 'NO_HARDWARE' };
   }
 
-  const newPlant = {
-    id: Date.now(),
-    sensorId,
-    valveId,
-    name: plantData.name,
-    desiredMoisture: plantData.desiredMoisture,
-    waterLimit: plantData.waterLimit,
-    irrigationSchedule: plantData.irrigationSchedule || null,
-    plantType: plantData.plantType || null
-  };
-
-  // Add the new plant to the user's list
-  userPlants.push(newPlant);
-  plantStorage.set(email, userPlants);
-  plantIdIndex.set(newPlant.id, { plant: newPlant, email });
-
-  return { plant: newPlant };
+  // Insert plant into DB
+  const result = await pool.query(
+    `INSERT INTO plants (user_id, name, ideal_moisture, water_limit, irrigation_schedule, plant_type, sensor_id, valve_id, last_watered)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+    [userId, plantData.name, plantData.desiredMoisture, plantData.waterLimit, plantData.irrigationSchedule || null, plantData.plantType || null, sensorId, valveId, null]
+  );
+  return { plant: result.rows[0] };
 }
 
-function getPlantById(plantId) {
-  const record = plantIdIndex.get(plantId);
-  return record ? record.plant : null;
+async function getPlantById(plantId) {
+  const result = await pool.query('SELECT * FROM plants WHERE plant_id = $1', [plantId]);
+  return result.rows[0] || null;
 }
 
-function getPlantByName(email, plantName) {
-  const userPlants = plantStorage.get(email) || [];
-  return userPlants.find(plant => plant.name === plantName) || null;
+async function getPlantByName(userId, plantName) {
+  const result = await pool.query('SELECT * FROM plants WHERE user_id = $1 AND name = $2', [userId, plantName]);
+  return result.rows[0] || null;
 }
 
-function assignSensor(plantId, sensorId) {
-  const record = plantIdIndex.get(plantId);
-  if (!record) return null;
-
-  record.plant.sensorId = sensorId;
-  return record; // { plant, email }
-}
-
-function assignValve(plantId, valveId) {
-  const record = plantIdIndex.get(plantId);
-  if (!record) return null;
-
-  record.plant.valveId = valveId;
-  return record; // { plant, email }
-}
-
-function getPlants(email) {
-  return plantStorage.get(email) || [];
+async function getPlants(userId) {
+  const result = await pool.query('SELECT * FROM plants WHERE user_id = $1', [userId]);
+  return result.rows;
 }
 
 module.exports = {
   addPlant,
   getPlants,
-  assignSensor,
-  assignValve,
   getPlantById,
   getPlantByName
 };

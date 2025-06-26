@@ -16,7 +16,7 @@ async function handleGetWeather(ws) {
       return sendError(ws, 'GET_WEATHER_FAIL', 'Weather API key is not configured');
     }
 
-    const user = getUser(email);
+    const user = await getUser(email);
     if (!user || !user.city || !user.country) {
       return sendError(ws, 'GET_WEATHER_FAIL', 'User city or country not found');
     }
