@@ -22,9 +22,20 @@ async function addPlant(userId, plantData) {
 
   // Insert plant into DB
   const result = await pool.query(
-    `INSERT INTO plants (user_id, name, ideal_moisture, water_limit, irrigation_schedule, plant_type, sensor_id, valve_id, last_watered)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-    [userId, plantData.name, plantData.desiredMoisture, plantData.waterLimit, plantData.irrigationSchedule || null, plantData.plantType || null, sensorId, valveId, null]
+    `INSERT INTO plants (user_id, name, ideal_moisture, water_limit, irrigation_days, irrigation_time, plant_type, sensor_id, valve_id, last_watered)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+    [
+      userId,
+      plantData.name,
+      plantData.desiredMoisture,
+      plantData.waterLimit,
+      plantData.irrigation_days ? JSON.stringify(plantData.irrigation_days) : null,
+      plantData.irrigation_time || null,
+      plantData.plantType || null,
+      sensorId,
+      valveId,
+      null
+    ]
   );
   return { plant: result.rows[0] };
 }
@@ -44,9 +55,34 @@ async function getPlants(userId) {
   return result.rows;
 }
 
+// Update irrigation schedule for a plant
+async function updatePlantSchedule(plantId, days, time) {
+  await pool.query(
+    'UPDATE plants SET irrigation_days = $1, irrigation_time = $2, updated_at = CURRENT_TIMESTAMP WHERE plant_id = $3',
+    [JSON.stringify(days), time, plantId]
+  );
+}
+
+// Get current moisture and ideal moisture for a plant
+async function getCurrentMoisture(plantId) {
+  const currentMoisture = Math.floor(Math.random() * 61) + 20; // ערך אקראי בין 20 ל-80
+  return currentMoisture;
+  // TODO: integrate with actual hardware/logic
+}
+
+// Trigger irrigation for a plant (stub: here you can send to Pi or update status)
+async function irrigatePlant(plantId) {
+  // Example: just log, or send to hardware
+  console.log(`Irrigation triggered for plant ${plantId}`);
+  // TODO: integrate with actual hardware/logic
+}
+
 module.exports = {
   addPlant,
   getPlants,
   getPlantById,
-  getPlantByName
+  getPlantByName,
+  updatePlantSchedule,
+  getCurrentMoisture,
+  irrigatePlant
 };

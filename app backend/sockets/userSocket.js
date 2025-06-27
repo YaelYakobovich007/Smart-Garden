@@ -3,6 +3,8 @@ const { handlePlantMessage } = require('../controllers/plantController');
 const { handleGetWeather } = require('../controllers/weatherController');
 const { sendError, sendSuccess } = require('../utils/wsResponses');
 const {removeUserSession} = require('../models/userSessions');
+const { handleIrrigationMessage } = require('../controllers/irrigationController');
+const { handleUserMessage } = require('../controllers/userController');
 
 
 function handleUserSocket(ws) {
@@ -25,6 +27,10 @@ function handleUserSocket(ws) {
       handleAuthMessage(data, ws);
     } else if (data.type === 'GET_WEATHER') {
       handleGetWeather(ws); 
+    } else if (['UPDATE_PLANT_SCHEDULE', 'SHOULD_IRRIGATE', 'IRRIGATE_PLANT'].includes(data.type)) {
+      handleIrrigationMessage(data, ws);
+    } else if (['GET_USER_NAME'].includes(data.type)) {
+      handleUserMessage(data, ws);
     } else {
       handlePlantMessage(data, ws);
     }
