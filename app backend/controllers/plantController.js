@@ -1,4 +1,4 @@
-const { addPlant, getPlants, getPlantByName } = require('../models/plantModel');
+const { addPlant, getPlants, getPlantByName, deletePlant } = require('../models/plantModel');
 const { getUser } = require('../models/userModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getPiSocket } = require('../sockets/piSocket');
@@ -7,7 +7,8 @@ const { getEmailBySocket } = require('../models/userSessions');
 const plantHandlers = {
   ADD_PLANT: handleAddPlant,
   GET_MY_PLANTS: handleGetMyPlants,
-  GET_PLANT_DETAILS: handleGetPlantDetails
+  GET_PLANT_DETAILS: handleGetPlantDetails,
+  DELETE_PLANT: handleDeletePlant
 };
 
 async function handlePlantMessage(data, ws) {
@@ -102,6 +103,23 @@ async function handleGetMyPlants(data, ws, email) {
 
   const plants = await getPlants(user.id);
   sendSuccess(ws, 'GET_MY_PLANTS_RESPONSE', { plants });
+}
+
+// Delete plant (and its irrigation events)
+async function handleDeletePlant(data, ws, email) {
+  const { plantName } = data;
+  if (!plantName) return sendError(ws, 'DELETE_PLANT_FAIL', 'Missing plantName');
+  const user = await getUser(email);
+  if (!user) return sendError(ws, 'DELETE_PLANT_FAIL', 'User not found');
+  const plant = await getPlantByName(user.id, plantName);
+  if (!plant) return sendError(ws, 'DELETE_PLANT_FAIL', 'Plant not found');
+
+  // Delete irrigation events first
+  await require('../models/irrigationModel').deleteIrrigationResultsByPlantId(plant.plant_id);
+  // Delete the plant
+  await require('../models/plantModel').deletePlantById(plant.plant_id);
+
+  sendSuccess(ws, 'DELETE_PLANT_SUCCESS', { message: 'Plant and its irrigation events deleted' });
 }
 
 module.exports = {
