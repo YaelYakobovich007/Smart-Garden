@@ -1,47 +1,77 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { View, ActivityIndicator } from 'react-native';
 
 import LoginScreen from './src/components/login/LoginScreen';
 import RegisterScreen from './src/components/register/RegisterScreen';
 import MainScreen from './src/components/main/MainScreen';
 import PlantDetail from './src/components/main/PlantDetail/PlantDetail';
 import AddPlantScreen from './src/components/addPlant/AddPlantScreen';
+import NotificationsScreen from './src/components/main/NotificationsScreen/NotificationsScreen';
+import SettingsScreen from './src/components/main/SettingsScreen/SettingsScreen';
 import websocketService from './src/services/websocketService';
+import sessionService from './src/services/sessionService';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [initialRoute, setInitialRoute] = useState('Login');
   const navigationRef = useRef(null);
 
   useEffect(() => {
-    // Establish WebSocket connection as soon as the app loads
-    websocketService.connect();
+    // Check for existing session and establish WebSocket connection
+    const initializeApp = async () => {
+      try {
+        // Check if user is already logged in
+        const isLoggedIn = await sessionService.isLoggedIn();
+        
+        // Establish WebSocket connection
+        websocketService.connect();
+
+        // Set initial route based on login status
+        setInitialRoute(isLoggedIn ? 'Main' : 'Login');
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        setInitialRoute('Login');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeApp();
 
     // Listen for connection status changes
     websocketService.onConnectionChange((connected) => {
       console.log('WebSocket connection status:', connected ? 'Connected' : 'Disconnected');
       setIsConnected(connected);
-
-      // Navigate to main screen when connection is successful
-      if (connected && navigationRef.current) {
-        navigationRef.current.navigate('Main');
-      }
     });
   }, []);
+
+  // Show loading screen while checking session
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA' }}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
-        initialRouteName="Login"
+        initialRouteName={initialRoute}
       >
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Main" component={MainScreen} />
         <Stack.Screen name="PlantDetail" component={PlantDetail} />
         <Stack.Screen name="AddPlant" component={AddPlantScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

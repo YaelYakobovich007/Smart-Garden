@@ -2,29 +2,56 @@ import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#E6F0FA',
+    justifyContent: 'space-between',
+    padding: 16,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
-    margin: 20
+    margin: 16,
+    height: 120,
+  },
+  animation: {
+    width: 130,
+    height: 130,
+    marginTop: -40,
+    marginLeft: -15,
+  },
+  leftSection: {
+    flexDirection: 'column',
+    alignItems: 'center',
   },
   temp: {
-    fontSize: 40,
+    fontSize: 55,
     fontWeight: 'bold',
-    color: '#333'
+    color: '#fff',
+    textAlign: 'left',
+    position: 'absolute',
+    left: 185,
+    top: 35,
   },
   description: {
-    fontSize: 18,
-    color: '#666',
-    marginVertical: 4
+    fontSize: 14,
+    color: '#fff',
+    marginTop: -10,
+    textAlign: 'center',
+    maxWidth: 100,
+    fontWeight: '500',
   },
   location: {
+    fontSize: 12,
+    color: '#E8F5E8',
+    marginTop: 4,
+    textAlign: 'center',
+    maxWidth: 100,
+  },
+  loadingText: {
     fontSize: 16,
-    color: '#888'
+    color: '#fff',
+    textAlign: 'center'
   }
 });
 

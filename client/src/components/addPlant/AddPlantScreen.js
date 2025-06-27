@@ -155,7 +155,7 @@ export default function AddPlantScreen() {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Leaf color="#16A34A" size={24} />
-          <Text style={styles.headerTitle}>Add New Plant</Text>
+        <Text style={styles.headerTitle}>Add New Plant</Text>
         </View>
         <View style={styles.placeholder} />
       </View>
@@ -208,16 +208,16 @@ export default function AddPlantScreen() {
               </Text>
             </View>
             <View style={styles.sliderContainer}>
-              <TextInput
+            <TextInput
                 style={[styles.numberInput, errors.humidity && styles.inputError]}
                 value={formData.humidity.toString()}
                 onChangeText={(text) => {
                   const value = parseInt(text) || 0;
                   updateFormData('humidity', Math.min(100, Math.max(0, value)));
                 }}
-                keyboardType="numeric"
+              keyboardType="numeric"
                 maxLength={3}
-              />
+            />
               <Text style={styles.unit}>%</Text>
             </View>
             {errors.humidity && (
@@ -236,16 +236,16 @@ export default function AddPlantScreen() {
               </Text>
             </View>
             <View style={styles.sliderContainer}>
-              <TextInput
+            <TextInput
                 style={[styles.numberInput, errors.waterLimit && styles.inputError]}
                 value={formData.waterLimit.toString()}
                 onChangeText={(text) => {
                   const value = parseFloat(text) || 0;
                   updateFormData('waterLimit', Math.max(0, value));
                 }}
-                keyboardType="numeric"
+              keyboardType="numeric"
                 placeholder="0.0"
-              />
+            />
               <Text style={styles.unit}>L</Text>
             </View>
             {errors.waterLimit && (
@@ -280,7 +280,7 @@ export default function AddPlantScreen() {
           <View style={styles.scheduleHeader}>
             <View style={styles.labelContainer}>
               <Calendar color="#16A34A" size={20} />
-              <Text style={styles.sectionTitle}>Watering Schedule</Text>
+            <Text style={styles.sectionTitle}>Watering Schedule</Text>
             </View>
             <Switch
               value={formData.useSchedule}
@@ -289,7 +289,7 @@ export default function AddPlantScreen() {
               thumbColor={formData.useSchedule ? '#FFFFFF' : '#F9FAFB'}
             />
           </View>
-          
+
           {formData.useSchedule && (
             <>
               <Text style={styles.scheduleDescription}>
@@ -298,7 +298,7 @@ export default function AddPlantScreen() {
               
               <View style={styles.daysContainer}>
                 {DAYS.map((day, index) => (
-                  <TouchableOpacity
+                    <TouchableOpacity
                     key={day}
                     style={[
                       styles.dayButton,
@@ -313,11 +313,11 @@ export default function AddPlantScreen() {
                       ]}
                     >
                       {day}
-                    </Text>
-                  </TouchableOpacity>
+                      </Text>
+                    </TouchableOpacity>
                 ))}
-              </View>
-
+                  </View>
+                  
               <TouchableOpacity
                 style={styles.timeContainer}
                 onPress={() => setShowTimePicker(true)}
@@ -338,16 +338,16 @@ export default function AddPlantScreen() {
           )}
           
           {!formData.useSchedule && (
-            <Text style={styles.algorithmText}>
+              <Text style={styles.algorithmText}>
               Your plant will be watered using our smart algorithm based on humidity levels and plant needs.
-            </Text>
+              </Text>
           )}
         </View>
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <CheckCircle color="#FFFFFF" size={20} />
           <Text style={styles.saveButtonText}>Add Plant to Garden</Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
       </ScrollView>
 
       {/* Image Picker Modal */}

@@ -42,6 +42,7 @@ async function handleGetWeather(ws) {
       country: user.country,
       temp: today.temp.day,
       description: today.weather[0].description,
+      weatherId: today.weather[0].id,
       rain: rain_amount,
       willRain
     });

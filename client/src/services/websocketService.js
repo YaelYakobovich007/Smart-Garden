@@ -13,11 +13,7 @@ class WebSocketService {
     }
 
     console.log('Connecting to WebSocket server...');
-<<<<<<< HEAD
-    this.ws = new WebSocket('ws://192.168.68.104:8080');
-=======
     this.ws = new WebSocket('ws://192.168.1.182:8080');
->>>>>>> client-forms
 
     this.ws.onopen = () => {
       console.log('WebSocket connected, sending HELLO_USER...');
@@ -72,6 +68,13 @@ class WebSocketService {
 
   onMessage(type, handler) {
     this.messageHandlers.set(type, handler);
+  }
+
+  offMessage(type, handler) {
+    // Only remove if the handler matches the currently registered one
+    if (this.messageHandlers.get(type) === handler) {
+      this.messageHandlers.delete(type);
+    }
   }
 
   onConnectionChange(handler) {

@@ -20,6 +20,21 @@ export const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
   },
+  appTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  appLogo: {
+    width: 24,
+    height: 28,
+    marginRight: 8,
+  },
+  appTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+  },
   greeting: {
     fontSize: 16,
     fontWeight: '500',
@@ -45,6 +60,29 @@ export const styles = StyleSheet.create({
   },
   profileButton: {
     padding: 4,
+  },
+  notificationsButton: {
+    padding: 4,
+    marginRight: 12,
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   simulationBadge: {
     flexDirection: 'row',
@@ -81,9 +119,9 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
   },
   plantsSection: {
-    flex: 1,
-    marginTop: 16,
-    marginBottom: 8,
+    flex: 0.6,
+    marginTop: 8,
+    marginBottom: 16,
   },
   notificationsSection: {
     flex: 1,

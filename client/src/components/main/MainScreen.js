@@ -6,6 +6,7 @@ import {
   StatusBar,
   Alert,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -148,6 +149,13 @@ const MainScreen = () => {
     navigation.navigate('AddPlant');
   };
 
+  const handleNotifications = () => {
+    navigation.navigate('Notifications', { 
+      notifications, 
+      isSimulationMode 
+    });
+  };
+
   const handleSchedule = () => {
     Alert.alert(
       'Schedule',
@@ -157,11 +165,7 @@ const MainScreen = () => {
   };
 
   const handleSettings = () => {
-    Alert.alert(
-      'Settings',
-      'Settings functionality will be implemented here',
-      [{ text: 'OK' }]
-    );
+    navigation.navigate('Settings');
   };
 
   const handleHelp = () => {
@@ -169,21 +173,6 @@ const MainScreen = () => {
       'Help',
       'Help functionality will be implemented here',
       [{ text: 'OK' }]
-    );
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: () => navigation.navigate('Login')
-        }
-      ]
     );
   };
 
@@ -195,18 +184,32 @@ const MainScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
+            <View style={styles.appTitleContainer}>
+              <Image 
+                source={require('../../../assets/images/Smart_Garden_Logo.png')} 
+                style={styles.appLogo}
+              />
+              <Text style={styles.appTitle}>Smart Garden</Text>
+            </View>
             <Text style={styles.greeting}>Hello, {userName}!</Text>
             <Text style={styles.subtitle}>How are your plants today?</Text>
           </View>
           <View style={styles.headerActions}>
-            {isSimulationMode && (
+            {/* {isSimulationMode && (
               <View style={styles.simulationBadge}>
                 <Feather name="play" size={12} color="#FFFFFF" />
                 <Text style={styles.simulationText}>Simulation</Text>
               </View>
-            )}
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-              <Feather name="log-out" size={20} color="#7F8C8D" />
+            )} */}
+            <TouchableOpacity onPress={handleNotifications} style={styles.notificationsButton}>
+              <Feather name="bell" size={20} color="#7F8C8D" />
+              {notifications.filter(n => !n.isRead).length > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {notifications.filter(n => !n.isRead).length}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -252,15 +255,7 @@ const MainScreen = () => {
           plants={plants}
           isSimulationMode={isSimulationMode}
           onWaterPlant={handleWaterPlant}
-        />
-      </View>
-
-      {/* Notifications Area */}
-      <View style={styles.notificationsSection}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        <NotificationArea
-          notifications={notifications}
-          isSimulationMode={isSimulationMode}
+          onAddPlant={handleAddPlant}
         />
       </View>
 

@@ -13,7 +13,7 @@ import MoistureCircle from './MoistureCircle';
 import TempCircle from './TempCircle';
 import LightCircle from './LightCircle';
 
-const PlantList = ({ plants, isSimulationMode, onWaterPlant }) => {
+const PlantList = ({ plants, isSimulationMode, onWaterPlant, onAddPlant }) => {
   const navigation = useNavigation();
 
   const getMoistureColor = (moisture) => {
@@ -101,11 +101,20 @@ const PlantList = ({ plants, isSimulationMode, onWaterPlant }) => {
   if (plants.length === 0) {
     return (
       <View style={styles.emptyState}>
-        <Feather name="leaf" size={48} color="#BDC3C7" />
-        <Text style={styles.emptyStateText}>No plants added yet</Text>
+        <Image 
+          source={require('../../../../assets/images/leaves.png')} 
+          style={styles.emptyStateIcon}
+        />
+        <Text style={styles.emptyStateText}>No plants yet</Text>
         <Text style={styles.emptyStateSubtext}>
-          Add your first plant to get started
+          Add your first plant to start building your smart garden ecosystem.
         </Text>
+        <TouchableOpacity
+          style={styles.addFirstPlantButton}
+          onPress={onAddPlant}
+        >
+          <Text style={styles.addFirstPlantButtonText}>Add Your First Plant+</Text>
+        </TouchableOpacity>
       </View>
     );
   }

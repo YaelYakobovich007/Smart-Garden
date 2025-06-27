@@ -17,6 +17,7 @@ import { useAuthRequest } from 'expo-auth-session/providers/google';
 import { styles } from './styles';
 import { connectAndSend } from '../../services/authService';
 import websocketService from '../../services/websocketService';
+import sessionService from '../../services/sessionService';
 import Logo from '../../../assets/images/Smart_Garden_Logo.png';
 import GoogleLogo from '../../../assets/images/Google_Logo.png';
 import Constants from 'expo-constants';
@@ -89,9 +90,18 @@ const LoginScreen = () => {
 
   // --- AUTHENTICATION LOGIC ---
   // Handles responses from the backend after an auth attempt
-  const handleAuthResponse = (data) => {
+  const handleAuthResponse = async (data) => {
     if (data.type === 'LOGIN_SUCCESS') {
       setMessage('Login successful!');
+      
+      // Save user session
+      const userData = {
+        email: data.userId || email,
+        name: data.name || 'User',
+        timestamp: new Date().toISOString()
+      };
+      await sessionService.saveSession(userData);
+      
       // Navigate to the main app screen
       navigation.navigate('Main');
     } else if (data.type === 'LOGIN_FAIL') {
