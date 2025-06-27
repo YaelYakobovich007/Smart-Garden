@@ -44,7 +44,7 @@ const BottomToolbar = ({ onAddPlant, onSchedule, onSettings, onHelp }) => {
           onPress={item.onPress}
         >
           <View style={styles.iconContainer}>
-            <Feather name={item.icon} size={24} color="#3498DB" />
+            <Feather name={item.icon} size={24} color="#FFFFFF" />
           </View>
           <Text style={styles.toolbarLabel}>{item.label}</Text>
         </TouchableOpacity>

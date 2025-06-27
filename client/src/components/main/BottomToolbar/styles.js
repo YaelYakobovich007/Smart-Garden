@@ -3,10 +3,10 @@ import { StyleSheet } from 'react-native';
 export const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#ECF0F1',
-    paddingVertical: 12,
+    backgroundColor: '#3da339',
+    borderRadius: 30,
+    margin: 16,
+    paddingVertical: 0,
     paddingHorizontal: 16,
     position: 'absolute',
     bottom: 0,
@@ -15,9 +15,9 @@ export const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: -2,
+      height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
   },
@@ -31,7 +31,7 @@ export const styles = StyleSheet.create({
   },
   toolbarLabel: {
     fontSize: 12,
-    color: '#7F8C8D',
+    color: '#FFFFFF',
     textAlign: 'center',
   },
 }); 

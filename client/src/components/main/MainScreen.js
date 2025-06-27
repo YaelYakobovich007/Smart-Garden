@@ -49,11 +49,7 @@ const MainScreen = () => {
   };
 
   const handleAddPlant = () => {
-    Alert.alert(
-      'Add Plant',
-      'Add plant functionality will be implemented here',
-      [{ text: 'OK' }]
-    );
+    navigation.navigate('AddPlant');
   };
 
   const handleSchedule = () => {

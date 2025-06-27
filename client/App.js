@@ -6,6 +6,7 @@ import LoginScreen from './src/components/login/LoginScreen';
 import RegisterScreen from './src/components/register/RegisterScreen';
 import MainScreen from './src/components/main/MainScreen';
 import PlantDetail from './src/components/main/PlantDetail/PlantDetail';
+import AddPlantScreen from './src/components/addPlant/AddPlantScreen';
 import websocketService from './src/services/websocketService';
 
 const Stack = createNativeStackNavigator();
@@ -34,12 +35,13 @@ export default function App() {
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator 
         screenOptions={{ headerShown: false }}
-        initialRouteName="Login"
+        initialRouteName="AddPlant"
       >
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Main" component={MainScreen} />
         <Stack.Screen name="PlantDetail" component={PlantDetail} />
+        <Stack.Screen name="AddPlant" component={AddPlantScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

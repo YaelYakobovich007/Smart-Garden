@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
+    "@react-native-community/datetimepicker": "^8.4.2",
     "@react-native-google-signin/google-signin": "^14.0.1",
     "@react-native-picker/picker": "^2.11.1",
     "@react-navigation/native": "^7.1.13",
@@ -17,7 +18,10 @@
     "country-state-city": "^3.2.1",
     "expo": "~53.0.12",
     "expo-auth-session": "^6.2.0",
+    "expo-camera": "^16.1.9",
+    "expo-image-picker": "^16.1.4",
     "expo-status-bar": "~2.2.3",
+    "lucide-react-native": "^0.523.0",
     "react": "19.0.0",
     "react-native": "0.79.4",
     "react-native-safe-area-context": "^5.4.1",
