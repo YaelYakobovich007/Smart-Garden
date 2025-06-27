@@ -35,7 +35,7 @@ export default function App() {
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator 
         screenOptions={{ headerShown: false }}
-        initialRouteName="AddPlant"
+        initialRouteName="Login"
       >
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
