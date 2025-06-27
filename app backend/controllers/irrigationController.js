@@ -107,7 +107,8 @@ async function handleGetIrrigationResult(data, ws, email) {
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'GET_IRRIGATION_RESULT_FAIL', 'Plant not found');
   const results = await irrigationModel.getIrrigationResultsByPlantId(plant.plant_id);
-  sendSuccess(ws, 'GET_IRRIGATION_RESULT_SUCCESS', { plantName, results });
+  // Return both the plant name and the results array
+  sendSuccess(ws, 'GET_IRRIGATION_RESULT_SUCCESS', { name: plant.name, results });
 }
 
 module.exports = {
