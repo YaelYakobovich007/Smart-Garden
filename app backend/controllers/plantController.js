@@ -48,8 +48,8 @@ async function handleAddPlant(data, ws, email) {
     desiredMoisture,
     waterLimit,
     irrigation_days: irrigationDays || null,
-    irrigation_time: time || null,
-    plantType: irrigationTime || null
+    irrigation_time: irrigationTime || null,
+    plantType: plantType || null
   };
 
   const result = await addPlant(user.id, plantData);

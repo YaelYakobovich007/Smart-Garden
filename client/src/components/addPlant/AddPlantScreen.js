@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ArrowLeft, Camera as CameraIcon, Image as ImageIcon, Droplets, Thermometer, Calendar, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Leaf } from 'lucide-react-native';
 import styles from './styles';
+import websocketService from '../../services/websocketService';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -42,6 +43,39 @@ export default function AddPlantScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
+  useEffect(() => {
+    // Handler for success
+    const handleSuccess = (data) => {
+      Alert.alert(
+        'Success!',
+        data?.message || 'Plant added successfully to your garden',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
+    };
+    // Handler for failure
+    const handleFail = (data) => {
+      Alert.alert(
+        'Failed to Add Plant',
+        data?.message || 'An error occurred while adding the plant',
+        [
+          { text: 'OK' }
+        ]
+      );
+    };
+    websocketService.onMessage('ADD_PLANT_SUCCESS', handleSuccess);
+    websocketService.onMessage('ADD_PLANT_FAIL', handleFail);
+    return () => {
+      // Remove handlers on unmount
+      websocketService.onMessage('ADD_PLANT_SUCCESS', () => {});
+      websocketService.onMessage('ADD_PLANT_FAIL', () => {});
+    };
+  }, [navigation]);
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -63,18 +97,27 @@ export default function AddPlantScreen() {
 
   const handleSave = () => {
     if (validateForm()) {
-      // TODO: Send plant data to server
-      console.log('Plant data:', formData);
-      Alert.alert(
-        'Success!',
-        'Plant added successfully to your garden',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      // Prepare irrigationDays and irrigationTime if schedule is enabled
+      let irrigationDays = null;
+      let irrigationTime = null;
+      if (formData.useSchedule) {
+        irrigationDays = DAYS.filter((day, idx) => formData.schedule.days[idx]);
+        // Format time as 'HH:mm'
+        const t = formData.schedule.time;
+        const pad = (n) => n.toString().padStart(2, '0');
+        irrigationTime = `${pad(t.getHours())}:${pad(t.getMinutes())}`;
+      }
+      const message = {
+        type: 'ADD_PLANT',
+        plantName: formData.plantName,
+        plantType: formData.plantType,
+        desiredMoisture: formData.humidity,
+        waterLimit: formData.waterLimit,
+        irrigationDays,
+        irrigationTime
+      };
+      // TODO: send image if/when supported
+      websocketService.sendMessage(message);
     }
   };
 
@@ -390,4 +433,4 @@ export default function AddPlantScreen() {
       )}
     </SafeAreaView>
   );
-} 
+}

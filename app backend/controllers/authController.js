@@ -33,8 +33,18 @@ async function handleRegister(data, ws) {
     return sendError(ws, 'REGISTER_FAIL', 'Password must be at least 6 characters long');
   }
 
+  if (!data.fullName || !data.country || !data.city) {
+    return sendError(ws, 'REGISTER_FAIL', 'Full name, country, and city are required');
+  }
+
   try {
-    const success = await authService.register(data.email, data.password);
+    const success = await authService.register(
+      data.email,
+      data.password,
+      data.fullName,
+      data.country,
+      data.city
+    );
     return sendSuccess(ws, success ? 'REGISTER_SUCCESS' : 'REGISTER_FAIL', {
       message: success ? 'User created' : 'Email already exists',
     });
