@@ -77,6 +77,11 @@ async function irrigatePlant(plantId) {
   // TODO: integrate with actual hardware/logic
 }
 
+// Delete a plant by id
+async function deletePlantById(plantId) {
+  await pool.query('DELETE FROM plants WHERE plant_id = $1', [plantId]);
+}
+
 module.exports = {
   addPlant,
   getPlants,
@@ -84,5 +89,6 @@ module.exports = {
   getPlantByName,
   updatePlantSchedule,
   getCurrentMoisture,
-  irrigatePlant
+  irrigatePlant,
+  deletePlantById
 };

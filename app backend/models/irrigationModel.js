@@ -51,7 +51,13 @@ async function getIrrigationResultsByPlantId(plantId) {
   return rows;
 }
 
+// Delete all irrigation events for a plant
+async function deleteIrrigationResultsByPlantId(plantId) {
+  await db.query('DELETE FROM irrigation_events WHERE plant_id = $1', [plantId]);
+}
+
 module.exports = {
   addIrrigationResult,
   getIrrigationResultsByPlantId,
+  deleteIrrigationResultsByPlantId
 };
