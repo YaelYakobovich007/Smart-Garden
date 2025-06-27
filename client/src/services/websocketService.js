@@ -13,7 +13,11 @@ class WebSocketService {
     }
 
     console.log('Connecting to WebSocket server...');
+<<<<<<< HEAD
     this.ws = new WebSocket('ws://192.168.68.104:8080');
+=======
+    this.ws = new WebSocket('ws://192.168.1.182:8080');
+>>>>>>> client-forms
 
     this.ws.onopen = () => {
       console.log('WebSocket connected, sending HELLO_USER...');

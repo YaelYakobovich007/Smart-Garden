@@ -7,7 +7,7 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { styles } from './styles';
 import websocketService from '../../services/websocketService';
@@ -16,6 +16,7 @@ import websocketService from '../../services/websocketService';
 import NotificationArea from './NotificationArea/NotificationArea';
 import PlantList from './PlantList/PlantList';
 import BottomToolbar from './BottomToolbar/BottomToolbar';
+import WeatherCard from './WeatherCard/WeatherCard';
 
 // Import simulation data from data folder
 import {
@@ -31,6 +32,9 @@ const MainScreen = () => {
   const [notifications, setNotifications] = useState([]);
   const [userName] = useState('John'); // TODO: Get from user profile/authentication
   const [isConnected, setIsConnected] = useState(websocketService.isConnected());
+  const [weather, setWeather] = useState(null);
+  const [weatherError, setWeatherError] = useState(false);
+  const [weatherLoading, setWeatherLoading] = useState(true);
 
   // Load simulation data
   useEffect(() => {
@@ -60,6 +64,38 @@ const MainScreen = () => {
     if (websocketService.isConnected()) {
       websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
     }
+  }, []);
+
+  // Fetch weather on mount and on connection
+  useEffect(() => {
+    function handleWeather(data) {
+      setWeather(data);
+      setWeatherError(false);
+      setWeatherLoading(false);
+    }
+    function handleWeatherFail() {
+      setWeather(null);
+      setWeatherError(true);
+      setWeatherLoading(false);
+    }
+    websocketService.onMessage('WEATHER', handleWeather);
+    websocketService.onMessage('GET_WEATHER_FAIL', handleWeatherFail);
+    if (websocketService.isConnected()) {
+      setWeatherLoading(true);
+      websocketService.sendMessage({ type: 'GET_WEATHER' });
+    }
+    // Also fetch weather when connection is established
+    websocketService.onConnectionChange((connected) => {
+      if (connected) {
+        setWeatherLoading(true);
+        websocketService.sendMessage({ type: 'GET_WEATHER' });
+      }
+    });
+    // Cleanup
+    return () => {
+      websocketService.offMessage('WEATHER', handleWeather);
+      websocketService.offMessage('GET_WEATHER_FAIL', handleWeatherFail);
+    };
   }, []);
 
   const handlePlantAdded = (data) => {
@@ -174,6 +210,29 @@ const MainScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
+      </View>
+
+      {/* Weather Forecast Area */}
+      <View>
+        {weatherLoading ? (
+          <View style={{ alignItems: 'center', margin: 20 }}>
+            <MaterialCommunityIcons name="cloud-refresh" size={48} color="#4A90E2" />
+            <Text style={{ color: '#888', marginTop: 8 }}>Loading weather...</Text>
+          </View>
+        ) : weatherError ? (
+          <View style={{ alignItems: 'center', margin: 20 }}>
+            <MaterialCommunityIcons name="cloud-off-outline" size={48} color="#E74C3C" />
+            <Text style={{ color: '#E74C3C', marginTop: 8 }}>Unable to fetch weather</Text>
+          </View>
+        ) : weather ? (
+          <WeatherCard
+            city={weather.city}
+            country={weather.country}
+            temp={weather.temp}
+            description={weather.description}
+            weatherId={weather.weatherId || 800} // fallback to sunny if not provided
+          />
+        ) : null}
       </View>
 
       {/* Connection Status */}
