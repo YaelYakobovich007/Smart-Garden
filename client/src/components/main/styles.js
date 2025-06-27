@@ -26,14 +26,25 @@ export const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 2,
   },
+  subtitle: {
+    fontSize: 14,
+    color: '#95A5A6',
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#2C3E50',
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  profileButton: {
+    padding: 4,
   },
   simulationBadge: {
     flexDirection: 'row',
@@ -52,6 +63,22 @@ export const styles = StyleSheet.create({
   },
   logoutButton: {
     padding: 4,
+  },
+  connectionWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEE2E2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FCA5A5',
+  },
+  connectionWarningText: {
+    color: '#E74C3C',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
   },
   plantsSection: {
     flex: 1,

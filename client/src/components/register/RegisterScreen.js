@@ -244,6 +244,7 @@ const RegisterScreen = () => {
       type: 'REGISTER', 
       email, 
       password,
+      fullName: fullName,
       country: selectedCountry,
       city: selectedCity
     }, handleAuthResponse, handleConnectionError);

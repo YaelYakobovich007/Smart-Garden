@@ -1,7 +1,7 @@
 const authService = require('../services/authService');
 const userModel = require('../models/userModel');
 const { verifyGoogleToken } = require('../services/googleService'); 
-const { isValidEmail } = require('../utils/validators');
+const { isValidEmail, isValidCountryAndCity } = require('../utils/validators');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { addUserSession } = require('../models/userSessions');
 
@@ -21,26 +21,35 @@ async function handleAuthMessage(data, ws) {
 }
 
 async function handleRegister(data, ws) {
-  if (!data.email || !data.password) {
-    return sendError(ws, 'REGISTER_FAIL', 'Email and password are required');
+  if (!data.email || !data.password || !data.fullName || !data.country || !data.city) {
+    return sendError(ws, 'REGISTER_FAIL', 'Email, password, full name, country, and city are required');
   }
 
   if (!isValidEmail(data.email)) {
     return sendError(ws, 'REGISTER_FAIL', 'Invalid email format');
   }
 
+  if (!isValidCountryAndCity(data.country, data.city)) {
+    return sendError(ws, 'REGISTER_FAIL', 'Invalid country or city');
+  }  
+
   if (data.password.length < 6) {
     return sendError(ws, 'REGISTER_FAIL', 'Password must be at least 6 characters long');
   }
 
   try {
-    const success = await authService.register(data.email, data.password);
+    const success = await authService.register(
+      data.email,
+      data.password,
+      data.fullName,
+      data.country,
+      data.city
+    );
     return sendSuccess(ws, success ? 'REGISTER_SUCCESS' : 'REGISTER_FAIL', {
       message: success ? 'User created' : 'Email already exists',
     });
   } catch (err) {
-    console.error('Registration failed:', err);
-    return sendError(ws, 'REGISTER_FAIL', 'Internal server error');
+    return sendError(ws, 'REGISTER_FAIL', 'Registration error');
   }
 }
 
@@ -50,7 +59,7 @@ async function handleLogin(data, ws) {
 
     if (user) {
       addUserSession(ws, user.email);
-      return sendSuccess(ws, 'LOGIN_SUCCESS', { userId: user.email });
+      return sendSuccess(ws, 'LOGIN_SUCCESS', { userId: user.id, email: user.email, name: user.full_name });
     } else {
       return sendError(ws, 'LOGIN_FAIL', 'Invalid email or password');
     }
@@ -70,12 +79,12 @@ async function handleGoogleLogin(data, ws) {
     let user = await userModel.getUser(userData.email);
 
     if (!user) {
-      await userModel.createUser(userData.email, null); // No password needed for Google login
+      await userModel.createUser(userData.email, null, userData.name, null, null);
       user = await userModel.getUser(userData.email);
     }
 
     addUserSession(ws, user.email);
-    return sendSuccess(ws, 'LOGIN_SUCCESS', {userId: userData.email, name: userData.name,});
+    return sendSuccess(ws, 'LOGIN_SUCCESS', { userId: user.id, email: user.email, name: user.full_name });
   } catch (err) {
     console.error('Google login failed:', err);
     return sendError(ws, 'LOGIN_FAIL', 'Google authentication failed');

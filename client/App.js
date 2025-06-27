@@ -18,12 +18,12 @@ export default function App() {
   useEffect(() => {
     // Establish WebSocket connection as soon as the app loads
     websocketService.connect();
-    
+
     // Listen for connection status changes
     websocketService.onConnectionChange((connected) => {
       console.log('WebSocket connection status:', connected ? 'Connected' : 'Disconnected');
       setIsConnected(connected);
-      
+
       // Navigate to main screen when connection is successful
       if (connected && navigationRef.current) {
         navigationRef.current.navigate('Main');
@@ -33,7 +33,7 @@ export default function App() {
 
   return (
     <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator 
+      <Stack.Navigator
         screenOptions={{ headerShown: false }}
         initialRouteName="Login"
       >

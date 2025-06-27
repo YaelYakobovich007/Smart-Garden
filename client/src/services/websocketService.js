@@ -13,7 +13,7 @@ class WebSocketService {
     }
 
     console.log('Connecting to WebSocket server...');
-    this.ws = new WebSocket('ws://192.168.1.182:8080');
+    this.ws = new WebSocket('ws://10.0.0.21:8080');
 
     this.ws.onopen = () => {
       console.log('WebSocket connected, sending HELLO_USER...');
@@ -24,14 +24,14 @@ class WebSocketService {
       try {
         const data = JSON.parse(event.data);
         console.log('Received message:', data);
-        
+
         // Handle connection success
         if (data.type === 'CONNECTION_SUCCESS') {
           this.connected = true;
           this.connectionHandlers.forEach(handler => handler(true));
           console.log('User connection confirmed by server');
         }
-        
+
         // Call registered message handlers
         if (this.messageHandlers.has(data.type)) {
           this.messageHandlers.get(data.type)(data);
@@ -60,6 +60,10 @@ class WebSocketService {
     } else {
       console.error('WebSocket not connected');
     }
+  }
+
+  sendMessage(message) {
+    this.send(message);
   }
 
   onMessage(type, handler) {
