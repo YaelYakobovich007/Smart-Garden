@@ -23,10 +23,6 @@ async function setupDatabase() {
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)
     `);
 
-    // Drop and recreate plants table to fix column type issues
-    await pool.query(`DROP TABLE IF EXISTS plants CASCADE`);
-    console.log('Dropped existing plants table');
-
     // Plants table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS plants (
@@ -35,7 +31,8 @@ async function setupDatabase() {
         name VARCHAR(255) NOT NULL,
         ideal_moisture DECIMAL(5,2),
         water_limit DECIMAL(5,2) NOT NULL,
-        irrigation_schedule VARCHAR(255),
+        irrigation_days JSONB,
+        irrigation_time TIME,
         plant_type VARCHAR(100),
         sensor_id VARCHAR(100),
         valve_id VARCHAR(100),
@@ -100,20 +97,29 @@ async function setupDatabase() {
       CREATE INDEX IF NOT EXISTS idx_readings_timestamp ON sensor_readings(reading_timestamp)
     `);
 
-    // Irrigation events table
+    // Drop and recreate irrigation_events table to match new DTO
+    await pool.query(`DROP TABLE IF EXISTS irrigation_events CASCADE`);
+    console.log('Dropped existing irrigation_events table');
+
+    // Irrigation events table - matches IrrigationResult DTO
     await pool.query(`
       CREATE TABLE IF NOT EXISTS irrigation_events (
         id SERIAL PRIMARY KEY,
         plant_id INTEGER NOT NULL,
-        valve_id VARCHAR(100),
-        duration_seconds INTEGER,
-        water_amount_ml INTEGER,
-        event_data JSONB, -- For additional event metadata
+        status VARCHAR(16) NOT NULL,                -- "done", "skipped", "error"
+        reason TEXT,                                -- Reason for skipping or error
+        moisture DECIMAL(5,2),                      -- Moisture at the beginning
+        final_moisture DECIMAL(5,2),                -- Moisture at the end
+        water_added_liters DECIMAL(5,2),            -- How much water was actually given
+        irrigation_time TIMESTAMP,                  -- Time of irrigation (from hardware)
+        event_data JSONB,                           -- Any extra data from hardware
         event_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (plant_id) REFERENCES plants(plant_id) ON DELETE CASCADE
       )
     `);
     console.log('Irrigation events table created');
+
+   
 
     // Create indexes for irrigation events
     await pool.query(`

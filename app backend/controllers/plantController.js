@@ -30,7 +30,7 @@ async function handlePlantMessage(data, ws) {
 }
 
 async function handleAddPlant(data, ws, email) {
-  const { plantName, desiredMoisture, waterLimit, irrigationSchedule, plantType } = data;
+  const { plantName, desiredMoisture, waterLimit, irrigationDays, irrigationTime, plantType } = data;
 
   if (!plantName || desiredMoisture == null || waterLimit == null) {
     return sendError(ws, 'ADD_PLANT_FAIL', 'Missing required plant data');
@@ -46,8 +46,9 @@ async function handleAddPlant(data, ws, email) {
     name: plantName,
     desiredMoisture,
     waterLimit,
-    irrigationSchedule: irrigationSchedule || null,
-    plantType: plantType || null
+    irrigation_days: irrigationDays || null,
+    irrigation_time: time || null,
+    plantType: irrigationTime || null
   };
 
   const result = await addPlant(user.id, plantData);
@@ -105,4 +106,4 @@ async function handleGetMyPlants(data, ws, email) {
 
 module.exports = {
   handlePlantMessage
-}; 
+};
