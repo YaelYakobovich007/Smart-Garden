@@ -27,7 +27,7 @@ function handleUserSocket(ws) {
       handleAuthMessage(data, ws);
     } else if (data.type === 'GET_WEATHER') {
       handleGetWeather(ws); 
-    } else if (['UPDATE_PLANT_SCHEDULE', 'SHOULD_IRRIGATE', 'IRRIGATE_PLANT'].includes(data.type)) {
+    } else if (['UPDATE_PLANT_SCHEDULE', 'GET_IRRIGATION_RESULT', 'IRRIGATE_PLANT'].includes(data.type)) {
       handleIrrigationMessage(data, ws);
     } else if (['GET_USER_NAME'].includes(data.type)) {
       handleUserMessage(data, ws);

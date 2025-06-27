@@ -1,12 +1,15 @@
 const { getUser } = require('../models/userModel');
-const { getPlantByName, updatePlantSchedule, getCurrentMoisture, irrigatePlant } = require('../models/plantModel');
+const { getPlantByName, updatePlantSchedule, getCurrentMoisture } = require('../models/plantModel');
+const irrigationModel = require('../models/irrigationModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getEmailBySocket } = require('../models/userSessions');
 
+const SIMULATION_MODE = process.env.SIMULATION_MODE === 'true';
+
 const irrigationHandlers = {
   UPDATE_PLANT_SCHEDULE: handleUpdatePlantSchedule,
-  SHOULD_IRRIGATE: handleShouldIrrigate,
-  IRRIGATE_PLANT: handleIrrigatePlant
+  IRRIGATE_PLANT: handleIrrigatePlant,
+  GET_IRRIGATION_RESULT: handleGetIrrigationResult
 };
 
 async function handleIrrigationMessage(data, ws) {
@@ -41,19 +44,6 @@ async function handleUpdatePlantSchedule(data, ws, email) {
   sendSuccess(ws, 'UPDATE_SCHEDULE_SUCCESS', { message: 'Schedule updated' });
 }
 
-// Should irrigate?
-async function handleShouldIrrigate(data, ws, email) {
-  const { plantName } = data;
-  if (!plantName) return sendError(ws, 'SHOULD_IRRIGATE_FAIL', 'Missing plantName');
-  const user = await getUser(email);
-  if (!user) return sendError(ws, 'SHOULD_IRRIGATE_FAIL', 'User not found');
-  const plant = await getPlantByName(user.id, plantName);
-  if (!plant) return sendError(ws, 'SHOULD_IRRIGATE_FAIL', 'Plant not found');
-  const { currentMoisture, ideal_moisture } = await getCurrentMoisture(plant.plant_id);
-  const shouldIrrigate = currentMoisture < ideal_moisture;
-  sendSuccess(ws, 'SHOULD_IRRIGATE_RESULT', { shouldIrrigate, currentMoisture, idealMoisture: ideal_moisture });
-}
-
 // Irrigate plant
 async function handleIrrigatePlant(data, ws, email) {
   const { plantName } = data;
@@ -62,8 +52,62 @@ async function handleIrrigatePlant(data, ws, email) {
   if (!user) return sendError(ws, 'IRRIGATE_FAIL', 'User not found');
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'IRRIGATE_FAIL', 'Plant not found');
-  await irrigatePlant(plant.plant_id);
-  sendSuccess(ws, 'IRRIGATE_SUCCESS', { message: 'Irrigation command sent' });
+
+  // Get current and ideal moisture
+  const currentMoisture = await getCurrentMoisture(plant.plant_id);
+  const idealMoisture = plant.ideal_moisture;
+  
+  // TODO: integrate with real hardware to get current moisture, and check if irrigation is needed should be in hardware
+  // Check if irrigation is needed
+  if (currentMoisture >= idealMoisture) {
+    // Insert skipped event
+    const result = await irrigationModel.addIrrigationResult({
+      plant_id: plant.plant_id,
+      status: 'skipped',
+      reason: 'Moisture sufficient',
+      moisture: currentMoisture,
+      final_moisture: currentMoisture,
+      water_added_liters: 0,
+      irrigation_time: new Date(),
+      event_data: { simulation: SIMULATION_MODE }
+    });
+    return sendSuccess(ws, 'IRRIGATE_SKIPPED', { message: 'Irrigation not needed', result });
+  }
+
+  // Perform irrigation (simulation or real)
+  let irrigationResult;
+  if (SIMULATION_MODE) {
+    // Simulate irrigation result
+    const added = 0.2; // liters
+    const finalMoisture = currentMoisture + 10;
+    irrigationResult = await irrigationModel.addIrrigationResult({
+      plant_id: plant.plant_id,
+      status: 'success',
+      reason: 'Simulated irrigation',
+      moisture: currentMoisture,
+      final_moisture: finalMoisture,
+      water_added_liters: added,
+      irrigation_time: new Date(),
+      event_data: { simulation: true }
+    });
+  } else {
+    // TODO: Real hardware integration should be implemented here
+    // For now, do nothing (no irrigation event is inserted)
+    irrigationResult = null;
+  }
+  sendSuccess(ws, 'IRRIGATE_SUCCESS', { message: 'Irrigation performed', result: irrigationResult });
+}
+
+// Get all irrigation results for a plant by name
+async function handleGetIrrigationResult(data, ws, email) {
+  const { plantName } = data;
+  if (!plantName) return sendError(ws, 'GET_IRRIGATION_RESULT_FAIL', 'Missing plantName');
+  const user = await getUser(email);
+  if (!user) return sendError(ws, 'GET_IRRIGATION_RESULT_FAIL', 'User not found');
+  const plant = await getPlantByName(user.id, plantName);
+  if (!plant) return sendError(ws, 'GET_IRRIGATION_RESULT_FAIL', 'Plant not found');
+  const results = await irrigationModel.getIrrigationResultsByPlantId(plant.plant_id);
+  sendSuccess(ws, 'GET_IRRIGATION_RESULT_SUCCESS', { plantName, results });
 }
 
 module.exports = {
