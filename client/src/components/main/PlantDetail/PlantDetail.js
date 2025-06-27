@@ -11,6 +11,9 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { styles } from './styles';
+import MoistureCircle from '../PlantList/MoistureCircle';
+import TempCircle from '../PlantList/TempCircle';
+import LightCircle from '../PlantList/LightCircle';
 
 const PlantDetail = () => {
   const navigation = useNavigation();
@@ -38,12 +41,6 @@ const PlantDetail = () => {
         // Fallback to the original image if plant type doesn't match
         return require('../../../../assets/images/Branch_With_Leafs.png');
     }
-  };
-
-  const getMoistureColor = (moisture) => {
-    if (moisture < 30) return '#E74C3C';
-    if (moisture < 60) return '#F39C12';
-    return '#27AE60';
   };
 
   const getMoistureStatus = (moisture) => {
@@ -112,22 +109,18 @@ const PlantDetail = () => {
           
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Feather name="droplets" size={24} color="#3498DB" />
+              <MoistureCircle percent={plant.moisture} />
               <Text style={styles.statLabel}>Humidity</Text>
-              <Text style={styles.statValue}>{plant.moisture}%</Text>
-              <Text style={styles.statStatus}>{getMoistureStatus(plant.moisture)}</Text>
             </View>
 
             <View style={styles.statCard}>
-              <Feather name="thermometer" size={24} color="#E67E22" />
+              <TempCircle value={plant.temperature} />
               <Text style={styles.statLabel}>Temperature</Text>
-              <Text style={styles.statValue}>{plant.temperature}°C</Text>
             </View>
 
             <View style={styles.statCard}>
-              <Feather name="sun" size={24} color="#F1C40F" />
-              <Text style={styles.statLabel}>Light Level</Text>
-              <Text style={styles.statValue}>{plant.lightLevel}%</Text>
+              <LightCircle percent={plant.lightLevel} />
+              <Text style={styles.statLabel}>Light</Text>
             </View>
           </View>
         </View>
