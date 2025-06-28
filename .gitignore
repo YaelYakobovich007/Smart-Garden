@@ -45,3 +45,8 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+#Google Cloud Service Account Keys
+/service-account-key.json
+/service-account-*.json
+**/google-cloud-key.json
+app backend/config/service-account-key.json
