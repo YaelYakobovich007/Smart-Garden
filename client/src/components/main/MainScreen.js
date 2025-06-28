@@ -152,10 +152,7 @@ const MainScreen = () => {
   };
 
   const handleNotifications = () => {
-    navigation.navigate('Notifications', { 
-      notifications, 
-      isSimulationMode 
-    });
+    navigation.navigate('Notification');
   };
 
   const handleSchedule = () => {
@@ -178,28 +175,6 @@ const MainScreen = () => {
     );
   };
 
-<<<<<<< HEAD
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: () => navigation.navigate('Login')
-        }
-      ]
-    );
-  };
-
-  const handleNotifications = () => {
-    navigation.navigate('Notification');
-  };
-
-=======
->>>>>>> client
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
