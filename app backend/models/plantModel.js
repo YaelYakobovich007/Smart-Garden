@@ -22,8 +22,8 @@ async function addPlant(userId, plantData) {
 
   // Insert plant into DB
   const result = await pool.query(
-    `INSERT INTO plants (user_id, name, ideal_moisture, water_limit, irrigation_days, irrigation_time, plant_type, sensor_id, valve_id, last_watered)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+    `INSERT INTO plants (user_id, name, ideal_moisture, water_limit, irrigation_days, irrigation_time, plant_type, image_url, sensor_id, valve_id, last_watered)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
     [
       userId,
       plantData.name,
@@ -32,6 +32,7 @@ async function addPlant(userId, plantData) {
       plantData.irrigation_days ? JSON.stringify(plantData.irrigation_days) : null,
       plantData.irrigation_time || null,
       plantData.plantType || null,
+      plantData.image_url || null,
       sensorId,
       valveId,
       null

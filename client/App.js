@@ -9,8 +9,8 @@ import RegisterScreen from './src/components/register/RegisterScreen';
 import MainScreen from './src/components/main/MainScreen';
 import PlantDetail from './src/components/main/PlantDetail/PlantDetail';
 import AddPlantScreen from './src/components/addPlant/AddPlantScreen';
-import NotificationScreen from './src/components/notification/NotificationScreen';
 import SettingsScreen from './src/components/main/SettingsScreen/SettingsScreen';
+import NotificationScreen from './src/components/notification/NotificationScreen';
 import websocketService from './src/services/websocketService';
 import sessionService from './src/services/sessionService';
 
@@ -33,18 +33,77 @@ export default function App() {
     // Check for existing session and establish WebSocket connection
     const initializeApp = async () => {
       try {
-        // Check if user is already logged in
+        // Check if user is already logged in locally
         const isLoggedIn = await sessionService.isLoggedIn();
         
-        // Establish WebSocket connection
+        // Establish WebSocket connection first
+        console.log('App: Initializing WebSocket connection...');
         websocketService.connect();
-
-        // Set initial route based on login status
-        setInitialRoute(isLoggedIn ? 'Main' : 'Login');
+        
+        if (isLoggedIn) {
+          console.log('App: Local session found, validating with server...');
+          
+          // Wait for WebSocket connection before validating session
+          const checkConnection = () => {
+            if (websocketService.isConnected()) {
+              // Validate session with server by requesting user name
+              websocketService.sendMessage({ type: 'GET_USER_NAME' });
+              
+              // Set up a timeout to handle server response
+              const validationTimeout = setTimeout(() => {
+                console.log('App: Session validation timeout, redirecting to login');
+                setInitialRoute('Login');
+                setIsLoading(false);
+              }, 3000); // 3 second timeout
+              
+              // Listen for session validation response
+              const handleValidation = (data) => {
+                clearTimeout(validationTimeout);
+                websocketService.offMessage('GET_USER_NAME_SUCCESS', handleValidation);
+                websocketService.offMessage('GET_USER_NAME_FAIL', handleValidation);
+                websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
+                
+                if (data.type === 'GET_USER_NAME_SUCCESS') {
+                  console.log('App: Session validated successfully, navigating to Main');
+                  setInitialRoute('Main');
+                } else {
+                  console.log('App: Session validation failed, redirecting to login');
+                  sessionService.clearSession(); // Clear invalid session
+                  setInitialRoute('Login');
+                }
+                setIsLoading(false);
+              };
+              
+              const handleUnauthorized = (data) => {
+                clearTimeout(validationTimeout);
+                websocketService.offMessage('GET_USER_NAME_SUCCESS', handleValidation);
+                websocketService.offMessage('GET_USER_NAME_FAIL', handleValidation);
+                websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
+                
+                console.log('App: Unauthorized response, clearing session and redirecting to login');
+                sessionService.clearSession(); // Clear invalid session
+                setInitialRoute('Login');
+                setIsLoading(false);
+              };
+              
+              websocketService.onMessage('GET_USER_NAME_SUCCESS', handleValidation);
+              websocketService.onMessage('GET_USER_NAME_FAIL', handleValidation);
+              websocketService.onMessage('UNAUTHORIZED', handleUnauthorized);
+            } else {
+              // If not connected yet, try again in 500ms
+              setTimeout(checkConnection, 500);
+            }
+          };
+          
+          checkConnection();
+        } else {
+          console.log('App: No local session found, navigating to Login');
+          setInitialRoute('Login');
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error('Error initializing app:', error);
         setInitialRoute('Login');
-      } finally {
         setIsLoading(false);
       }
     };
@@ -52,10 +111,19 @@ export default function App() {
     initializeApp();
 
     // Listen for connection status changes
-    websocketService.onConnectionChange((connected) => {
-      console.log('WebSocket connection status:', connected ? 'Connected' : 'Disconnected');
+    const handleConnectionChange = (connected) => {
+      console.log('App: WebSocket connection status:', connected ? 'Connected' : 'Disconnected');
       setIsConnected(connected);
-    });
+    };
+
+    websocketService.onConnectionChange(handleConnectionChange);
+
+    // Cleanup function to disconnect when app is closed
+    return () => {
+      console.log('App closing, disconnecting WebSocket...');
+      websocketService.offConnectionChange(handleConnectionChange);
+      websocketService.disconnect();
+    };
   }, []);
 
   // Show loading screen while checking session or loading fonts
@@ -78,7 +146,8 @@ export default function App() {
         <Stack.Screen name="Main" component={MainScreen} />
         <Stack.Screen name="PlantDetail" component={PlantDetail} />
         <Stack.Screen name="AddPlant" component={AddPlantScreen} />
-        <Stack.Screen name="Notification" component={NotificationScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

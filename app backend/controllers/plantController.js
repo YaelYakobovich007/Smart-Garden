@@ -3,6 +3,7 @@ const { getUser } = require('../models/userModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getPiSocket } = require('../sockets/piSocket');
 const { getEmailBySocket } = require('../models/userSessions');
+const googleCloudStorage = require('../services/googleCloudStorage');
 
 const plantHandlers = {
   ADD_PLANT: handleAddPlant,
@@ -31,10 +32,30 @@ async function handlePlantMessage(data, ws) {
 }
 
 async function handleAddPlant(data, ws, email) {
-  const { plantName, desiredMoisture, waterLimit, irrigationDays, irrigationTime, plantType } = data;
+  // Only support new structure with plantData and imageData
+  const { plantData, imageData } = data;
+  
+  if (!plantData) {
+    return sendError(ws, 'ADD_PLANT_FAIL', 'Missing plantData in request. Expected structure: { plantData: {...}, imageData: {...} }');
+  }
+  
+  if (typeof plantData !== 'object') {
+    return sendError(ws, 'ADD_PLANT_FAIL', 'plantData must be an object');
+  }
+  
+  const { plantName, desiredMoisture, waterLimit, irrigationDays, irrigationTime, plantType } = plantData;
 
   if (!plantName || desiredMoisture == null || waterLimit == null) {
-    return sendError(ws, 'ADD_PLANT_FAIL', 'Missing required plant data');
+    return sendError(ws, 'ADD_PLANT_FAIL', 'Missing required plant data: plantName, desiredMoisture, and waterLimit are required');
+  }
+
+  // Validate imageData structure if provided
+  if (imageData && typeof imageData !== 'object') {
+    return sendError(ws, 'ADD_PLANT_FAIL', 'imageData must be an object');
+  }
+  
+  if (imageData && (!imageData.base64 || !imageData.filename || !imageData.mimeType)) {
+    return sendError(ws, 'ADD_PLANT_FAIL', 'imageData must contain base64, filename, and mimeType');
   }
 
   // Get user from DB to get userId
@@ -43,16 +64,37 @@ async function handleAddPlant(data, ws, email) {
     return sendError(ws, 'ADD_PLANT_FAIL', 'User not found');
   }
 
-  const plantData = {
+  // Process image data if provided
+  let imageUrl = null;
+  if (imageData) {
+    try {
+      console.log('Processing image upload for plant:', plantName);
+      console.log('Image data received:', {
+        filename: imageData.filename,
+        mimeType: imageData.mimeType,
+        base64Length: imageData.base64 ? imageData.base64.length : 0
+      });
+
+      imageUrl = await processAndSaveImage(imageData, user.id, plantName);
+      
+      console.log('Image processed successfully, URL:', imageUrl);
+    } catch (imageError) {
+      console.error('Error processing image:', imageError);
+      return sendError(ws, 'ADD_PLANT_FAIL', 'Failed to process plant image');
+    }
+  }
+
+  const plantDataToSave = {
     name: plantName,
     desiredMoisture,
     waterLimit,
     irrigation_days: irrigationDays || null,
     irrigation_time: irrigationTime || null,
-    plantType: plantType || null
+    plantType: plantType || null,
+    image_url: imageUrl // Add image URL to plant data
   };
 
-  const result = await addPlant(user.id, plantData);
+  const result = await addPlant(user.id, plantDataToSave);
   if (result.error === 'DUPLICATE_NAME') {
     return sendError(ws, 'ADD_PLANT_FAIL', 'You already have a plant with this name');
   }
@@ -60,7 +102,14 @@ async function handleAddPlant(data, ws, email) {
     return sendError(ws, 'ADD_PLANT_FAIL', 'No available hardware for this plant');
   }
 
-  sendSuccess(ws, 'ADD_PLANT_SUCCESS', { message: 'Plant added successfully' });
+  // Return success with plant data including image URL
+  sendSuccess(ws, 'ADD_PLANT_SUCCESS', { 
+    message: 'Plant added successfully',
+    plant: {
+      ...result.plant,
+      image_url: imageUrl
+    }
+  });
 
   // Optional: Notify Pi socket
   // const piSocket = getPiSocket();
@@ -120,6 +169,29 @@ async function handleDeletePlant(data, ws, email) {
   await require('../models/plantModel').deletePlantById(plant.plant_id);
 
   sendSuccess(ws, 'DELETE_PLANT_SUCCESS', { message: 'Plant and its irrigation events deleted' });
+}
+
+// Updated function for image processing with Google Cloud Storage
+async function processAndSaveImage(imageData, userId, plantName) {
+  try {
+    console.log('Processing image for user:', userId, 'plant:', plantName);
+    
+    // Generate unique filename
+    const fileName = googleCloudStorage.generateFileName(userId, imageData.filename);
+    
+    // Upload to Google Cloud Storage
+    const imageUrl = await googleCloudStorage.uploadBase64Image(
+      imageData.base64, 
+      fileName
+    );
+    
+    console.log('Image uploaded successfully to:', imageUrl);
+    
+    return imageUrl;
+  } catch (error) {
+    console.error('Error in processAndSaveImage:', error);
+    throw new Error('Failed to upload image to cloud storage');
+  }
 }
 
 module.exports = {

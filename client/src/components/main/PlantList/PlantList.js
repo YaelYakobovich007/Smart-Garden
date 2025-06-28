@@ -15,7 +15,7 @@ import TempCircle from './TempCircle';
 
 const CARD_WIDTH = Math.floor(Dimensions.get('window').width * 0.8);
 
-const PlantList = ({ plants, isSimulationMode, onWaterPlant, onAddPlant }) => {
+const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
   const navigation = useNavigation();
 
   const getMoistureColor = (moisture) => {

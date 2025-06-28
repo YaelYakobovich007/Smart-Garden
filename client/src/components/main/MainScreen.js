@@ -2,71 +2,84 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  SafeAreaView,
-  StatusBar,
-  Alert,
+  StyleSheet,
   TouchableOpacity,
   Image,
-  ImageBackground,
-  ScrollView,
+  Alert,
+  StatusBar,
 } from 'react-native';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { styles } from './styles';
-import websocketService from '../../services/websocketService';
+import { Feather } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// Import components from their new folder locations
-import NotificationArea from './NotificationArea/NotificationArea';
 import PlantList from './PlantList/PlantList';
 import BottomToolbar from './BottomToolbar/BottomToolbar';
 import WeatherCard from './WeatherCard/WeatherCard';
-
-// Import simulation data from data folder
-import {
-  getSimulatedPlants,
-  getSimulatedNotifications,
-  simulationConfig
-} from '../../data';
+import websocketService from '../../services/websocketService';
+import sessionService from '../../services/sessionService';
+import styles from './styles';
 
 const MainScreen = () => {
   const navigation = useNavigation();
-  const [isSimulationMode] = useState(simulationConfig.isEnabled);
   const [plants, setPlants] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [userName] = useState('John'); // TODO: Get from user profile/authentication
+  const [userName, setUserName] = useState(''); // Empty string for generic greeting
   const [isConnected, setIsConnected] = useState(websocketService.isConnected());
   const [weather, setWeather] = useState(null);
   const [weatherError, setWeatherError] = useState(false);
   const [weatherLoading, setWeatherLoading] = useState(true);
-
-  // Load simulation data
-  useEffect(() => {
-    if (isSimulationMode) {
-      // Load plants and notifications from simulation data
-      setPlants(getSimulatedPlants());
-      setNotifications(getSimulatedNotifications());
-    }
-  }, [isSimulationMode]);
 
   // Set up WebSocket message handlers
   useEffect(() => {
     websocketService.onMessage('ADD_PLANT_SUCCESS', handlePlantAdded);
     websocketService.onMessage('GET_MY_PLANTS_RESPONSE', handlePlantsReceived);
     websocketService.onMessage('GET_MY_PLANTS_FAIL', handlePlantsError);
+    websocketService.onMessage('GET_USER_NAME_SUCCESS', handleUserNameReceived);
+    websocketService.onMessage('GET_USER_NAME_FAIL', handleUserNameError);
+    websocketService.onMessage('UNAUTHORIZED', handleUnauthorized);
 
     // Listen for connection changes
-    websocketService.onConnectionChange((connected) => {
+    const handleConnectionChange = (connected) => {
+      console.log('MainScreen: Connection status changed to:', connected);
       setIsConnected(connected);
       if (connected) {
-        // Request plants when connection is established
-        websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+        console.log('MainScreen: WebSocket connected, checking authentication...');
+        // First check if we're authenticated by requesting user name
+        websocketService.sendMessage({ type: 'GET_USER_NAME' });
       }
-    });
+    };
 
-    // Request plants from server if already connected
+    websocketService.onConnectionChange(handleConnectionChange);
+
+    // Request user name from server if already connected
     if (websocketService.isConnected()) {
-      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+      console.log('MainScreen: WebSocket already connected, checking authentication...');
+      websocketService.sendMessage({ type: 'GET_USER_NAME' });
+    } else {
+      console.log('MainScreen: WebSocket not connected, attempting to connect...');
+      websocketService.connect();
     }
+
+    // Check connection after a short delay to ensure WebSocket has time to connect
+    const connectionTimer = setTimeout(() => {
+      if (websocketService.isConnected()) {
+        console.log('MainScreen: WebSocket connected after delay, checking authentication...');
+        websocketService.sendMessage({ type: 'GET_USER_NAME' });
+      }
+    }, 2000);
+
+    // Cleanup function
+    return () => {
+      clearTimeout(connectionTimer);
+      websocketService.offMessage('ADD_PLANT_SUCCESS', handlePlantAdded);
+      websocketService.offMessage('GET_MY_PLANTS_RESPONSE', handlePlantsReceived);
+      websocketService.offMessage('GET_MY_PLANTS_FAIL', handlePlantsError);
+      websocketService.offMessage('GET_USER_NAME_SUCCESS', handleUserNameReceived);
+      websocketService.offMessage('GET_USER_NAME_FAIL', handleUserNameError);
+      websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
+      websocketService.offConnectionChange(handleConnectionChange);
+    };
   }, []);
 
   // Fetch weather on mount and on connection
@@ -81,19 +94,15 @@ const MainScreen = () => {
       setWeatherError(true);
       setWeatherLoading(false);
     }
+
     websocketService.onMessage('WEATHER', handleWeather);
     websocketService.onMessage('GET_WEATHER_FAIL', handleWeatherFail);
+    
     if (websocketService.isConnected()) {
       setWeatherLoading(true);
       websocketService.sendMessage({ type: 'GET_WEATHER' });
     }
-    // Also fetch weather when connection is established
-    websocketService.onConnectionChange((connected) => {
-      if (connected) {
-        setWeatherLoading(true);
-        websocketService.sendMessage({ type: 'GET_WEATHER' });
-      }
-    });
+
     // Cleanup
     return () => {
       websocketService.offMessage('WEATHER', handleWeather);
@@ -127,10 +136,38 @@ const MainScreen = () => {
 
   const handlePlantsError = (data) => {
     console.error('Failed to fetch plants:', data.message);
-    // Keep using simulation data if server fails
-    if (isSimulationMode) {
-      setPlants(getSimulatedPlants());
+    console.log('MainScreen: Server failed, keeping empty plant list');
+    setPlants([]);
+  };
+
+  const handleUnauthorized = (data) => {
+    console.log('MainScreen: Unauthorized access detected, redirecting to login');
+    // Clear the session and redirect to login
+    sessionService.clearSession().then(() => {
+      navigation.navigate('Login');
+    });
+  };
+
+  const handleUserNameReceived = (data) => {
+    console.log('Received user name response:', data);
+    if (data.fullName) {
+      console.log('Setting user name to:', data.fullName);
+      setUserName(data.fullName);
+      // Now that we're authenticated, request plants
+      console.log('MainScreen: User authenticated, requesting plants...');
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+    } else {
+      console.log('No fullName in response data');
     }
+  };
+
+  const handleUserNameError = (data) => {
+    console.error('Failed to fetch user name:', data.message);
+    // If we can't get user name, we're not authenticated
+    console.log('MainScreen: Authentication failed, redirecting to login');
+    sessionService.clearSession().then(() => {
+      navigation.navigate('Login');
+    });
   };
 
   const handleWaterPlant = (plantId) => {
@@ -175,6 +212,26 @@ const MainScreen = () => {
     );
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            // Clear the session
+            await sessionService.clearSession();
+            // Navigate to login
+            navigation.navigate('Login');
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -208,7 +265,9 @@ const MainScreen = () => {
           resizeMode="cover"
         />
         <View style={styles.greetingOverlay}>
-          <Text style={styles.greetingWhite}>Hello Yael!</Text>
+          <Text style={styles.greetingWhite}>
+            {userName ? `Hello ${userName}!` : 'Hello!'}
+          </Text>
         </View>
       </View>
 
@@ -242,23 +301,32 @@ const MainScreen = () => {
             ) : null}
           </View>
         </View>
+
         {/* Connection Status */}
         {!isConnected && (
           <View style={styles.connectionWarning}>
             <Feather name="wifi-off" size={16} color="#E74C3C" />
             <Text style={styles.connectionWarningText}>
-              Offline mode - using simulation data
+              Offline mode - no data available
             </Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={() => {
+                console.log('Manual retry: attempting to connect...');
+                websocketService.connect();
+              }}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
           </View>
         )}
-
+        
         {/* Plants List */}
         <View style={styles.plantsSection}>
           <Text style={styles.sectionTitle}>My Plants</Text>
           <View style={styles.titleSeparator} />
           <PlantList
             plants={plants}
-            isSimulationMode={isSimulationMode}
             onWaterPlant={handleWaterPlant}
             onAddPlant={handleAddPlant}
           />
@@ -268,7 +336,6 @@ const MainScreen = () => {
       <BottomToolbar
         onAddPlant={handleAddPlant}
         onSchedule={handleSchedule}
-        onNotifications={handleNotifications}
         onSettings={handleSettings}
         onHelp={handleHelp}
       />
