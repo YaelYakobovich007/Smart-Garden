@@ -34,15 +34,15 @@ async function handlePlantMessage(data, ws) {
 async function handleAddPlant(data, ws, email) {
   // Only support new structure with plantData and imageData
   const { plantData, imageData } = data;
-  
+
   if (!plantData) {
     return sendError(ws, 'ADD_PLANT_FAIL', 'Missing plantData in request. Expected structure: { plantData: {...}, imageData: {...} }');
   }
-  
+
   if (typeof plantData !== 'object') {
     return sendError(ws, 'ADD_PLANT_FAIL', 'plantData must be an object');
   }
-  
+
   const { plantName, desiredMoisture, waterLimit, irrigationDays, irrigationTime, plantType } = plantData;
 
   if (!plantName || desiredMoisture == null || waterLimit == null) {
@@ -53,7 +53,7 @@ async function handleAddPlant(data, ws, email) {
   if (imageData && typeof imageData !== 'object') {
     return sendError(ws, 'ADD_PLANT_FAIL', 'imageData must be an object');
   }
-  
+
   if (imageData && (!imageData.base64 || !imageData.filename || !imageData.mimeType)) {
     return sendError(ws, 'ADD_PLANT_FAIL', 'imageData must contain base64, filename, and mimeType');
   }
@@ -76,7 +76,7 @@ async function handleAddPlant(data, ws, email) {
       });
 
       imageUrl = await processAndSaveImage(imageData, user.id, plantName);
-      
+
       console.log('Image processed successfully, URL:', imageUrl);
     } catch (imageError) {
       console.error('Error processing image:', imageError);
@@ -103,7 +103,7 @@ async function handleAddPlant(data, ws, email) {
   }
 
   // Return success with plant data including image URL
-  sendSuccess(ws, 'ADD_PLANT_SUCCESS', { 
+  sendSuccess(ws, 'ADD_PLANT_SUCCESS', {
     message: 'Plant added successfully',
     plant: {
       ...result.plant,
@@ -175,18 +175,18 @@ async function handleDeletePlant(data, ws, email) {
 async function processAndSaveImage(imageData, userId, plantName) {
   try {
     console.log('Processing image for user:', userId, 'plant:', plantName);
-    
+
     // Generate unique filename
     const fileName = googleCloudStorage.generateFileName(userId, imageData.filename);
-    
+
     // Upload to Google Cloud Storage
     const imageUrl = await googleCloudStorage.uploadBase64Image(
-      imageData.base64, 
+      imageData.base64,
       fileName
     );
-    
+
     console.log('Image uploaded successfully to:', imageUrl);
-    
+
     return imageUrl;
   } catch (error) {
     console.error('Error in processAndSaveImage:', error);

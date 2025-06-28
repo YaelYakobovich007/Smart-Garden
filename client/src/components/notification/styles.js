@@ -116,4 +116,25 @@ export const styles = StyleSheet.create({
         marginTop: 12,
         fontFamily: 'Nunito_500Medium',
     },
+    emptyContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 60,
+    },
+    emptyTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#374151',
+        marginTop: 16,
+        marginBottom: 8,
+        fontFamily: 'Nunito_700Bold',
+    },
+    emptyMessage: {
+        fontSize: 16,
+        color: '#6B7280',
+        textAlign: 'center',
+        paddingHorizontal: 32,
+        fontFamily: 'Nunito_400Regular',
+    },
 }); 

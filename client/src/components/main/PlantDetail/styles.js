@@ -193,6 +193,21 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
     fontFamily: 'Nunito_700Bold',
   },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EF4444',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontFamily: 'Nunito_700Bold',
+  },
   descriptionContainer: {
     backgroundColor: '#FFFFFF',
     padding: 20,
