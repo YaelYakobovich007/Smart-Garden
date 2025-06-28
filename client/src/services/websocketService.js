@@ -25,7 +25,7 @@ class WebSocketService {
     console.log('Connecting to WebSocket server...');
     // Use your computer's IP address here
     // Replace 192.168.1.100 with your actual IP address from ipconfig
-    this.ws = new WebSocket('ws://192.168.1.182:8080');
+    this.ws = new WebSocket('ws://10.100.102.55:8080');
 
     this.ws.onopen = () => {
       console.log('WebSocket connected, sending HELLO_USER...');

@@ -147,7 +147,7 @@ export default function App() {
         <Stack.Screen name="PlantDetail" component={PlantDetail} />
         <Stack.Screen name="AddPlant" component={AddPlantScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
-        <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+        <Stack.Screen name="Notification" component={NotificationScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
