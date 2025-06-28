@@ -66,12 +66,26 @@ const PlantDetail = () => {
     websocketService.onMessage('IRRIGATE_FAIL', handleFail);
     websocketService.onMessage('IRRIGATE_SKIPPED', handleFail);
 
+    // Handler for delete plant responses
+    const handleDeleteSuccess = (data) => {
+      Alert.alert('Success', 'Plant deleted successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    };
+    const handleDeleteFail = (data) => {
+      Alert.alert('Error', data?.message || 'Failed to delete the plant.');
+    };
+    websocketService.onMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
+    websocketService.onMessage('DELETE_PLANT_FAIL', handleDeleteFail);
+
     return () => {
       websocketService.onMessage('IRRIGATE_SUCCESS', () => { });
       websocketService.onMessage('IRRIGATE_FAIL', () => { });
       websocketService.onMessage('IRRIGATE_SKIPPED', () => { });
+      websocketService.onMessage('DELETE_PLANT_SUCCESS', () => { });
+      websocketService.onMessage('DELETE_PLANT_FAIL', () => { });
     };
-  }, []);
+  }, [navigation]);
 
   // Water plant button handler
   const handleWaterPlant = () => {
@@ -84,6 +98,32 @@ const PlantDetail = () => {
       plantName: plant.name,
     });
     Alert.alert('Irrigation', 'Irrigation command sent. Please wait for result.');
+  };
+
+  // Delete plant button handler
+  const handleDeletePlant = () => {
+    if (!plant?.name) {
+      Alert.alert('Error', 'Plant name is missing.');
+      return;
+    }
+
+    Alert.alert(
+      'Delete Plant',
+      `Are you sure you want to delete "${plant.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            websocketService.sendMessage({
+              type: 'DELETE_PLANT',
+              plantName: plant.name,
+            });
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -161,6 +201,11 @@ const PlantDetail = () => {
           <TouchableOpacity style={styles.scheduleButton}>
             <Feather name="calendar" size={20} color="#FFFFFF" />
             <Text style={styles.scheduleButtonText}>View Schedule</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDeletePlant}>
+            <Feather name="trash-2" size={20} color="#FFFFFF" />
+            <Text style={styles.deleteButtonText}>Delete Plant</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

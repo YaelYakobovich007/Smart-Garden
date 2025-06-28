@@ -69,7 +69,7 @@ class WebSocketService {
       console.log('WebSocket disconnected, code:', event.code, 'reason:', event.reason);
       this.connected = false;
       this.connectionHandlers.forEach(handler => handler(false));
-      
+
       // Attempt to reconnect if not a clean close
       if (event.code !== 1000 && !this.isReconnecting) {
         this.attemptReconnect();
@@ -85,13 +85,13 @@ class WebSocketService {
 
     this.isReconnecting = true;
     this.reconnectAttempts++;
-    
+
     console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${this.reconnectDelay}ms...`);
-    
+
     this.reconnectTimer = setTimeout(() => {
       this.connect();
     }, this.reconnectDelay);
-    
+
     // Exponential backoff
     this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000); // Max 30 seconds
   }
@@ -101,10 +101,10 @@ class WebSocketService {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    
+
     this.isReconnecting = false;
     this.reconnectAttempts = 0;
-    
+
     if (this.ws) {
       this.ws.close(1000, 'User initiated disconnect');
       this.ws = null;

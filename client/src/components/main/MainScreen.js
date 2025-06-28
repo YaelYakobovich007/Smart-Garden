@@ -9,9 +9,8 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { Feather } from '@expo/vector-icons';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import PlantList from './PlantList/PlantList';
 import BottomToolbar from './BottomToolbar/BottomToolbar';
@@ -30,9 +29,82 @@ const MainScreen = () => {
   const [weatherError, setWeatherError] = useState(false);
   const [weatherLoading, setWeatherLoading] = useState(true);
 
+  // Define handlers before useEffect
+  const handlePlantAdded = (data) => {
+    // Refresh plant list after adding a new plant
+    if (websocketService.isConnected()) {
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+    }
+  };
+
+  const handlePlantDeleted = (data) => {
+    // Refresh plant list after deleting a plant
+    if (websocketService.isConnected()) {
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+    } else {
+      console.log('MainScreen: WebSocket not connected, cannot refresh plants');
+    }
+  };
+
+  const handlePlantsReceived = (data) => {
+    if (data.plants) {
+      // Transform server data to match our plant format
+      const transformedPlants = data.plants.map(plant => {
+        const transformed = {
+          id: plant.plant_id,
+          name: plant.name,
+          type: plant.plant_type || 'Unknown',
+          image_url: plant.image_url, // Add image_url from server
+          location: 'Garden', // Default location
+          moisture: Math.floor(Math.random() * 61) + 20, // Simulated moisture
+          temperature: Math.floor(Math.random() * 15) + 20, // Simulated temperature
+          lightLevel: Math.floor(Math.random() * 41) + 40, // Simulated light level
+          isHealthy: true, // Default to healthy
+        };
+        return transformed;
+      });
+      setPlants(transformedPlants);
+    } else {
+      console.log('MainScreen: No plants data in response');
+    }
+  };
+
+  const handlePlantsError = (data) => {
+    console.error('Failed to fetch plants:', data.message);
+    setPlants([]);
+  };
+
+  const handleUnauthorized = (data) => {
+    // Clear the session and redirect to login
+    sessionService.clearSession().then(() => {
+      navigation.navigate('Login');
+    });
+  };
+
+  const handleUserNameReceived = (data) => {
+    if (data.fullName) {
+      setUserName(data.fullName);
+      // Now that we're authenticated, request plants
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+    } else {
+      console.log('No fullName in response data');
+    }
+  };
+
+  const handleUserNameError = (data) => {
+    console.error('Failed to fetch user name:', data.message);
+    // If we can't get user name, we're not authenticated
+    console.log('MainScreen: Authentication failed, redirecting to login');
+    sessionService.clearSession().then(() => {
+      navigation.navigate('Login');
+    });
+  };
+
   // Set up WebSocket message handlers
   useEffect(() => {
+    console.log('MainScreen: Setting up WebSocket handlers...');
     websocketService.onMessage('ADD_PLANT_SUCCESS', handlePlantAdded);
+    websocketService.onMessage('DELETE_PLANT_SUCCESS', handlePlantDeleted);
     websocketService.onMessage('GET_MY_PLANTS_RESPONSE', handlePlantsReceived);
     websocketService.onMessage('GET_MY_PLANTS_FAIL', handlePlantsError);
     websocketService.onMessage('GET_USER_NAME_SUCCESS', handleUserNameReceived);
@@ -41,10 +113,8 @@ const MainScreen = () => {
 
     // Listen for connection changes
     const handleConnectionChange = (connected) => {
-      console.log('MainScreen: Connection status changed to:', connected);
       setIsConnected(connected);
       if (connected) {
-        console.log('MainScreen: WebSocket connected, checking authentication...');
         // First check if we're authenticated by requesting user name
         websocketService.sendMessage({ type: 'GET_USER_NAME' });
       }
@@ -54,17 +124,14 @@ const MainScreen = () => {
 
     // Request user name from server if already connected
     if (websocketService.isConnected()) {
-      console.log('MainScreen: WebSocket already connected, checking authentication...');
       websocketService.sendMessage({ type: 'GET_USER_NAME' });
     } else {
-      console.log('MainScreen: WebSocket not connected, attempting to connect...');
       websocketService.connect();
     }
 
     // Check connection after a short delay to ensure WebSocket has time to connect
     const connectionTimer = setTimeout(() => {
       if (websocketService.isConnected()) {
-        console.log('MainScreen: WebSocket connected after delay, checking authentication...');
         websocketService.sendMessage({ type: 'GET_USER_NAME' });
       }
     }, 2000);
@@ -73,6 +140,7 @@ const MainScreen = () => {
     return () => {
       clearTimeout(connectionTimer);
       websocketService.offMessage('ADD_PLANT_SUCCESS', handlePlantAdded);
+      websocketService.offMessage('DELETE_PLANT_SUCCESS', handlePlantDeleted);
       websocketService.offMessage('GET_MY_PLANTS_RESPONSE', handlePlantsReceived);
       websocketService.offMessage('GET_MY_PLANTS_FAIL', handlePlantsError);
       websocketService.offMessage('GET_USER_NAME_SUCCESS', handleUserNameReceived);
@@ -110,71 +178,14 @@ const MainScreen = () => {
     };
   }, []);
 
-  const handlePlantAdded = (data) => {
-    // Refresh plant list after adding a new plant
-    if (websocketService.isConnected()) {
-      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
-    }
-  };
-
-  const handlePlantsReceived = (data) => {
-    if (data.plants) {
-      console.log('Raw plants data from server:', data.plants);
-      // Transform server data to match our plant format
-      const transformedPlants = data.plants.map(plant => {
-        const transformed = {
-          id: plant.plant_id,
-          name: plant.name,
-          type: plant.plant_type || 'Unknown',
-          image_url: plant.image_url, // Add image_url from server
-          location: 'Garden', // Default location
-          moisture: Math.floor(Math.random() * 61) + 20, // Simulated moisture
-          temperature: Math.floor(Math.random() * 15) + 20, // Simulated temperature
-          lightLevel: Math.floor(Math.random() * 41) + 40, // Simulated light level
-          isHealthy: true, // Default to healthy
-        };
-        console.log('Transformed plant:', transformed);
-        return transformed;
-      });
-      setPlants(transformedPlants);
-    }
-  };
-
-  const handlePlantsError = (data) => {
-    console.error('Failed to fetch plants:', data.message);
-    console.log('MainScreen: Server failed, keeping empty plant list');
-    setPlants([]);
-  };
-
-  const handleUnauthorized = (data) => {
-    console.log('MainScreen: Unauthorized access detected, redirecting to login');
-    // Clear the session and redirect to login
-    sessionService.clearSession().then(() => {
-      navigation.navigate('Login');
-    });
-  };
-
-  const handleUserNameReceived = (data) => {
-    console.log('Received user name response:', data);
-    if (data.fullName) {
-      console.log('Setting user name to:', data.fullName);
-      setUserName(data.fullName);
-      // Now that we're authenticated, request plants
-      console.log('MainScreen: User authenticated, requesting plants...');
-      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
-    } else {
-      console.log('No fullName in response data');
-    }
-  };
-
-  const handleUserNameError = (data) => {
-    console.error('Failed to fetch user name:', data.message);
-    // If we can't get user name, we're not authenticated
-    console.log('MainScreen: Authentication failed, redirecting to login');
-    sessionService.clearSession().then(() => {
-      navigation.navigate('Login');
-    });
-  };
+  // Refresh plants when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (websocketService.isConnected()) {
+        websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+      }
+    }, [])
+  );
 
   const handleWaterPlant = (plantId) => {
     if (!websocketService.isConnected()) {

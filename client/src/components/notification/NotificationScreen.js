@@ -118,6 +118,12 @@ const NotificationScreen = () => {
           <Feather name="chevron-left" size={24} color="#2C3E50" />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
+        <Text style={styles.title}>Irrigation Notifications</Text>
+        <View style={styles.emptyContainer}>
+          <Feather name="bell" size={64} color="#9CA3AF" />
+          <Text style={styles.emptyTitle}>No Notifications</Text>
+          <Text style={styles.emptyMessage}>You don't have any irrigation notifications at the moment</Text>
+        </View>
       </View>
     );
   }
