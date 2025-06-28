@@ -4,6 +4,11 @@ class WebSocketService {
     this.connected = false;
     this.messageHandlers = new Map();
     this.connectionHandlers = [];
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectDelay = 1000; // Start with 1 second
+    this.reconnectTimer = null;
+    this.isReconnecting = false;
   }
 
   connect() {
@@ -12,12 +17,25 @@ class WebSocketService {
       return;
     }
 
+    if (this.isReconnecting) {
+      console.log('Already attempting to reconnect...');
+      return;
+    }
+
     console.log('Connecting to WebSocket server...');
+    // Use your computer's IP address here
+    // Replace 192.168.1.100 with your actual IP address from ipconfig
     this.ws = new WebSocket('ws://192.168.1.182:8080');
 
     this.ws.onopen = () => {
       console.log('WebSocket connected, sending HELLO_USER...');
+      this.connected = true;
+      this.isReconnecting = false;
+      this.reconnectAttempts = 0;
+      this.reconnectDelay = 1000; // Reset delay
       this.ws.send(JSON.stringify({ type: 'HELLO_USER' }));
+      // Notify connection handlers immediately
+      this.connectionHandlers.forEach(handler => handler(true));
     };
 
     this.ws.onmessage = (event) => {
@@ -47,18 +65,58 @@ class WebSocketService {
       this.connectionHandlers.forEach(handler => handler(false));
     };
 
-    this.ws.onclose = () => {
-      console.log('WebSocket disconnected');
+    this.ws.onclose = (event) => {
+      console.log('WebSocket disconnected, code:', event.code, 'reason:', event.reason);
       this.connected = false;
       this.connectionHandlers.forEach(handler => handler(false));
+      
+      // Attempt to reconnect if not a clean close
+      if (event.code !== 1000 && !this.isReconnecting) {
+        this.attemptReconnect();
+      }
     };
+  }
+
+  attemptReconnect() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log('Max reconnection attempts reached');
+      return;
+    }
+
+    this.isReconnecting = true;
+    this.reconnectAttempts++;
+    
+    console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${this.reconnectDelay}ms...`);
+    
+    this.reconnectTimer = setTimeout(() => {
+      this.connect();
+    }, this.reconnectDelay);
+    
+    // Exponential backoff
+    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000); // Max 30 seconds
+  }
+
+  disconnect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    
+    this.isReconnecting = false;
+    this.reconnectAttempts = 0;
+    
+    if (this.ws) {
+      this.ws.close(1000, 'User initiated disconnect');
+      this.ws = null;
+    }
   }
 
   send(message) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     } else {
-      console.error('WebSocket not connected');
+      console.error('WebSocket not connected, attempting to reconnect...');
+      this.connect();
     }
   }
 
@@ -81,8 +139,15 @@ class WebSocketService {
     this.connectionHandlers.push(handler);
   }
 
+  offConnectionChange(handler) {
+    const index = this.connectionHandlers.indexOf(handler);
+    if (index > -1) {
+      this.connectionHandlers.splice(index, 1);
+    }
+  }
+
   isConnected() {
-    return this.connected;
+    return this.connected && this.ws && this.ws.readyState === WebSocket.OPEN;
   }
 }
 

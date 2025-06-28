@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-export const styles = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F8F0',
@@ -89,22 +89,6 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'Nunito_700Bold',
   },
-  simulationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#3498DB',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 12,
-  },
-  simulationText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
-    fontFamily: 'Nunito_500Medium',
-  },
   logoutButton: {
     padding: 4,
   },
@@ -124,6 +108,19 @@ export const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 8,
     fontFamily: 'Nunito_500Medium',
+  },
+  retryButton: {
+    backgroundColor: '#E74C3C',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginLeft: 12,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Nunito_700Bold',
   },
   plantsSection: {
     flex: 0.6,
@@ -262,4 +259,6 @@ export const styles = StyleSheet.create({
     marginVertical: 8,
     marginHorizontal: 0,
   },
-}); 
+});
+
+export default styles; 

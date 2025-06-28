@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F8F0',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -72,6 +72,17 @@ export const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#E74C3C',
+    fontWeight: '500',
+    fontFamily: 'Nunito_500Medium',
+  },
+  clearSessionItem: {
+    marginTop: 5,
+    borderRadius: 8,
+    marginHorizontal: 20,
+    borderBottomWidth: 0,
+  },
+  clearSessionText: {
+    color: '#F39C12',
     fontWeight: '500',
     fontFamily: 'Nunito_500Medium',
   },

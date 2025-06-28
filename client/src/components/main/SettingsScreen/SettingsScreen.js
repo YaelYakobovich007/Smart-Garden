@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { styles } from './styles';
 import sessionService from '../../../services/sessionService';
 
@@ -24,6 +25,26 @@ const SettingsScreen = () => {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            // Clear user session
+            await sessionService.clearSession();
+            // Navigate to login screen
+            navigation.navigate('Login');
+          }
+        }
+      ]
+    );
+  };
+
+  const handleClearSession = async () => {
+    Alert.alert(
+      'Clear Session',
+      'This will clear your current session and redirect you to login. Use this if you\'re having authentication issues.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear Session',
           style: 'destructive',
           onPress: async () => {
             // Clear user session
@@ -127,6 +148,12 @@ const SettingsScreen = () => {
             <View style={styles.settingLeft}>
               <Feather name="log-out" size={20} color="#E74C3C" />
               <Text style={[styles.settingText, styles.logoutText]}>Logout</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.settingItem, styles.clearSessionItem]} onPress={handleClearSession}>
+            <View style={styles.settingLeft}>
+              <Feather name="refresh-cw" size={20} color="#F39C12" />
+              <Text style={[styles.settingText, styles.clearSessionText]}>Clear Session (Debug)</Text>
             </View>
           </TouchableOpacity>
         </View>
