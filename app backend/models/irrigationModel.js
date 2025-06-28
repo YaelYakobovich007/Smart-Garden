@@ -1,7 +1,7 @@
 // app backend/models/irrigationModel.js
 // Model for managing the irrigation_events table
+const { pool } = require('../config/database');
 
-const db = require('../config/database');
 
 /**
  * Adds a new irrigation result to the irrigation_events table
@@ -36,7 +36,7 @@ async function addIrrigationResult(irrigationResult) {
     irrigation_time,
     event_data ? JSON.stringify(event_data) : null
   ];
-  const { rows } = await db.query(query, values);
+  const { rows } = await pool.query(query, values);
   return rows[0];
 }
 
@@ -47,13 +47,13 @@ async function addIrrigationResult(irrigationResult) {
  */
 async function getIrrigationResultsByPlantId(plantId) {
   const query = `SELECT * FROM irrigation_events WHERE plant_id = $1 ORDER BY irrigation_time DESC`;
-  const { rows } = await db.query(query, [plantId]);
+  const { rows } = await pool.query(query, [plantId]);
   return rows;
 }
 
 // Delete all irrigation events for a plant
 async function deleteIrrigationResultsByPlantId(plantId) {
-  await db.query('DELETE FROM irrigation_events WHERE plant_id = $1', [plantId]);
+  await pool.query('DELETE FROM irrigation_events WHERE plant_id = $1', [plantId]);
 }
 
 module.exports = {

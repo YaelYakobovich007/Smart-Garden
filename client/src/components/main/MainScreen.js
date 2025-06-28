@@ -187,6 +187,10 @@ const MainScreen = () => {
     );
   };
 
+  const handleNotifications = () => {
+    navigation.navigate('Notification');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -268,6 +272,7 @@ const MainScreen = () => {
       <BottomToolbar
         onAddPlant={handleAddPlant}
         onSchedule={handleSchedule}
+        onNotifications={handleNotifications}
         onSettings={handleSettings}
         onHelp={handleHelp}
       />
@@ -275,4 +280,4 @@ const MainScreen = () => {
   );
 };
 
-export default MainScreen; 
+export default MainScreen;

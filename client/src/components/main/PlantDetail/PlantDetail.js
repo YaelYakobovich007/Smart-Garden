@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StatusBar,
   TouchableOpacity,
   Image,
+  Alert,
   ScrollView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -14,6 +15,7 @@ import { styles } from './styles';
 import MoistureCircle from '../PlantList/MoistureCircle';
 import TempCircle from '../PlantList/TempCircle';
 import LightCircle from '../PlantList/LightCircle';
+import websocketService from '../../../services/websocketService';
 
 const PlantDetail = () => {
   const navigation = useNavigation();
@@ -58,6 +60,38 @@ const PlantDetail = () => {
       </SafeAreaView>
     );
   }
+
+  // Handler for irrigation responses
+  useEffect(() => {
+    const handleSuccess = (data) => {
+      Alert.alert('Irrigation', data?.message || 'Irrigation performed successfully!');
+    };
+    const handleFail = (data) => {
+      Alert.alert('Irrigation', data?.message || 'Failed to irrigate the plant.');
+    };
+    websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
+    websocketService.onMessage('IRRIGATE_FAIL', handleFail);
+    websocketService.onMessage('IRRIGATE_SKIPPED', handleFail);
+
+    return () => {
+      websocketService.onMessage('IRRIGATE_SUCCESS', () => {});
+      websocketService.onMessage('IRRIGATE_FAIL', () => {});
+      websocketService.onMessage('IRRIGATE_SKIPPED', () => {});
+    };
+  }, []);
+
+  // Water plant button handler
+  const handleWaterPlant = () => {
+    if (!plant?.name) {
+      Alert.alert('Error', 'Plant name is missing.');
+      return;
+    }
+    websocketService.sendMessage({
+      type: 'IRRIGATE_PLANT',
+      plantName: plant.name,
+    });
+    Alert.alert('Irrigation', 'Irrigation command sent. Please wait for result.');
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -129,8 +163,8 @@ const PlantDetail = () => {
         <View style={styles.actionsContainer}>
           <Text style={styles.sectionTitle}>Actions</Text>
           
-          <TouchableOpacity style={styles.waterButton}>
-            <Feather name="droplets" size={20} color="#FFFFFF" />
+          <TouchableOpacity style={styles.waterButton} onPress={handleWaterPlant}>
+            <Feather name="droplet" size={20} color="#FFFFFF" />
             <Text style={styles.waterButtonText}>Water Plant</Text>
           </TouchableOpacity>
 
