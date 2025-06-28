@@ -187,6 +187,7 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
     marginLeft: 4,
     fontWeight: '600',
+    fontFamily: 'Nunito_500Medium',
   },
   title: {
     fontSize: 26,
@@ -194,6 +195,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: '#16A34A',
     alignSelf: 'center',
+    fontFamily: 'Nunito_700Bold',
   },
   scroll: {
     width: '100%',
@@ -214,10 +216,12 @@ const styles = StyleSheet.create({
   plantName: {
     fontSize: 16,
     fontWeight: 'bold',
+    fontFamily: 'Nunito_700Bold',
   },
   unreadText: {
     fontWeight: 'bold',
     color: '#111827',
+    fontFamily: 'Nunito_700Bold',
   },
   unreadDot: {
     width: 8,
@@ -230,26 +234,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     marginTop: 2,
+    fontFamily: 'Nunito_400Regular',
   },
   infoText: {
     fontSize: 13,
     color: '#374151',
     marginTop: 2,
+    fontFamily: 'Nunito_400Regular',
   },
   message: {
     fontSize: 13,
     color: '#374151',
     marginTop: 2,
+    fontFamily: 'Nunito_400Regular',
   },
   placeholder: {
     fontSize: 16,
     color: '#6B7280',
     marginTop: 32,
+    fontFamily: 'Nunito_400Regular',
   },
   error: {
     color: '#EF4444',
     fontSize: 16,
     marginTop: 32,
+    fontFamily: 'Nunito_500Medium',
   },
   emptyState: {
     flex: 1,
@@ -261,6 +270,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     marginTop: 8,
+    fontFamily: 'Nunito_400Regular',
   },
 });
 

@@ -84,4 +84,3 @@ const WeatherCard = ({ city, country, temp, description, weatherId, compact }) =
 };
 
 export default WeatherCard;
-

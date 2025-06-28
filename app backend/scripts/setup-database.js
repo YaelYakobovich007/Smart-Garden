@@ -34,6 +34,7 @@ async function setupDatabase() {
         irrigation_days JSONB,
         irrigation_time TIME,
         plant_type VARCHAR(100),
+        image_url VARCHAR(2000),
         sensor_id VARCHAR(100),
         valve_id VARCHAR(100),
         last_watered TIMESTAMP,
@@ -43,6 +44,16 @@ async function setupDatabase() {
       )
     `);
     console.log('Plants table created');
+
+    // Add image_url column if it doesn't exist (for existing databases)
+    try {
+      await pool.query(`
+        ALTER TABLE plants ADD COLUMN IF NOT EXISTS image_url VARCHAR(500)
+      `);
+      console.log('Image URL column added to plants table');
+    } catch (error) {
+      console.log('Image URL column already exists or error adding it:', error.message);
+    }
 
     // Create indexes for better performance
     await pool.query(`
@@ -97,9 +108,6 @@ async function setupDatabase() {
       CREATE INDEX IF NOT EXISTS idx_readings_timestamp ON sensor_readings(reading_timestamp)
     `);
 
-    // Drop and recreate irrigation_events table to match new DTO
-    await pool.query(`DROP TABLE IF EXISTS irrigation_events CASCADE`);
-    console.log('Dropped existing irrigation_events table');
 
     // Irrigation events table - matches IrrigationResult DTO
     await pool.query(`
@@ -136,6 +144,13 @@ async function setupDatabase() {
       END;
       $$ language 'plpgsql'
     `);
+
+    // Drop existing trigger if it exists, then create new one
+    try {
+      await pool.query(`DROP TRIGGER IF EXISTS update_plants_updated_at ON plants`);
+    } catch (error) {
+      // Ignore errors if trigger doesn't exist
+    }
 
     // Create trigger for plants table
     await pool.query(`

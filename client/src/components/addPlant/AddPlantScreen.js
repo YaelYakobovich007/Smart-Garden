@@ -17,7 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ArrowLeft, Camera as CameraIcon, Image as ImageIcon, Droplets, Thermometer, Calendar, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Leaf } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import styles from './styles';
 import websocketService from '../../services/websocketService';
 
@@ -41,11 +41,13 @@ export default function AddPlantScreen() {
   const [errors, setErrors] = useState({});
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   useEffect(() => {
     // Handler for success
     const handleSuccess = (data) => {
+      setIsSaving(false);
       Alert.alert(
         'Success!',
         data?.message || 'Plant added successfully to your garden',
@@ -59,6 +61,7 @@ export default function AddPlantScreen() {
     };
     // Handler for failure
     const handleFail = (data) => {
+      setIsSaving(false);
       Alert.alert(
         'Failed to Add Plant',
         data?.message || 'An error occurred while adding the plant',
@@ -71,8 +74,8 @@ export default function AddPlantScreen() {
     websocketService.onMessage('ADD_PLANT_FAIL', handleFail);
     return () => {
       // Remove handlers on unmount
-      websocketService.onMessage('ADD_PLANT_SUCCESS', () => {});
-      websocketService.onMessage('ADD_PLANT_FAIL', () => {});
+      websocketService.offMessage('ADD_PLANT_SUCCESS', handleSuccess);
+      websocketService.offMessage('ADD_PLANT_FAIL', handleFail);
     };
   }, [navigation]);
 
@@ -95,29 +98,99 @@ export default function AddPlantScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (validateForm()) {
-      // Prepare irrigationDays and irrigationTime if schedule is enabled
-      let irrigationDays = null;
-      let irrigationTime = null;
-      if (formData.useSchedule) {
-        irrigationDays = DAYS.filter((day, idx) => formData.schedule.days[idx]);
-        // Format time as 'HH:mm'
-        const t = formData.schedule.time;
-        const pad = (n) => n.toString().padStart(2, '0');
-        irrigationTime = `${pad(t.getHours())}:${pad(t.getMinutes())}`;
+      setIsSaving(true);
+      try {
+        // Prepare irrigationDays and irrigationTime if schedule is enabled
+        let irrigationDays = null;
+        let irrigationTime = null;
+        if (formData.useSchedule) {
+          irrigationDays = DAYS.filter((day, idx) => formData.schedule.days[idx]);
+          // Format time as 'HH:mm'
+          const t = formData.schedule.time;
+          const pad = (n) => n.toString().padStart(2, '0');
+          irrigationTime = `${pad(t.getHours())}:${pad(t.getMinutes())}`;
+        }
+
+        // Prepare image data if an image is selected
+        let imageData = null;
+        if (formData.image) {
+          try {
+            // Convert image to base64
+            const response = await fetch(formData.image);
+            const blob = await response.blob();
+            
+            // Check image size (limit to 5MB)
+            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+            if (blob.size > maxSize) {
+              Alert.alert(
+                'Image Too Large',
+                'Please select an image smaller than 5MB.',
+                [{ text: 'OK' }]
+              );
+              setIsSaving(false);
+              return;
+            }
+            
+            const base64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+
+            // Extract filename from URI
+            const filename = formData.image.split('/').pop() || 'plant_image.jpg';
+            const mimeType = blob.type || 'image/jpeg';
+
+            imageData = {
+              base64: base64,
+              filename: filename,
+              mimeType: mimeType
+            };
+
+            console.log('Image prepared for upload:', {
+              filename: imageData.filename,
+              mimeType: imageData.mimeType,
+              size: Math.round(blob.size / 1024) + ' KB'
+            });
+          } catch (imageError) {
+            console.error('Error processing image:', imageError);
+            Alert.alert(
+              'Image Error',
+              'Failed to process the selected image. Please try selecting a different image.',
+              [{ text: 'OK' }]
+            );
+            setIsSaving(false);
+            return;
+          }
+        }
+
+        const message = {
+          type: 'ADD_PLANT',
+          plantData: {
+            plantName: formData.plantName,
+            plantType: formData.plantType,
+            desiredMoisture: formData.humidity,
+            waterLimit: formData.waterLimit,
+            irrigationDays,
+            irrigationTime
+          },
+          imageData: imageData // Include image data if available
+        };
+
+        console.log('Sending plant creation request with image:', !!imageData);
+        websocketService.sendMessage(message);
+      } catch (error) {
+        console.error('Error in handleSave:', error);
+        Alert.alert(
+          'Error',
+          'An unexpected error occurred. Please try again.',
+          [{ text: 'OK' }]
+        );
+        setIsSaving(false);
       }
-      const message = {
-        type: 'ADD_PLANT',
-        plantName: formData.plantName,
-        plantType: formData.plantType,
-        desiredMoisture: formData.humidity,
-        waterLimit: formData.waterLimit,
-        irrigationDays,
-        irrigationTime
-      };
-      // TODO: send image if/when supported
-      websocketService.sendMessage(message);
     }
   };
 
@@ -194,13 +267,13 @@ export default function AddPlantScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft color="#16A34A" size={24} />
+          <Feather name="chevron-left" size={24} color="#2C3E50" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Leaf color="#16A34A" size={24} />
-        <Text style={styles.headerTitle}>Add New Plant</Text>
+          <Feather name="leaf" size={20} color="#4CAF50" />
+          <Text style={styles.headerTitle}>Add New Plant</Text>
         </View>
-        <View style={styles.placeholder} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -221,7 +294,7 @@ export default function AddPlantScreen() {
             />
             {errors.plantName && (
               <View style={styles.errorContainer}>
-                <AlertCircle color="#EF4444" size={16} />
+                <Feather name="alert-circle" size={16} color="#EF4444" />
                 <Text style={styles.errorText}>{errors.plantName}</Text>
               </View>
             )}
@@ -245,7 +318,7 @@ export default function AddPlantScreen() {
           
           <View style={styles.inputContainer}>
             <View style={styles.labelContainer}>
-              <Thermometer color="#16A34A" size={20} />
+              <Feather name="thermometer" size={20} color="#4CAF50" />
               <Text style={styles.label}>
                 Optimal Humidity <Text style={styles.required}>*</Text>
               </Text>
@@ -265,7 +338,7 @@ export default function AddPlantScreen() {
             </View>
             {errors.humidity && (
               <View style={styles.errorContainer}>
-                <AlertCircle color="#EF4444" size={16} />
+                <Feather name="alert-circle" size={16} color="#EF4444" />
                 <Text style={styles.errorText}>{errors.humidity}</Text>
               </View>
             )}
@@ -273,7 +346,7 @@ export default function AddPlantScreen() {
 
           <View style={styles.inputContainer}>
             <View style={styles.labelContainer}>
-              <Droplets color="#3B82F6" size={20} />
+              <Feather name="droplet" size={20} color="#4CAF50" />
               <Text style={styles.label}>
                 Water Limit <Text style={styles.required}>*</Text>
               </Text>
@@ -293,7 +366,7 @@ export default function AddPlantScreen() {
             </View>
             {errors.waterLimit && (
               <View style={styles.errorContainer}>
-                <AlertCircle color="#EF4444" size={16} />
+                <Feather name="alert-circle" size={16} color="#EF4444" />
                 <Text style={styles.errorText}>{errors.waterLimit}</Text>
               </View>
             )}
@@ -311,7 +384,7 @@ export default function AddPlantScreen() {
               <Image source={{ uri: formData.image }} style={styles.plantImage} />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <CameraIcon color="#9CA3AF" size={32} />
+                <Feather name="camera" size={32} color="#9CA3AF" />
                 <Text style={styles.imagePlaceholderText}>Add a photo of your plant</Text>
               </View>
             )}
@@ -322,7 +395,7 @@ export default function AddPlantScreen() {
         <View style={styles.section}>
           <View style={styles.scheduleHeader}>
             <View style={styles.labelContainer}>
-              <Calendar color="#16A34A" size={20} />
+              <Feather name="calendar" size={20} color="#4CAF50" />
             <Text style={styles.sectionTitle}>Watering Schedule</Text>
             </View>
             <Switch
@@ -366,7 +439,7 @@ export default function AddPlantScreen() {
                 onPress={() => setShowTimePicker(true)}
               >
                 <View style={styles.labelContainer}>
-                  <Clock color="#16A34A" size={20} />
+                  <Feather name="clock" size={20} color="#4CAF50" />
                   <Text style={styles.label}>Watering Time</Text>
                 </View>
                 <Text style={styles.timeText}>
@@ -387,10 +460,23 @@ export default function AddPlantScreen() {
           )}
         </View>
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <CheckCircle color="#FFFFFF" size={20} />
-          <Text style={styles.saveButtonText}>Add Plant to Garden</Text>
-          </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
+          onPress={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <>
+              <Feather name="loader" size={20} color="#FFFFFF" style={{ opacity: 0.7 }} />
+              <Text style={styles.saveButtonText}>Adding Plant...</Text>
+            </>
+          ) : (
+            <>
+              <Feather name="check" size={20} color="#FFFFFF" />
+              <Text style={styles.saveButtonText}>Add Plant to Garden</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Image Picker Modal */}
@@ -404,11 +490,11 @@ export default function AddPlantScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add Plant Photo</Text>
             <TouchableOpacity style={styles.modalButton} onPress={takePhoto}>
-              <CameraIcon color="#16A34A" size={24} />
+              <Feather name="camera" size={24} color="#16A34A" />
               <Text style={styles.modalButtonText}>Take Photo</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.modalButton} onPress={pickImage}>
-              <ImageIcon color="#16A34A" size={24} />
+              <Feather name="image" size={24} color="#16A34A" />
               <Text style={styles.modalButtonText}>Choose from Gallery</Text>
             </TouchableOpacity>
             <TouchableOpacity
