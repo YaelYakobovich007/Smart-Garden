@@ -97,7 +97,7 @@ const MainScreen = () => {
 
     websocketService.onMessage('WEATHER', handleWeather);
     websocketService.onMessage('GET_WEATHER_FAIL', handleWeatherFail);
-    
+
     if (websocketService.isConnected()) {
       setWeatherLoading(true);
       websocketService.sendMessage({ type: 'GET_WEATHER' });
@@ -119,17 +119,23 @@ const MainScreen = () => {
 
   const handlePlantsReceived = (data) => {
     if (data.plants) {
+      console.log('Raw plants data from server:', data.plants);
       // Transform server data to match our plant format
-      const transformedPlants = data.plants.map(plant => ({
-        id: plant.plant_id,
-        name: plant.name,
-        type: plant.plant_type || 'Unknown',
-        location: 'Garden', // Default location
-        moisture: Math.floor(Math.random() * 61) + 20, // Simulated moisture
-        temperature: Math.floor(Math.random() * 15) + 20, // Simulated temperature
-        lightLevel: Math.floor(Math.random() * 41) + 40, // Simulated light level
-        isHealthy: true, // Default to healthy
-      }));
+      const transformedPlants = data.plants.map(plant => {
+        const transformed = {
+          id: plant.plant_id,
+          name: plant.name,
+          type: plant.plant_type || 'Unknown',
+          image_url: plant.image_url, // Add image_url from server
+          location: 'Garden', // Default location
+          moisture: Math.floor(Math.random() * 61) + 20, // Simulated moisture
+          temperature: Math.floor(Math.random() * 15) + 20, // Simulated temperature
+          lightLevel: Math.floor(Math.random() * 41) + 40, // Simulated light level
+          isHealthy: true, // Default to healthy
+        };
+        console.log('Transformed plant:', transformed);
+        return transformed;
+      });
       setPlants(transformedPlants);
     }
   };
@@ -239,8 +245,8 @@ const MainScreen = () => {
       {/* Thin Top Bar with Logo, App Name, and Notification Icon */}
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
-          <Image 
-            source={require('../../../assets/images/Smart_Garden_Logo.png')} 
+          <Image
+            source={require('../../../assets/images/Smart_Garden_Logo.png')}
             style={styles.topBarLogo}
           />
           <Text style={styles.topBarTitle}>Smart Garden</Text>
@@ -309,7 +315,7 @@ const MainScreen = () => {
             <Text style={styles.connectionWarningText}>
               Offline mode - no data available
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.retryButton}
               onPress={() => {
                 console.log('Manual retry: attempting to connect...');
@@ -320,7 +326,7 @@ const MainScreen = () => {
             </TouchableOpacity>
           </View>
         )}
-        
+
         {/* Plants List */}
         <View style={styles.plantsSection}>
           <Text style={styles.sectionTitle}>My Plants</Text>
