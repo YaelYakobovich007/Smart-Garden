@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import websocketService from '../../services/websocketService';
 import { Feather } from '@expo/vector-icons';
+import { styles } from './styles';
 
 const STATUS_COLORS = {
   error: '#EF4444', // red
@@ -16,11 +17,13 @@ const NotificationScreen = () => {
   const navigation = useNavigation();
   const [notifications, setNotifications] = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
     setError(null);
     setNotifications([]);
+    setLoading(true);
 
     // Step 1: Get user's plants
     const handlePlants = (data) => {
@@ -28,6 +31,7 @@ const NotificationScreen = () => {
       if (!data.plants || !Array.isArray(data.plants)) {
         setError('No plants found');
         setNotifications([]);
+        setLoading(false);
         return;
       }
       // Step 2: For each plant, get irrigation results
@@ -35,6 +39,7 @@ const NotificationScreen = () => {
       const allNotifications = [];
       if (pending === 0) {
         setNotifications([]);
+        setLoading(false);
         return;
       }
       data.plants.forEach((plant) => {
@@ -59,6 +64,7 @@ const NotificationScreen = () => {
             // Sort notifications by time descending (if available)
             allNotifications.sort((a, b) => (b.time || '').localeCompare(a.time || ''));
             setNotifications(allNotifications);
+            setLoading(false);
           }
         };
         websocketService.onMessage('GET_IRRIGATION_RESULT_SUCCESS', handleIrrigation);
@@ -72,12 +78,12 @@ const NotificationScreen = () => {
 
   const getStatusIcon = (status) => {
     if (status === 'done' || status === 'success')
-      return <Feather name="check-circle" size={22} color={STATUS_COLORS.done} style={{marginRight: 8}} />;
+      return <Feather name="check-circle" size={22} color={STATUS_COLORS.done} style={{ marginRight: 8 }} />;
     if (status === 'skipped')
-      return <Feather name="alert-triangle" size={22} color={STATUS_COLORS.skipped} style={{marginRight: 8}} />;
+      return <Feather name="alert-triangle" size={22} color={STATUS_COLORS.skipped} style={{ marginRight: 8 }} />;
     if (status === 'error')
-      return <Feather name="x-circle" size={22} color={STATUS_COLORS.error} style={{marginRight: 8}} />;
-    return <Feather name="info" size={22} color="#6B7280" style={{marginRight: 8}} />;
+      return <Feather name="x-circle" size={22} color={STATUS_COLORS.error} style={{ marginRight: 8 }} />;
+    return <Feather name="info" size={22} color="#6B7280" style={{ marginRight: 8 }} />;
   };
 
   const handleMarkAsRead = (idx) => {
@@ -92,16 +98,26 @@ const NotificationScreen = () => {
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
 
-  // Empty state with back button
-  if (notifications.length === 0) {
+  // Loading state - removed, screen will be blank during loading
+  if (loading) {
     return (
-      <View style={styles.emptyState}>
+      <View style={styles.container}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Feather name="chevron-left" size={24} color="#2C3E50" />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
-        <Feather name="bell" size={32} color="#9CA3AF" style={{ marginBottom: 12 }} />
-        <Text style={styles.emptyStateText}>No irrigation notifications yet.</Text>
+      </View>
+    );
+  }
+
+  // Empty state - removed, screen will be blank if no notifications
+  if (notifications.length === 0 && !loading) {
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Feather name="chevron-left" size={24} color="#2C3E50" />
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -114,7 +130,7 @@ const NotificationScreen = () => {
         <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
       <Text style={styles.title}>Irrigation Notifications</Text>
-      <ScrollView style={styles.scroll} contentContainerStyle={{paddingBottom: 32}}>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 32 }}>
         {notifications.map((notif, idx) => (
           <TouchableOpacity
             key={idx}
@@ -125,10 +141,10 @@ const NotificationScreen = () => {
                   notif.status === 'error'
                     ? '#FEE2E2'
                     : notif.status === 'skipped'
-                    ? '#FEF3C7'
-                    : notif.status === 'done' || notif.status === 'success'
-                    ? '#DCFCE7'
-                    : '#fff',
+                      ? '#FEF3C7'
+                      : notif.status === 'done' || notif.status === 'success'
+                        ? '#DCFCE7'
+                        : '#fff',
                 borderLeftWidth: 6,
                 borderLeftColor: STATUS_COLORS[notif.status] || '#16A34A',
               },
@@ -137,8 +153,8 @@ const NotificationScreen = () => {
             onPress={() => handleMarkAsRead(idx)}
           >
             {getStatusIcon(notif.status)}
-            <View style={{flex: 1}}>
-              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text
                   style={[
                     styles.plantName,
@@ -166,112 +182,5 @@ const NotificationScreen = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFF',
-    alignItems: 'center',
-    paddingTop: 30,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    marginTop: 8,
-    marginLeft: 4,
-    alignSelf: 'flex-start',
-  },
-  backText: {
-    fontSize: 16,
-    color: '#2C3E50',
-    marginLeft: 4,
-    fontWeight: '600',
-    fontFamily: 'Nunito_500Medium',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#16A34A',
-    alignSelf: 'center',
-    fontFamily: 'Nunito_700Bold',
-  },
-  scroll: {
-    width: '100%',
-    paddingHorizontal: 16,
-  },
-  notificationRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  plantName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'Nunito_700Bold',
-  },
-  unreadText: {
-    fontWeight: 'bold',
-    color: '#111827',
-    fontFamily: 'Nunito_700Bold',
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: UNREAD_DOT_COLOR,
-    marginLeft: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 2,
-    fontFamily: 'Nunito_400Regular',
-  },
-  infoText: {
-    fontSize: 13,
-    color: '#374151',
-    marginTop: 2,
-    fontFamily: 'Nunito_400Regular',
-  },
-  message: {
-    fontSize: 13,
-    color: '#374151',
-    marginTop: 2,
-    fontFamily: 'Nunito_400Regular',
-  },
-  placeholder: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginTop: 32,
-    fontFamily: 'Nunito_400Regular',
-  },
-  error: {
-    color: '#EF4444',
-    fontSize: 16,
-    marginTop: 32,
-    fontFamily: 'Nunito_500Medium',
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    marginTop: 80, // Moves the content down
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginTop: 8,
-    fontFamily: 'Nunito_400Regular',
-  },
-});
 
 export default NotificationScreen;

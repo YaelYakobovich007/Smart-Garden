@@ -103,8 +103,8 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
   if (plants.length === 0) {
     return (
       <View style={styles.emptyState}>
-        <Image 
-          source={require('../../../../assets/images/leaves.png')} 
+        <Image
+          source={require('../../../../assets/images/leaves.png')}
           style={styles.emptyStateIcon}
         />
         <Text style={styles.emptyStateText}>No plants yet</Text>
@@ -139,9 +139,27 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
             onPress={() => handlePlantPress(plant)}
           >
             <View style={styles.plantImageContainer}>
-              <Image 
-                source={getPlantImage(plant.type)} 
+              {console.log('Plant image debug:', {
+                plantName: plant.name,
+                image_url: plant.image_url,
+                type: plant.type,
+                hasImageUrl: !!plant.image_url
+              })}
+              <Image
+                source={
+                  plant.image_url
+                    ? {
+                      uri: plant.image_url,
+                      headers: {
+                        'Accept': 'image/*',
+                        'Cache-Control': 'no-cache'
+                      }
+                    }
+                    : getPlantImage(plant.type)
+                }
                 style={styles.plantImage}
+                onLoad={() => console.log('Image loaded successfully for:', plant.name)}
+                onError={(error) => console.log('Image load error for:', plant.name, error.nativeEvent)}
               />
             </View>
             <View style={styles.plantContent}>

@@ -67,9 +67,9 @@ const PlantDetail = () => {
     websocketService.onMessage('IRRIGATE_SKIPPED', handleFail);
 
     return () => {
-      websocketService.onMessage('IRRIGATE_SUCCESS', () => {});
-      websocketService.onMessage('IRRIGATE_FAIL', () => {});
-      websocketService.onMessage('IRRIGATE_SKIPPED', () => {});
+      websocketService.onMessage('IRRIGATE_SUCCESS', () => { });
+      websocketService.onMessage('IRRIGATE_FAIL', () => { });
+      websocketService.onMessage('IRRIGATE_SKIPPED', () => { });
     };
   }, []);
 
@@ -89,7 +89,7 @@ const PlantDetail = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -102,9 +102,27 @@ const PlantDetail = () => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Plant Image and Info */}
         <View style={styles.imageContainer}>
-          <Image 
-            source={getPlantImage(plant.type)} 
+          {console.log('PlantDetail image debug:', {
+            plantName: plant.name,
+            image_url: plant.image_url,
+            type: plant.type,
+            hasImageUrl: !!plant.image_url
+          })}
+          <Image
+            source={
+              plant.image_url
+                ? {
+                  uri: plant.image_url,
+                  headers: {
+                    'Accept': 'image/*',
+                    'Cache-Control': 'no-cache'
+                  }
+                }
+                : getPlantImage(plant.type)
+            }
             style={styles.plantImage}
+            onLoad={() => console.log('PlantDetail image loaded successfully for:', plant.name)}
+            onError={(error) => console.log('PlantDetail image load error for:', plant.name, error.nativeEvent)}
           />
           <View style={styles.infoOverlay}>
             <View style={styles.separator} />
@@ -118,7 +136,7 @@ const PlantDetail = () => {
         {/* Stats */}
         <View style={styles.statsContainer}>
           <Text style={styles.sectionTitle}>Current Conditions</Text>
-          
+
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
               <MoistureCircle percent={plant.moisture} />

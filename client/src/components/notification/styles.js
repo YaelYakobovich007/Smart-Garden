@@ -1,0 +1,119 @@
+import { StyleSheet } from 'react-native';
+
+export const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#FFF',
+        alignItems: 'center',
+        paddingTop: 30,
+    },
+    backButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        marginTop: 8,
+        marginLeft: 4,
+        alignSelf: 'flex-start',
+    },
+    backText: {
+        fontSize: 16,
+        color: '#2C3E50',
+        marginLeft: 4,
+        fontWeight: '600',
+        fontFamily: 'Nunito_500Medium',
+    },
+    title: {
+        fontSize: 26,
+        fontWeight: 'bold',
+        marginBottom: 16,
+        color: '#16A34A',
+        alignSelf: 'center',
+        fontFamily: 'Nunito_700Bold',
+    },
+    scroll: {
+        width: '100%',
+        paddingHorizontal: 16,
+    },
+    notificationRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        padding: 14,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    plantName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        fontFamily: 'Nunito_700Bold',
+    },
+    unreadText: {
+        fontWeight: 'bold',
+        color: '#111827',
+        fontFamily: 'Nunito_700Bold',
+    },
+    unreadDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#3B82F6',
+        marginLeft: 8,
+    },
+    statusText: {
+        fontSize: 14,
+        color: '#6B7280',
+        marginTop: 2,
+        fontFamily: 'Nunito_400Regular',
+    },
+    infoText: {
+        fontSize: 13,
+        color: '#374151',
+        marginTop: 2,
+        fontFamily: 'Nunito_400Regular',
+    },
+    message: {
+        fontSize: 13,
+        color: '#374151',
+        marginTop: 2,
+        fontFamily: 'Nunito_400Regular',
+    },
+    placeholder: {
+        fontSize: 16,
+        color: '#6B7280',
+        marginTop: 32,
+        fontFamily: 'Nunito_400Regular',
+    },
+    error: {
+        color: '#EF4444',
+        fontSize: 16,
+        marginTop: 32,
+        fontFamily: 'Nunito_500Medium',
+    },
+    emptyState: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        marginTop: 80, // Moves the content down
+    },
+    emptyStateText: {
+        fontSize: 16,
+        color: '#6B7280',
+        marginTop: 8,
+        fontFamily: 'Nunito_400Regular',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        fontSize: 16,
+        color: '#16A34A',
+        marginTop: 12,
+        fontFamily: 'Nunito_500Medium',
+    },
+}); 
