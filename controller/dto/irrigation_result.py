@@ -10,3 +10,7 @@ class IrrigationResult:
     final_moisture: Optional[float] = None       # Moisture at the end (after watering)
     water_added_liters: Optional[float] = None   # How much water was actually given 
     irrigation_time: Optional[datetime] = None   # Time of irrigation
+
+
+    # TODO: Add a field for the plant name
+    

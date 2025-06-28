@@ -14,7 +14,6 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { styles } from './styles';
 import MoistureCircle from '../PlantList/MoistureCircle';
 import TempCircle from '../PlantList/TempCircle';
-import LightCircle from '../PlantList/LightCircle';
 import websocketService from '../../../services/websocketService';
 
 const PlantDetail = () => {
@@ -43,12 +42,6 @@ const PlantDetail = () => {
         // Fallback to the original image if plant type doesn't match
         return require('../../../../assets/images/Branch_With_Leafs.png');
     }
-  };
-
-  const getMoistureStatus = (moisture) => {
-    if (moisture < 30) return 'Dry';
-    if (moisture < 60) return 'Moderate';
-    return 'Good';
   };
 
   if (!plant) {
@@ -107,33 +100,18 @@ const PlantDetail = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Plant Image */}
+        {/* Plant Image and Info */}
         <View style={styles.imageContainer}>
           <Image 
             source={getPlantImage(plant.type)} 
             style={styles.plantImage}
           />
-        </View>
-
-        {/* Plant Info */}
-        <View style={styles.infoContainer}>
-          <Text style={styles.plantName}>{plant.name}</Text>
-          <Text style={styles.plantType}>{plant.type}</Text>
-          <Text style={styles.plantLocation}>Location: {plant.location}</Text>
-          
-          {/* Status */}
-          <View style={styles.statusContainer}>
-            <View style={styles.statusIndicator}>
-              <View 
-                style={[
-                  styles.statusDot, 
-                  { backgroundColor: plant.isHealthy ? '#27AE60' : '#E74C3C' }
-                ]} 
-              />
-              <Text style={styles.statusText}>
-                {plant.isHealthy ? 'Healthy' : 'Needs Attention'}
-              </Text>
-            </View>
+          <View style={styles.infoOverlay}>
+            <View style={styles.separator} />
+            <Text style={styles.infoLabel}>Plant Name</Text>
+            <Text style={styles.plantName}>{plant.name}</Text>
+            <Text style={styles.infoLabel}>Genus</Text>
+            <Text style={styles.plantType}>{plant.type}</Text>
           </View>
         </View>
 
@@ -151,37 +129,21 @@ const PlantDetail = () => {
               <TempCircle value={plant.temperature} />
               <Text style={styles.statLabel}>Temperature</Text>
             </View>
-
-            <View style={styles.statCard}>
-              <LightCircle percent={plant.lightLevel} />
-              <Text style={styles.statLabel}>Light</Text>
-            </View>
           </View>
         </View>
 
         {/* Actions */}
         <View style={styles.actionsContainer}>
           <Text style={styles.sectionTitle}>Actions</Text>
-          
           <TouchableOpacity style={styles.waterButton} onPress={handleWaterPlant}>
             <Feather name="droplet" size={20} color="#FFFFFF" />
-            <Text style={styles.waterButtonText}>Water Plant</Text>
+            <Text style={styles.waterButtonText}>Water Now</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.scheduleButton}>
-            <Feather name="calendar" size={20} color="#3498DB" />
+            <Feather name="calendar" size={20} color="#FFFFFF" />
             <Text style={styles.scheduleButtonText}>View Schedule</Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Plant Description */}
-        <View style={styles.descriptionContainer}>
-          <Text style={styles.sectionTitle}>About {plant.name}</Text>
-          <Text style={styles.descriptionText}>
-            This is a {plant.type.toLowerCase()} plant located in {plant.location}. 
-            It requires regular watering and monitoring to maintain optimal health. 
-            The current conditions show {getMoistureStatus(plant.moisture).toLowerCase()} humidity levels.
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

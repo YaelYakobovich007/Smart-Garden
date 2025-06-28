@@ -9,8 +9,9 @@ const RADIUS = (SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const MoistureCircle = ({ percent }) => {
-  const progress = Math.max(0, Math.min(percent, 100));
-  const strokeDashoffset = CIRCUMFERENCE * (1 - progress / 100);
+  // Clamp percent between 0 and 100
+  const progress = Math.max(0, Math.min(Number(percent), 100));
+  const strokeDashoffset = (CIRCUMFERENCE * (1 - progress / 100)).toString();
 
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -30,7 +31,7 @@ const MoistureCircle = ({ percent }) => {
           stroke="#7CB518"
           strokeWidth={STROKE_WIDTH}
           fill="none"
-          strokeDasharray={CIRCUMFERENCE}
+          strokeDasharray={CIRCUMFERENCE.toString()}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
           rotation="-90"

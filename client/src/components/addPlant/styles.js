@@ -265,6 +265,6 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     textAlign: 'center',
   },
-});
+}); 
 
 export default styles; 

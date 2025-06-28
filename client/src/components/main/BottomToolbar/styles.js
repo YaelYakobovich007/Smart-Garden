@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 export const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
-    backgroundColor: '#3da339',
+    backgroundColor: '#FFFFFF',
     borderRadius: 30,
     margin: 16,
     paddingVertical: 0,
@@ -31,7 +31,7 @@ export const styles = StyleSheet.create({
   },
   toolbarLabel: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: '#1c7823',
     textAlign: 'center',
   },
 }); 
