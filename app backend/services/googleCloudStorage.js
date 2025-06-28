@@ -2,14 +2,35 @@ const { Storage } = require('@google-cloud/storage');
 
 class GoogleCloudStorageService {
   constructor() {
+    // Check if required environment variables are set
+    if (!process.env.GOOGLE_CLOUD_PROJECT_ID) {
+      console.error('❌ GOOGLE_CLOUD_PROJECT_ID environment variable is not set');
+    }
+    if (!process.env.GOOGLE_CLOUD_KEY_FILE) {
+      console.error('❌ GOOGLE_CLOUD_KEY_FILE environment variable is not set');
+    }
+    if (!process.env.GOOGLE_CLOUD_BUCKET_NAME) {
+      console.error('❌ GOOGLE_CLOUD_BUCKET_NAME environment variable is not set');
+    }
+
     // Initialize Google Cloud Storage
-    this.storage = new Storage({
-      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-      keyFilename: process.env.GOOGLE_CLOUD_KEY_FILE, // Path to your service account key file
-    });
-    
-    this.bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME || 'smart-garden-images';
-    this.bucket = this.storage.bucket(this.bucketName);
+    try {
+      this.storage = new Storage({
+        projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+        keyFilename: process.env.GOOGLE_CLOUD_KEY_FILE, // Path to your service account key file
+      });
+      
+      this.bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME;
+      this.bucket = this.storage.bucket(this.bucketName);
+      
+      console.log('✅ Google Cloud Storage initialized with:');
+      console.log(`   Project ID: ${process.env.GOOGLE_CLOUD_PROJECT_ID}`);
+      console.log(`   Bucket: ${this.bucketName}`);
+      console.log(`   Key file: ${process.env.GOOGLE_CLOUD_KEY_FILE}`);
+    } catch (error) {
+      console.error('❌ Failed to initialize Google Cloud Storage:', error);
+      throw error;
+    }
   }
 
   /**
@@ -20,32 +41,53 @@ class GoogleCloudStorageService {
    */
   async uploadBase64Image(base64Image, fileName) {
     try {
+      console.log(`📤 Starting upload for file: ${fileName}`);
+      
+      // Validate inputs
+      if (!base64Image) {
+        throw new Error('Base64 image data is required');
+      }
+      if (!fileName) {
+        throw new Error('File name is required');
+      }
+
       // Remove data URL prefix if present
       const base64Data = base64Image.replace(/^data:image\/[a-z]+;base64,/, '');
       
       // Convert base64 to buffer
       const imageBuffer = Buffer.from(base64Data, 'base64');
+      console.log(`📊 Image buffer size: ${imageBuffer.length} bytes`);
       
       // Create file reference
       const file = this.bucket.file(fileName);
       
-      // Upload the file
+      // Upload the file (removed public: true due to public access prevention)
+      console.log(`🚀 Uploading to bucket: ${this.bucketName}`);
       await file.save(imageBuffer, {
         metadata: {
           contentType: this.getContentType(fileName),
         },
-        public: true, // Make the file publicly accessible
+        // Removed public: true - bucket has public access prevention enabled
       });
       
-      // Generate public URL
-      const publicUrl = `https://storage.googleapis.com/${this.bucketName}/${fileName}`;
+      // Generate signed URL for public access (valid for 1 year)
+      const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1 year from now
+      });
       
-      console.log(`Image uploaded successfully: ${publicUrl}`);
-      return publicUrl;
+      console.log(`✅ Image uploaded successfully with signed URL`);
+      return signedUrl;
       
     } catch (error) {
-      console.error('Error uploading image to Google Cloud Storage:', error);
-      throw new Error('Failed to upload image to cloud storage');
+      console.error('❌ Error uploading image to Google Cloud Storage:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        details: error.details
+      });
+      throw new Error(`Failed to upload image to cloud storage: ${error.message}`);
     }
   }
 
@@ -91,6 +133,28 @@ class GoogleCloudStorageService {
       'webp': 'image/webp'
     };
     return contentTypes[extension] || 'image/jpeg';
+  }
+
+  /**
+   * Test Google Cloud Storage connection and bucket access
+   */
+  async testConnection() {
+    try {
+      console.log('🧪 Testing Google Cloud Storage connection...');
+      
+      // Test bucket access
+      const [exists] = await this.bucket.exists();
+      if (!exists) {
+        throw new Error(`Bucket '${this.bucketName}' does not exist`);
+      }
+      
+      console.log('✅ Google Cloud Storage connection test successful');
+      console.log(`✅ Bucket '${this.bucketName}' is accessible`);
+      return true;
+    } catch (error) {
+      console.error('❌ Google Cloud Storage connection test failed:', error);
+      throw error;
+    }
   }
 }
 

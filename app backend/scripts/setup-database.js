@@ -34,7 +34,7 @@ async function setupDatabase() {
         irrigation_days JSONB,
         irrigation_time TIME,
         plant_type VARCHAR(100),
-        image_url VARCHAR(500),
+        image_url VARCHAR(2000),
         sensor_id VARCHAR(100),
         valve_id VARCHAR(100),
         last_watered TIMESTAMP,
