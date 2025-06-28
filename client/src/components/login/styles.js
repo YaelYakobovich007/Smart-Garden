@@ -19,11 +19,13 @@ export const styles = StyleSheet.create({
         fontSize: 32,
         fontWeight: 'bold',
         color: '#34A853',
+        fontFamily: 'Nunito_700Bold',
     },
     headerSubtitle: {
         fontSize: 16,
         color: '#666',
         marginTop: 4,
+        fontFamily: 'Nunito_400Regular',
     },
     formContainer: {
         marginHorizontal: 24,
@@ -44,12 +46,14 @@ export const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#34A853',
         textAlign: 'center',
+        fontFamily: 'Nunito_700Bold',
     },
     welcomeSubtitle: {
         fontSize: 16,
         color: '#666',
         textAlign: 'center',
         marginBottom: 24,
+        fontFamily: 'Nunito_400Regular',
     },
     connectionStatus: {
         paddingHorizontal: 16,
@@ -62,6 +66,7 @@ export const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontWeight: 'bold',
         fontSize: 12,
+        fontFamily: 'Nunito_700Bold',
     },
     inputContainer: {
         flexDirection: 'row',
@@ -85,6 +90,7 @@ export const styles = StyleSheet.create({
         height: 50,
         color: '#333',
         fontSize: 16,
+        fontFamily: 'Nunito_400Regular',
     },
     fieldError: {
         color: '#D32F2F',
@@ -97,6 +103,7 @@ export const styles = StyleSheet.create({
         textAlign: 'right',
         marginBottom: 16,
         fontWeight: '600',
+        fontFamily: 'Nunito_500Medium',
     },
     signInButton: {
         backgroundColor: '#34A853',
@@ -112,6 +119,7 @@ export const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: 'bold',
         fontSize: 16,
+        fontFamily: 'Nunito_700Bold',
     },
     separatorContainer: {
         flexDirection: 'row',
@@ -126,6 +134,7 @@ export const styles = StyleSheet.create({
     separatorText: {
         marginHorizontal: 10,
         color: '#888',
+        fontFamily: 'Nunito_400Regular',
     },
     googleButton: {
         flexDirection: 'row',
@@ -146,6 +155,7 @@ export const styles = StyleSheet.create({
         color: '#333',
         fontWeight: '600',
         fontSize: 16,
+        fontFamily: 'Nunito_500Medium',
     },
     message: {
         marginTop: 16,
@@ -153,6 +163,7 @@ export const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14,
         textAlign: 'center',
+        fontFamily: 'Nunito_700Bold',
     },
     footer: {
         flexDirection: 'row',
@@ -162,9 +173,11 @@ export const styles = StyleSheet.create({
     },
     footerText: {
         color: '#666',
+        fontFamily: 'Nunito_400Regular',
     },
     signUpText: {
         color: '#34A853',
         fontWeight: 'bold',
+        fontFamily: 'Nunito_700Bold',
     },
 }); 

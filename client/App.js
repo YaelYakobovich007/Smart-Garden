@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator } from 'react-native';
+import { useFonts as useNunito, Nunito_400Regular, Nunito_500Medium, Nunito_700Bold } from '@expo-google-fonts/nunito';
 
 import LoginScreen from './src/components/login/LoginScreen';
 import RegisterScreen from './src/components/register/RegisterScreen';
@@ -20,6 +21,13 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Login');
   const navigationRef = useRef(null);
+
+  // Load Nunito fonts using the pattern from the user's example
+  const [fontsLoaded] = useNunito({ 
+    Nunito_400Regular,
+    Nunito_500Medium,
+    Nunito_700Bold
+  });
 
   useEffect(() => {
     // Check for existing session and establish WebSocket connection
@@ -50,8 +58,8 @@ export default function App() {
     });
   }, []);
 
-  // Show loading screen while checking session
-  if (isLoading) {
+  // Show loading screen while checking session or loading fonts
+  if (isLoading || !fontsLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA' }}>
         <ActivityIndicator size="large" color="#4CAF50" />

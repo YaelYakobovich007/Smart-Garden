@@ -2,16 +2,18 @@ import React from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   Image,
+  FlatList,
+  Dimensions,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { styles } from './styles';
 import MoistureCircle from './MoistureCircle';
 import TempCircle from './TempCircle';
-import LightCircle from './LightCircle';
+
+const CARD_WIDTH = Math.floor(Dimensions.get('window').width * 0.8);
 
 const PlantList = ({ plants, isSimulationMode, onWaterPlant, onAddPlant }) => {
   const navigation = useNavigation();
@@ -120,47 +122,44 @@ const PlantList = ({ plants, isSimulationMode, onWaterPlant, onAddPlant }) => {
   }
 
   return (
-    <ScrollView 
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.horizontalScrollContainer}
-    >
-      {plants.map((plant) => (
-        <TouchableOpacity
-          key={plant.id}
-          style={styles.plantCard}
-          onPress={() => handlePlantPress(plant)}
-        >
-          <View style={styles.plantImageContainer}>
-            <Image 
-              source={getPlantImage(plant.type)} 
-              style={styles.plantImage}
-            />
-          </View>
-
-          <View style={styles.plantContent}>
-            <View style={styles.plantHeader}>
+    <View style={styles.plantsSection}>
+      <FlatList
+        data={plants}
+        keyExtractor={(item) => item.id.toString()}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
+        snapToInterval={CARD_WIDTH + 16}
+        decelerationRate="fast"
+        style={{ height: 320 }}
+        renderItem={({ item: plant }) => (
+          <TouchableOpacity
+            key={plant.id}
+            style={[styles.plantCard, { width: CARD_WIDTH }]}
+            onPress={() => handlePlantPress(plant)}
+          >
+            <View style={styles.plantImageContainer}>
+              <Image 
+                source={getPlantImage(plant.type)} 
+                style={styles.plantImage}
+              />
+            </View>
+            <View style={styles.plantContent}>
               <Text style={styles.plantName}>{plant.name}</Text>
               <Text style={styles.plantType}>{plant.type}</Text>
             </View>
-
             <View style={styles.plantStats}>
               <View style={styles.statItem}>
                 <MoistureCircle percent={plant.moisture} />
               </View>
-
               <View style={styles.statItem}>
                 <TempCircle value={plant.temperature} />
               </View>
-
-              <View style={styles.statItem}>
-                <LightCircle percent={plant.lightLevel} />
-              </View>
             </View>
-          </View>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
   );
 };
 

@@ -32,7 +32,7 @@ function getWeatherAnimation(weatherId) {
   return require('../../../../assets/animations/partly-cloudy.json'); // Default
 }
 
-const WeatherCard = ({ city, country, temp, description, weatherId }) => {
+const WeatherCard = ({ city, country, temp, description, weatherId, compact }) => {
   const [animationSource, setAnimationSource] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -51,8 +51,8 @@ const WeatherCard = ({ city, country, temp, description, weatherId }) => {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: '#D4EDDA' }]}> 
-        <ActivityIndicator size="large" color="#fff" />
+      <View style={[styles.container, compact && styles.compact]}> 
+        <ActivityIndicator size="small" color="#4CAF50" />
         <Text style={styles.loadingText}>Loading weather...</Text>
       </View>
     );
@@ -60,14 +60,14 @@ const WeatherCard = ({ city, country, temp, description, weatherId }) => {
 
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: '#D4EDDA' }]}> 
+      <View style={[styles.container, compact && styles.compact]}> 
         <Text style={styles.loadingText}>Error: {error}</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: '#D4EDDA' }]}> 
+    <View style={[styles.container, compact && styles.compact]}> 
       <View style={styles.leftSection}>
         <LottieView
           source={animationSource}
@@ -75,10 +75,10 @@ const WeatherCard = ({ city, country, temp, description, weatherId }) => {
           loop
           style={styles.animation}
         />
+        <Text style={styles.temp}>{Math.round(temp)}°</Text>
         <Text style={styles.description}>{description}</Text>
         <Text style={styles.location}>{city}, {country}</Text>
       </View>
-      <Text style={styles.temp}>{Math.round(temp)}°</Text>
     </View>
   );
 };

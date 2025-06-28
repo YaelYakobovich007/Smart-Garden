@@ -7,6 +7,8 @@ import {
   Alert,
   TouchableOpacity,
   Image,
+  ImageBackground,
+  ScrollView,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -180,86 +182,93 @@ const MainScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <View style={styles.appTitleContainer}>
-              <Image 
-                source={require('../../../assets/images/Smart_Garden_Logo.png')} 
-                style={styles.appLogo}
-              />
-              <Text style={styles.appTitle}>Smart Garden</Text>
-            </View>
-            <Text style={styles.greeting}>Hello, {userName}!</Text>
-            <Text style={styles.subtitle}>How are your plants today?</Text>
-          </View>
-          <View style={styles.headerActions}>
-            {/* {isSimulationMode && (
-              <View style={styles.simulationBadge}>
-                <Feather name="play" size={12} color="#FFFFFF" />
-                <Text style={styles.simulationText}>Simulation</Text>
-              </View>
-            )} */}
-            <TouchableOpacity onPress={handleNotifications} style={styles.notificationsButton}>
-              <Feather name="bell" size={20} color="#7F8C8D" />
-              {notifications.filter(n => !n.isRead).length > 0 && (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.notificationBadgeText}>
-                    {notifications.filter(n => !n.isRead).length}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      {/* Weather Forecast Area */}
-      <View>
-        {weatherLoading ? (
-          <View style={{ alignItems: 'center', margin: 20 }}>
-            <MaterialCommunityIcons name="cloud-refresh" size={48} color="#4A90E2" />
-            <Text style={{ color: '#888', marginTop: 8 }}>Loading weather...</Text>
-          </View>
-        ) : weatherError ? (
-          <View style={{ alignItems: 'center', margin: 20 }}>
-            <MaterialCommunityIcons name="cloud-off-outline" size={48} color="#E74C3C" />
-            <Text style={{ color: '#E74C3C', marginTop: 8 }}>Unable to fetch weather</Text>
-          </View>
-        ) : weather ? (
-          <WeatherCard
-            city={weather.city}
-            country={weather.country}
-            temp={weather.temp}
-            description={weather.description}
-            weatherId={weather.weatherId || 800} // fallback to sunny if not provided
+      {/* Thin Top Bar with Logo, App Name, and Notification Icon */}
+      <View style={styles.topBar}>
+        <View style={styles.topBarLeft}>
+          <Image 
+            source={require('../../../assets/images/Smart_Garden_Logo.png')} 
+            style={styles.topBarLogo}
           />
-        ) : null}
-      </View>
-
-      {/* Connection Status */}
-      {!isConnected && (
-        <View style={styles.connectionWarning}>
-          <Feather name="wifi-off" size={16} color="#E74C3C" />
-          <Text style={styles.connectionWarningText}>
-            Offline mode - using simulation data
-          </Text>
+          <Text style={styles.topBarTitle}>Smart Garden</Text>
         </View>
-      )}
-
-      {/* Plants List */}
-      <View style={styles.plantsSection}>
-        <Text style={styles.sectionTitle}>My Plants</Text>
-        <PlantList
-          plants={plants}
-          isSimulationMode={isSimulationMode}
-          onWaterPlant={handleWaterPlant}
-          onAddPlant={handleAddPlant}
-        />
+        <TouchableOpacity onPress={handleNotifications} style={styles.topBarNotification}>
+          <Feather name="bell" size={20} color="#7F8C8D" />
+          {notifications.filter(n => !n.isRead).length > 0 && (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>
+                {notifications.filter(n => !n.isRead).length}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* Bottom Toolbar */}
+      {/* Top Illustration */}
+      <View style={styles.topImageContainer}>
+        <Image
+          source={require('../../../assets/images/main_screen.png')}
+          style={styles.topImage}
+          resizeMode="cover"
+        />
+        <View style={styles.greetingOverlay}>
+          <Text style={styles.greetingWhite}>Hello Yael!</Text>
+        </View>
+      </View>
+
+      {/* Main Content Card */}
+      <View style={styles.mainContentCard}>
+        {/* Weather and Subtitle Row */}
+        <View style={styles.weatherRow}>
+          <View style={styles.weatherSubtitleContainer}>
+            <Text style={styles.weatherSubtitle}>{'How are your\nplants today?'}</Text>
+          </View>
+          <View style={styles.weatherCardContainer}>
+            {weatherLoading ? (
+              <View style={{ alignItems: 'center', margin: 10 }}>
+                <MaterialCommunityIcons name="cloud-refresh" size={32} color="#4A90E2" />
+                <Text style={{ color: '#888', marginTop: 4, fontSize: 12 }}>Loading weather...</Text>
+              </View>
+            ) : weatherError ? (
+              <View style={{ alignItems: 'center', margin: 10 }}>
+                <MaterialCommunityIcons name="cloud-off-outline" size={32} color="#E74C3C" />
+                <Text style={{ color: '#E74C3C', marginTop: 4, fontSize: 12 }}>Unable to fetch weather</Text>
+              </View>
+            ) : weather ? (
+              <WeatherCard
+                city={weather.city}
+                country={weather.country}
+                temp={weather.temp}
+                description={weather.description}
+                weatherId={weather.weatherId || 800}
+                compact
+              />
+            ) : null}
+          </View>
+        </View>
+
+        {/* Connection Status */}
+        {!isConnected && (
+          <View style={styles.connectionWarning}>
+            <Feather name="wifi-off" size={16} color="#E74C3C" />
+            <Text style={styles.connectionWarningText}>
+              Offline mode - using simulation data
+            </Text>
+          </View>
+        )}
+
+        {/* Plants List */}
+        <View style={styles.plantsSection}>
+          <Text style={styles.sectionTitle}>My Plants</Text>
+          <View style={styles.titleSeparator} />
+          <PlantList
+            plants={plants}
+            isSimulationMode={isSimulationMode}
+            onWaterPlant={handleWaterPlant}
+            onAddPlant={handleAddPlant}
+          />
+        </View>
+      </View>
+      {/* Bottom Toolbar - moved outside mainContentCard for fixed bottom position */}
       <BottomToolbar
         onAddPlant={handleAddPlant}
         onSchedule={handleSchedule}

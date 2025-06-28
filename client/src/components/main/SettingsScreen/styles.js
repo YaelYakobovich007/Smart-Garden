@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F0F8F0',
   },
   header: {
     flexDirection: 'row',
@@ -22,6 +22,7 @@ export const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'Nunito_700Bold',
   },
   headerSpacer: {
     width: 34, // Same width as back button for centering
@@ -41,6 +42,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Nunito_500Medium',
   },
   settingItem: {
     flexDirection: 'row',
@@ -60,6 +62,7 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     marginLeft: 15,
+    fontFamily: 'Nunito_400Regular',
   },
   logoutItem: {
     marginTop: 10,
@@ -70,5 +73,6 @@ export const styles = StyleSheet.create({
   logoutText: {
     color: '#E74C3C',
     fontWeight: '500',
+    fontFamily: 'Nunito_500Medium',
   },
 }); 
