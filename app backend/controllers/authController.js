@@ -1,7 +1,7 @@
 const authService = require('../services/authService');
 const userModel = require('../models/userModel');
-const { verifyGoogleToken } = require('../services/googleService'); 
-const { isValidEmail } = require('../utils/validators');
+const { verifyGoogleToken } = require('../services/googleService');
+const { isValidEmail, isValidPassword, isValidName, isValidLocation, isValidCountryAndCity } = require('../utils/validators');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { addUserSession } = require('../models/userSessions');
 
@@ -29,21 +29,33 @@ async function handleRegister(data, ws) {
     return sendError(ws, 'REGISTER_FAIL', 'Invalid email format');
   }
 
-  if (data.password.length < 6) {
-    return sendError(ws, 'REGISTER_FAIL', 'Password must be at least 6 characters long');
+  if (!isValidPassword(data.password)) {
+    return sendError(ws, 'REGISTER_FAIL', 'Password must be at least 8 characters with at least one letter and one number');
   }
 
   if (!data.fullName || !data.country || !data.city) {
     return sendError(ws, 'REGISTER_FAIL', 'Full name, country, and city are required');
   }
 
+  if (!isValidName(data.fullName)) {
+    return sendError(ws, 'REGISTER_FAIL', 'Invalid name format. Name should be 2-50 characters with letters, spaces, hyphens, and apostrophes only');
+  }
+
+  if (!isValidLocation(data.country, data.city)) {
+    return sendError(ws, 'REGISTER_FAIL', 'Country and city are required');
+  }
+
+  if (!isValidCountryAndCity(data.country, data.city)) {
+    return sendError(ws, 'REGISTER_FAIL', 'Invalid country or city');
+  }
+
   try {
     const success = await authService.register(
       data.email,
       data.password,
-      data.fullName,
-      data.country,
-      data.city
+      data.fullName.trim(),
+      data.country.trim(),
+      data.city.trim()
     );
     return sendSuccess(ws, success ? 'REGISTER_SUCCESS' : 'REGISTER_FAIL', {
       message: success ? 'User created' : 'Email already exists',
@@ -85,7 +97,7 @@ async function handleGoogleLogin(data, ws) {
     }
 
     addUserSession(ws, user.email);
-    return sendSuccess(ws, 'LOGIN_SUCCESS', {userId: userData.email, name: userData.name,});
+    return sendSuccess(ws, 'LOGIN_SUCCESS', { userId: userData.email, name: userData.name, });
   } catch (err) {
     console.error('Google login failed:', err);
     return sendError(ws, 'LOGIN_FAIL', 'Google authentication failed');
