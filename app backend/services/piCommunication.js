@@ -15,6 +15,13 @@ class PiCommunication {
         }
 
         try {
+            // Debug: Log the plantData structure
+            console.log('🔍 DEBUG - plantData received:', JSON.stringify(plantData, null, 2));
+            console.log('🔍 DEBUG - plantData keys:', Object.keys(plantData));
+            console.log('🔍 DEBUG - plant_id value:', plantData.plant_id);
+            console.log('🔍 DEBUG - ideal_moisture value:', plantData.ideal_moisture);
+            console.log('🔍 DEBUG - water_limit value:', plantData.water_limit);
+
             const request = {
                 type: 'ADD_PLANT',
                 plantId: plantData.plant_id,

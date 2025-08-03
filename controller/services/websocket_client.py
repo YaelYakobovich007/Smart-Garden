@@ -95,10 +95,10 @@ class SmartGardenPiClient:
         # Send response back to server using DTO
         response_data = response.to_websocket_data()
         
-        # Add server plant_id to response for server's reference
-        response_data["server_plant_id"] = data.get("plant_id")
+        # Use server's plant_id as the main plant_id in response
+        response_data["plant_id"] = data.get("plantId")  # Use server's plant ID
         
-        await self.send_message("ADD_PLANT_COMPLETE", response_data)
+        await self.send_message("ADD_PLANT_RESPONSE", response_data)
         
         if success:
             self.logger.info(f"Successfully processed ADD_PLANT command")
