@@ -9,7 +9,8 @@ const plantHandlers = {
   ADD_PLANT: handleAddPlant,
   GET_MY_PLANTS: handleGetMyPlants,
   GET_PLANT_DETAILS: handleGetPlantDetails,
-  DELETE_PLANT: handleDeletePlant
+  DELETE_PLANT: handleDeletePlant,
+  UPDATE_PLANT_DETAILS: handleUpdatePlantDetails
 };
 
 async function handlePlantMessage(data, ws) {
@@ -169,6 +170,68 @@ async function handleDeletePlant(data, ws, email) {
   await require('../models/plantModel').deletePlantById(plant.plant_id);
 
   sendSuccess(ws, 'DELETE_PLANT_SUCCESS', { message: 'Plant and its irrigation events deleted' });
+}
+
+async function handleUpdatePlantDetails(data, ws, email) {
+  try {
+    const { plantName, newPlantName, desiredMoisture, waterLimit } = data;
+
+    // Validate required fields
+    if (!plantName) {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Plant name is required');
+    }
+
+    // Validate new plant name (if provided)
+    if (newPlantName && (newPlantName.trim().length < 1 || newPlantName.trim().length > 50)) {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'New plant name must be 1-50 characters');
+    }
+
+    // Validate desired moisture (0-100)
+    if (desiredMoisture !== undefined && (desiredMoisture < 0 || desiredMoisture > 100)) {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Desired moisture must be between 0-100');
+    }
+
+    // Validate water limit (positive number)
+    if (waterLimit !== undefined && waterLimit <= 0) {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Water limit must be a positive number');
+    }
+
+    // Get user ID from email
+    const user = await getUser(email);
+    if (!user) {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'User not found');
+    }
+
+    // Find the plant by name
+    const plant = await getPlantByName(user.id, plantName);
+    if (!plant) {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Plant not found');
+    }
+
+    // Update plant details
+    const updatedPlant = await updatePlantDetails(user.id, plant.plant_id, {
+      plantName: newPlantName?.trim(),
+      desiredMoisture,
+      waterLimit
+    });
+
+    if (!updatedPlant) {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Update failed');
+    }
+
+    if (updatedPlant.error === 'DUPLICATE_NAME') {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'You already have a plant with this name');
+    }
+
+    sendSuccess(ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {
+      plant: updatedPlant,
+      message: 'Plant details updated successfully'
+    });
+
+  } catch (err) {
+    console.error('Update plant details error:', err);
+    sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Failed to update plant details');
+  }
 }
 
 // Updated function for image processing with Google Cloud Storage
