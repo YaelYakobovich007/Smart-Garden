@@ -137,10 +137,6 @@ const MainScreen = () => {
       console.log('Updated moisture for all plants');
     }
   };
-    } else {
-      console.log('MainScreen: No plants data in response');
-    }
-  };
 
   /**
    * Handle plant data fetch errors
