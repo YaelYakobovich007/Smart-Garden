@@ -19,10 +19,11 @@ import asyncio
 import signal
 import logging
 
-# Add the current directory to Python path so we can import our modules
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Add the project root directory to Python path so we can import the controller package
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
 
-from services.websocket_client import SmartGardenPiClient
+from controller.services.websocket_client import SmartGardenPiClient
 
 # Configure logging
 logging.basicConfig(
