@@ -46,6 +46,35 @@ function handlePiSocket(ws) {
       return;
     }
 
+    // Handle PLANT_MOISTURE_RESPONSE from Pi
+    if (data.type === 'PLANT_MOISTURE_RESPONSE') {
+      const responseData = data.data || {};
+
+      if (responseData.status === 'success') {
+        console.log(`🌿 Plant ${responseData.plant_id}: moisture=${responseData.moisture}%`);
+        // TODO: Send moisture data to requesting client
+      } else {
+        console.error(`❌ Plant ${responseData.plant_id} moisture read failed: ${responseData.error_message}`);
+      }
+      return;
+    }
+
+    // Handle ALL_PLANTS_MOISTURE_RESPONSE from Pi
+    if (data.type === 'ALL_PLANTS_MOISTURE_RESPONSE') {
+      const responseData = data.data || {};
+
+      if (responseData.status === 'success') {
+        console.log(`🌿 All plants moisture: ${responseData.total_plants} plants received`);
+        responseData.plants?.forEach(plant => {
+          console.log(`   Plant ${plant.plant_id}: ${plant.moisture}%`);
+        });
+        // TODO: Send all moisture data to requesting client
+      } else {
+        console.error(`❌ All plants moisture request failed: ${responseData.error_message}`);
+      }
+      return;
+    }
+
     sendError(ws, 'UNKNOWN_TYPE', `Unknown message type: ${data.type}`);
   });
 

@@ -44,7 +44,7 @@ class SmartGardenEngine:
 
         valve = Valve(valve_id, pipe_diameter, water_limit, flow_rate, relay_controller=self.relay_controller,
                       simulation_mode=True)
-        sensor = Sensor(simulation_mode=True, modbus_id=sensor_id)
+        sensor = Sensor(simulation_mode=False, modbus_id=sensor_id)
 
         plant = Plant(plant_id, desired_moisture, sensor, valve, plant_lat, plant_lon)
         self.plants[plant_id] = plant

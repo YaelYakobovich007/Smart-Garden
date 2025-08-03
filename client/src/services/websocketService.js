@@ -244,6 +244,33 @@ class WebSocketService {
   isConnected() {
     return this.connected && this.ws && this.ws.readyState === WebSocket.OPEN;
   }
+
+  /**
+   * Request moisture data for a specific plant
+   * @param {number} plantId - ID of the plant to get moisture for
+   */
+  requestPlantMoisture(plantId) {
+    const message = {
+      type: 'GET_PLANT_MOISTURE',
+      data: {
+        plant_id: plantId
+      }
+    };
+    this.send(message);
+    console.log('Requested moisture for plant:', plantId);
+  }
+
+  /**
+   * Request moisture data for all plants
+   */
+  requestAllPlantsMoisture() {
+    const message = {
+      type: 'GET_ALL_MOISTURE',
+      data: {}
+    };
+    this.send(message);
+    console.log('Requested moisture for all plants');
+  }
 }
 
 // Create and export a singleton instance
