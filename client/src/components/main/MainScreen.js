@@ -90,14 +90,53 @@ const MainScreen = () => {
           type: plant.plant_type || 'Unknown',
           image_url: plant.image_url, // Add image_url from server
           location: 'Garden', // Default location
-          moisture: Math.floor(Math.random() * 61) + 20, // Simulated moisture
-          temperature: Math.floor(Math.random() * 15) + 20, // Simulated temperature
-          lightLevel: Math.floor(Math.random() * 41) + 40, // Simulated light level
+          moisture: 0, // Will be updated with real data from Pi
+          temperature: 0, // Will be updated with real data from Pi
+          lightLevel: 0, // Will be updated with real data from Pi
           isHealthy: true, // Default to healthy
         };
         return transformed;
       });
       setPlants(transformedPlants);
+    }
+  };
+
+  /**
+   * Handle moisture response for a specific plant
+   * Updates the plant's moisture value with real data from server
+   * @param {Object} data - Server moisture response data
+   */
+  const handlePlantMoistureResponse = (data) => {
+    if (data.plant_id && data.moisture !== undefined) {
+      setPlants(prevPlants => 
+        prevPlants.map(plant => 
+          plant.id === data.plant_id 
+            ? { ...plant, moisture: data.moisture }
+            : plant
+        )
+      );
+      console.log('Updated moisture for plant:', data.plant_id, 'to:', data.moisture);
+    }
+  };
+
+  /**
+   * Handle moisture response for all plants
+   * Updates all plants' moisture values with real data from server
+   * @param {Object} data - Server moisture response data
+   */
+  const handleAllPlantsMoistureResponse = (data) => {
+    if (data.plants && Array.isArray(data.plants)) {
+      setPlants(prevPlants => 
+        prevPlants.map(plant => {
+          const moistureData = data.plants.find(p => p.plant_id === plant.id);
+          return moistureData && moistureData.moisture !== undefined
+            ? { ...plant, moisture: moistureData.moisture }
+            : plant;
+        })
+      );
+      console.log('Updated moisture for all plants');
+    }
+  };
     } else {
       console.log('MainScreen: No plants data in response');
     }
@@ -165,6 +204,8 @@ const MainScreen = () => {
     websocketService.onMessage('GET_USER_NAME_SUCCESS', handleUserNameReceived);
     websocketService.onMessage('GET_USER_NAME_FAIL', handleUserNameError);
     websocketService.onMessage('UNAUTHORIZED', handleUnauthorized);
+    websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handlePlantMoistureResponse);
+    websocketService.onMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
 
     /**
      * Handle WebSocket connection status changes
@@ -208,6 +249,8 @@ const MainScreen = () => {
       websocketService.offMessage('GET_USER_NAME_SUCCESS', handleUserNameReceived);
       websocketService.offMessage('GET_USER_NAME_FAIL', handleUserNameError);
       websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
+      websocketService.offMessage('PLANT_MOISTURE_RESPONSE', handlePlantMoistureResponse);
+      websocketService.offMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
       websocketService.offConnectionChange(handleConnectionChange);
     };
   }, []);
