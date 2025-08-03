@@ -37,10 +37,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class PiClientRunner:
-    def __init__(self, server_url: str = "ws://192.168.68.59:8080"):
+    def __init__(self, server_url: str = "ws://192.168.68.59:8080", total_valves: int = 2, total_sensors: int = 2):
         self.server_url = server_url
+        self.total_valves = total_valves
+        self.total_sensors = total_sensors
         self.client = None
         self.running = False
+        
+        # Create the Smart Garden Engine ONCE at startup (not per connection)
+        logger.info(f"🔧 Initializing Smart Garden Engine with {total_valves} valves and {total_sensors} sensors")
+        from controller.engine.smart_garden_engine import SmartGardenEngine
+        self.engine = SmartGardenEngine(total_valves=total_valves, total_sensors=total_sensors)
+        logger.info(f"✅ Smart Garden Engine initialized and ready")
         
     async def start(self):
         """Start the Pi client and handle reconnections"""
@@ -48,17 +56,14 @@ class PiClientRunner:
         
         while self.running:
             try:
-                logger.info("=== Starting Smart Garden Pi Client ===")
-                self.client = SmartGardenPiClient(self.server_url)
+                logger.info("=== Starting Smart Garden WebSocket Client ===")
+                logger.info(f"🔗 Connecting to server using existing engine instance")
                 
-                if await self.client.connect():
-                    logger.info("✅ Connected to Smart Garden server")
-                    
-                    # Send initial sensor/valve assignments if needed
-                    await self._send_initial_assignments()
-                    
-                    # Listen for messages (this will block until disconnection)
-                    await self.client.listen_for_messages()
+                # Create WebSocket client with the SAME engine instance (no recreation)
+                self.client = SmartGardenPiClient(self.server_url, self.engine)
+                
+                # Run the client (includes connection, hello, assignments, and message listening)
+                await self.client.run()
                 
                 if self.running:  # Only try to reconnect if we weren't manually stopped
                     logger.warning("⚠️ Connection lost. Retrying in 5 seconds...")
@@ -131,11 +136,15 @@ async def main():
     
     # Override with environment variable if set
     server_url = os.getenv('SMART_GARDEN_SERVER_URL', server_url)
+    total_valves = int(os.getenv('SMART_GARDEN_TOTAL_VALVES', '2'))
+    total_sensors = int(os.getenv('SMART_GARDEN_TOTAL_SENSORS', '2'))
     
     logger.info(f"🌱 Smart Garden Pi Client starting...")
     logger.info(f"🔗 Server URL: {server_url}")
+    logger.info(f"🚰 Total Valves: {total_valves}")
+    logger.info(f"📊 Total Sensors: {total_sensors}")
     
-    client_runner = PiClientRunner(server_url)
+    client_runner = PiClientRunner(server_url, total_valves, total_sensors)
     
     try:
         await client_runner.start()
