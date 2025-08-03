@@ -26,6 +26,17 @@ function handlePiSocket(ws) {
       return handleValveAssigned(data, ws);
     }
 
+    if (data.type === 'ADD_PLANT_COMPLETE') {
+      console.log(`Received add plant completion: Plant ${data.data?.plant_id} (${data.data?.plant_name}) - Status: ${data.data?.status}`);
+      if (data.data?.status === 'success') {
+        console.log(`  ✅ Plant successfully added to Pi with internal ID ${data.data?.internal_plant_id}`);
+        console.log(`  📊 Assigned sensor: ${data.data?.assigned_sensor}, valve: ${data.data?.assigned_valve}`);
+      } else {
+        console.error(`  ❌ Failed to add plant to Pi: ${data.data?.error_message}`);
+      }
+      return; // No response needed for this notification
+    }
+
     sendError(ws, 'UNKNOWN_TYPE', `Unknown message type: ${data.type}`);
   });
 

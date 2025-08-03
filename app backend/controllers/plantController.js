@@ -112,13 +112,38 @@ async function handleAddPlant(data, ws, email) {
     }
   });
 
-  // Optional: Notify Pi socket
-  // const piSocket = getPiSocket();
-  // if (piSocket) {
-  //   piSocket.send(JSON.stringify({type: 'REQUEST_SENSOR', plantId: result.plant.plant_id, needValve: true }));
-  // } else {
-  //   console.error('Pi socket not connected, unable to send new plant data');
-  // }
+  // Notify Pi socket about the new plant
+  const piSocket = getPiSocket();
+  if (piSocket) {
+    const addPlantMessage = {
+      type: 'ADD_PLANT',
+      data: {
+        plant_id: result.plant.plant_id,
+        plant_name: plantName,
+        desired_moisture: desiredMoisture,
+        water_limit: waterLimit,
+        irrigation_days: irrigationDays,
+        irrigation_time: irrigationTime,
+        plant_type: plantType || 'default',
+        // Convert irrigation schedule to the format expected by Pi
+        schedule_data: irrigationDays && irrigationTime ? 
+          irrigationDays.map(day => ({
+            day: day,
+            time: irrigationTime,
+            valve_number: result.plant.valve_id || 1
+          })) : null
+      }
+    };
+    
+    try {
+      piSocket.send(JSON.stringify(addPlantMessage));
+      console.log(`Sent ADD_PLANT message to Pi for plant ${plantName} (ID: ${result.plant.plant_id})`);
+    } catch (error) {
+      console.error('Error sending ADD_PLANT message to Pi:', error);
+    }
+  } else {
+    console.warn('Pi socket not connected, unable to send new plant data');
+  }
 }
 
 async function handleGetPlantDetails(data, ws, email) {
