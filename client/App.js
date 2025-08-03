@@ -14,7 +14,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts as useNunito, Nunito_400Regular, Nunito_500Medium, Nunito_700Bold } from '@expo-google-fonts/nunito';
 
@@ -51,7 +51,7 @@ export default function App() {
   /**
    * Load Nunito fonts for consistent typography throughout the app
    * Uses Expo's font loading system for better performance
-   */ 
+   */
   // Load Nunito fonts using the pattern from the user's example
   const [fontsLoaded] = useNunito({
     Nunito_400Regular,
@@ -72,15 +72,15 @@ export default function App() {
       try {
         // First check if user has completed onboarding
         const onboardingCompleted = await onboardingService.isOnboardingCompleted();
-        
+
         if (!onboardingCompleted) {
           console.log('App: Onboarding not completed, showing onboarding first');
           setInitialRoute('Onboarding');
           setIsLoading(false);
           return;
         }
-        
-       
+
+
         // Check if user is already logged in locally
         const isLoggedIn = await sessionService.isLoggedIn();
 
@@ -148,7 +148,7 @@ export default function App() {
           console.log('App: No local session found, navigating to Login');
           setInitialRoute('Login');
           setIsLoading(false);
-          
+
           // Still try to connect WebSocket for when user logs in
           websocketService.connect();
         }
