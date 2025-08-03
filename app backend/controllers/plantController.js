@@ -1,9 +1,9 @@
 const { addPlant, getPlants, getPlantByName, deletePlant } = require('../models/plantModel');
 const { getUser } = require('../models/userModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
-const { getPiSocket } = require('../sockets/piSocket');
 const { getEmailBySocket } = require('../models/userSessions');
 const googleCloudStorage = require('../services/googleCloudStorage');
+const piCommunication = require('../services/piCommunication');
 
 const plantHandlers = {
   ADD_PLANT: handleAddPlant,
@@ -95,30 +95,27 @@ async function handleAddPlant(data, ws, email) {
     image_url: imageUrl // Add image URL to plant data
   };
 
+  // Step 1: Save plant to database without hardware IDs
   const result = await addPlant(user.id, plantDataToSave);
   if (result.error === 'DUPLICATE_NAME') {
     return sendError(ws, 'ADD_PLANT_FAIL', 'You already have a plant with this name');
   }
-  if (result.error === 'NO_HARDWARE') {
-    return sendError(ws, 'ADD_PLANT_FAIL', 'No available hardware for this plant');
-  }
 
-  // Return success with plant data including image URL
+  // Step 2: Send request to Pi (no waiting - fire and forget)
+  const piResult = piCommunication.addPlant(result.plant);
+
+  // Step 3: Return success to user immediately
+  const message = piResult.success
+    ? 'Plant added successfully (hardware assignment in progress)'
+    : 'Plant added successfully (Pi not connected - hardware will be assigned when Pi reconnects)';
+
   sendSuccess(ws, 'ADD_PLANT_SUCCESS', {
-    message: 'Plant added successfully',
+    message: message,
     plant: {
       ...result.plant,
       image_url: imageUrl
     }
   });
-
-  // Optional: Notify Pi socket
-  // const piSocket = getPiSocket();
-  // if (piSocket) {
-  //   piSocket.send(JSON.stringify({type: 'REQUEST_SENSOR', plantId: result.plant.plant_id, needValve: true }));
-  // } else {
-  //   console.error('Pi socket not connected, unable to send new plant data');
-  // }
 }
 
 async function handleGetPlantDetails(data, ws, email) {

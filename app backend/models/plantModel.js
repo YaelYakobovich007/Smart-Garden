@@ -13,14 +13,7 @@ async function addPlant(userId, plantData) {
     return { error: 'DUPLICATE_NAME' };
   }
 
-  // Assign hardware
-  const sensorId = hardwarePool.assignSensor();
-  const valveId = hardwarePool.assignValve();
-  if (!sensorId || !valveId) {
-    return { error: 'NO_HARDWARE' };
-  }
-
-  // Insert plant into DB
+  // Insert plant into DB without hardware IDs (will be assigned by Pi)
   const result = await pool.query(
     `INSERT INTO plants (user_id, name, ideal_moisture, water_limit, irrigation_days, irrigation_time, plant_type, image_url, sensor_id, valve_id, last_watered)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
@@ -33,8 +26,8 @@ async function addPlant(userId, plantData) {
       plantData.irrigation_time || null,
       plantData.plantType || null,
       plantData.image_url || null,
-      sensorId,
-      valveId,
+      null, // sensor_id - will be assigned by Pi
+      null, // valve_id - will be assigned by Pi
       null
     ]
   );
@@ -157,6 +150,14 @@ async function deletePlantById(plantId) {
   await pool.query('DELETE FROM plants WHERE plant_id = $1', [plantId]);
 }
 
+// Update plant with hardware IDs from Pi
+async function updatePlantHardware(plantId, sensorId, valveId) {
+  await pool.query(
+    'UPDATE plants SET sensor_id = $1, valve_id = $2, updated_at = CURRENT_TIMESTAMP WHERE plant_id = $3',
+    [sensorId, valveId, plantId]
+  );
+}
+
 module.exports = {
   addPlant,
   getPlants,
@@ -166,5 +167,6 @@ module.exports = {
   getCurrentMoisture,
   irrigatePlant,
   deletePlantById,
-  updatePlantDetails
+  updatePlantDetails,
+  updatePlantHardware
 };
