@@ -20,6 +20,9 @@ import { useFonts as useNunito, Nunito_400Regular, Nunito_500Medium, Nunito_700B
 
 // Import all screen components
 import LoginScreen from './src/components/login/LoginScreen';
+import ForgotPasswordScreen from './src/components/forgotPassword/ForgotPasswordScreen';
+import EnterCodeScreen from './src/components/enterCode/EnterCodeScreen';
+import ResetPasswordScreen from './src/components/resetPassword/ResetPasswordScreen';
 import RegisterScreen from './src/components/register/RegisterScreen';
 import MainScreen from './src/components/main/MainScreen';
 import PlantDetail from './src/components/main/PlantDetail/PlantDetail';
@@ -48,8 +51,9 @@ export default function App() {
   /**
    * Load Nunito fonts for consistent typography throughout the app
    * Uses Expo's font loading system for better performance
-   */
-  const [fontsLoaded] = useNunito({ 
+   */ 
+  // Load Nunito fonts using the pattern from the user's example
+  const [fontsLoaded] = useNunito({
     Nunito_400Regular,
     Nunito_500Medium,
     Nunito_700Bold
@@ -76,18 +80,70 @@ export default function App() {
           return;
         }
         
-        // Check if user is already logged in locally using session service
+       
+        // Check if user is already logged in locally
         const isLoggedIn = await sessionService.isLoggedIn();
-        
+
+        // Establish WebSocket connection first
+        console.log('App: Initializing WebSocket connection...');
+        websocketService.connect();
+
         if (isLoggedIn) {
-          console.log('App: Local session found, navigating to Main immediately');
-          // Navigate to Main immediately if we have a local session (like Instagram)
-          setInitialRoute('Main');
-          setIsLoading(false);
-          
-          // Try to establish WebSocket connection in background for real-time features
-          console.log('App: Attempting WebSocket connection in background...');
-          websocketService.connect();
+          console.log('App: Local session found, validating with server...');
+
+          // Wait for WebSocket connection before validating session
+          const checkConnection = () => {
+            if (websocketService.isConnected()) {
+              // Validate session with server by requesting user name
+              websocketService.sendMessage({ type: 'GET_USER_NAME' });
+
+              // Set up a timeout to handle server response
+              const validationTimeout = setTimeout(() => {
+                console.log('App: Session validation timeout, redirecting to login');
+                setInitialRoute('Login');
+                setIsLoading(false);
+              }, 3000); // 3 second timeout
+
+              // Listen for session validation response
+              const handleValidation = (data) => {
+                clearTimeout(validationTimeout);
+                websocketService.offMessage('GET_USER_NAME_SUCCESS', handleValidation);
+                websocketService.offMessage('GET_USER_NAME_FAIL', handleValidation);
+                websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
+
+                if (data.type === 'GET_USER_NAME_SUCCESS') {
+                  console.log('App: Session validated successfully, navigating to Main');
+                  setInitialRoute('Main');
+                } else {
+                  console.log('App: Session validation failed, redirecting to login');
+                  sessionService.clearSession(); // Clear invalid session
+                  setInitialRoute('Login');
+                }
+                setIsLoading(false);
+              };
+
+              const handleUnauthorized = (data) => {
+                clearTimeout(validationTimeout);
+                websocketService.offMessage('GET_USER_NAME_SUCCESS', handleValidation);
+                websocketService.offMessage('GET_USER_NAME_FAIL', handleValidation);
+                websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
+
+                console.log('App: Unauthorized response, clearing session and redirecting to login');
+                sessionService.clearSession(); // Clear invalid session
+                setInitialRoute('Login');
+                setIsLoading(false);
+              };
+
+              websocketService.onMessage('GET_USER_NAME_SUCCESS', handleValidation);
+              websocketService.onMessage('GET_USER_NAME_FAIL', handleValidation);
+              websocketService.onMessage('UNAUTHORIZED', handleUnauthorized);
+            } else {
+              // If not connected yet, try again in 500ms
+              setTimeout(checkConnection, 500);
+            }
+          };
+
+          checkConnection();
         } else {
           console.log('App: No local session found, navigating to Login');
           setInitialRoute('Login');
@@ -122,10 +178,48 @@ export default function App() {
      * Cleanup function to disconnect WebSocket when app is closed
      * Prevents memory leaks and ensures clean shutdown
      */
+    // Handle deep links
+    const handleDeepLink = (url) => {
+      if (url) {
+        console.log('App: Received deep link:', url);
+        // Extract token from URL
+        const token = extractTokenFromUrl(url);
+        if (token) {
+          console.log('App: Token extracted from deep link:', token);
+          // Navigate to reset password screen with token
+          navigationRef.current?.navigate('ResetPassword', { token });
+        }
+      }
+    };
+
+    const extractTokenFromUrl = (url) => {
+      try {
+        const urlObj = new URL(url);
+        return urlObj.searchParams.get('token');
+      } catch (error) {
+        console.error('Error extracting token from URL:', error);
+        return null;
+      }
+    };
+
+    // Set up deep link listeners
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    // Check for initial deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink(url);
+      }
+    });
+
+    // Cleanup function to disconnect when app is closed
     return () => {
       console.log('App closing, disconnecting WebSocket...');
       websocketService.offConnectionChange(handleConnectionChange);
       websocketService.disconnect();
+      subscription?.remove();
     };
   }, []);
 
@@ -146,6 +240,7 @@ export default function App() {
    * Uses React Navigation for screen management with all app screens
    */
   return (
+
     <SafeAreaProvider>
       <NavigationContainer ref={navigationRef}>
         <Stack.Navigator
@@ -154,6 +249,9 @@ export default function App() {
         >
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="EnterCode" component={EnterCodeScreen} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="Main" component={MainScreen} />
           <Stack.Screen name="PlantDetail" component={PlantDetail} />
@@ -166,5 +264,6 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
+
   );
 }

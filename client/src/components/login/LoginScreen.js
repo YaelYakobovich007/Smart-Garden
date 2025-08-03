@@ -73,7 +73,7 @@ const LoginScreen = () => {
   useEffect(() => {
     // Check initial connection status
     setIsConnected(websocketService.isConnected());
-    
+
     /**
      * Handle WebSocket connection changes
      * Updates connection state and shows user feedback
@@ -85,7 +85,7 @@ const LoginScreen = () => {
         setMessage('Connection lost. Please check your network.');
       }
     };
-    
+
     websocketService.onConnectionChange(handleConnectionChange);
   }, []);
 
@@ -138,7 +138,8 @@ const LoginScreen = () => {
   const handleAuthResponse = async (data) => {
     if (data.type === 'LOGIN_SUCCESS') {
       setMessage('Login successful!');
-      
+
+    
       // Save user session with authentication data
       const userData = {
         email: data.userId || email,
@@ -146,7 +147,7 @@ const LoginScreen = () => {
         timestamp: new Date().toISOString()
       };
       await sessionService.saveSession(userData);
-      
+
       // Navigate to the main app screen
       navigation.navigate('Main');
     } else if (data.type === 'LOGIN_FAIL') {
@@ -159,7 +160,7 @@ const LoginScreen = () => {
    * Shows user-friendly error message for connection issues
    */
   const handleConnectionError = () => {
-      setMessage('Connection error. Please try again.');
+    setMessage('Connection error. Please try again.');
   }
 
   /**
@@ -207,7 +208,7 @@ const LoginScreen = () => {
       setMessage('Not connected to server. Please wait...');
       return;
     }
-    
+
     try {
       await promptAsync({ useProxy: true });
     } catch (error) {
@@ -237,88 +238,80 @@ const LoginScreen = () => {
 
         {/* Login Form Container */}
         <View style={styles.formContainer}>
-            <Text style={styles.welcomeTitle}>Welcome</Text>
-            <Text style={styles.welcomeSubtitle}>Sign in to your garden</Text>
+          <Text style={styles.welcomeTitle}>Welcome</Text>
+          <Text style={styles.welcomeSubtitle}>Sign in to your garden</Text>
 
-            {/* Email Input Field */}
-            <View style={[
-              styles.inputContainer, 
-              emailError && styles.inputError
-            ]}>
-              <Feather name="mail" size={20} color={emailError ? "#D32F2F" : "#888"} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email address"
-                placeholderTextColor="#888"
-                value={email}
-                onChangeText={handleEmailChange}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            {emailErrorMessage ? <Text style={styles.fieldError}>{emailErrorMessage}</Text> : null}
+          <View style={[
+            styles.inputContainer,
+            emailError && styles.inputError
+          ]}>
+            <Feather name="mail" size={20} color={emailError ? "#D32F2F" : "#888"} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email address"
+              placeholderTextColor="#888"
+              value={email}
+              onChangeText={handleEmailChange}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+          {emailErrorMessage ? <Text style={styles.fieldError}>{emailErrorMessage}</Text> : null}
 
-            {/* Password Input Field */}
-            <View style={[
-              styles.inputContainer, 
-              passwordError && styles.inputError
-            ]}>
-                <Feather name="lock" size={20} color={passwordError ? "#D32F2F" : "#888"} style={styles.inputIcon} />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    placeholderTextColor="#888"
-                    value={password}
-                    onChangeText={handlePasswordChange}
-                    secureTextEntry={secureTextEntry}
-                />
-                <TouchableOpacity onPress={() => setSecureTextEntry(!secureTextEntry)}>
-                    <Feather name={secureTextEntry ? 'eye-off' : 'eye'} size={20} color={passwordError ? "#D32F2F" : "#888"} />
-                </TouchableOpacity>
-            </View>
-            {passwordErrorMessage ? <Text style={styles.fieldError}>{passwordErrorMessage}</Text> : null}
-
-            {/* Forgot Password Link */}
-            <TouchableOpacity>
-                <Text style={styles.forgotPassword}>Forgot Password?</Text>
+          <View style={[
+            styles.inputContainer,
+            passwordError && styles.inputError
+          ]}>
+            <Feather name="lock" size={20} color={passwordError ? "#D32F2F" : "#888"} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#888"
+              value={password}
+              onChangeText={handlePasswordChange}
+              secureTextEntry={secureTextEntry}
+            />
+            <TouchableOpacity onPress={() => setSecureTextEntry(!secureTextEntry)}>
+              <Feather name={secureTextEntry ? 'eye-off' : 'eye'} size={20} color={passwordError ? "#D32F2F" : "#888"} />
             </TouchableOpacity>
+          </View>
+          {passwordErrorMessage ? <Text style={styles.fieldError}>{passwordErrorMessage}</Text> : null}
 
-            {/* Sign In Button */}
-            <TouchableOpacity 
-              style={[styles.signInButton, !isConnected && styles.disabledButton]} 
-              onPress={handleLogin}
-              disabled={!isConnected}
-            >
-                <Text style={styles.signInButtonText}>Sign In</Text>
-            </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+            <Text style={styles.forgotPassword}>Forgot Password?</Text>
+          </TouchableOpacity>
 
-            {/* Separator */}
-            <View style={styles.separatorContainer}>
-                <View style={styles.separatorLine} />
-                <Text style={styles.separatorText}>or</Text>
-                <View style={styles.separatorLine} />
-            </View>
+          <TouchableOpacity
+            style={[styles.signInButton, !isConnected && styles.disabledButton]}
+            onPress={handleLogin}
+            disabled={!isConnected}
+          >
+            <Text style={styles.signInButtonText}>Sign In</Text>
+          </TouchableOpacity>
+          <View style={styles.separatorContainer}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>or</Text>
+            <View style={styles.separatorLine} />
+          </View>
 
-            {/* Google OAuth Button */}
-            <TouchableOpacity 
-              style={[styles.googleButton, !isConnected && styles.disabledButton]} 
-              onPress={handleGoogleLogin}
-              disabled={!isConnected || !request}
-            >
-                <Image source={GoogleLogo} style={styles.googleIcon} />
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.googleButton, !isConnected && styles.disabledButton]}
+            onPress={handleGoogleLogin}
+            disabled={!isConnected || !request}
+          >
+            <Image source={GoogleLogo} style={styles.googleIcon} />
+            <Text style={styles.googleButtonText}>Continue with Google</Text>
+          </TouchableOpacity>
 
-            {/* Status Message Display */}
-            {message ? <Text style={styles.message}>{message}</Text> : null}
+          {message ? <Text style={styles.message}>{message}</Text> : null}
         </View>
         
         {/* Footer with Registration Link */}
         <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.signUpText}>Sign Up</Text>
-            </TouchableOpacity>
+          <Text style={styles.footerText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.signUpText}>Sign Up</Text>
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </View>

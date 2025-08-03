@@ -64,6 +64,80 @@ async function updatePlantSchedule(plantId, days, time) {
   );
 }
 
+// Update plant details
+async function updatePlantDetails(userId, plantId, updateData) {
+  try {
+    // First, verify the plant belongs to the user
+    const plantCheck = await pool.query(
+      'SELECT * FROM plants WHERE plant_id = $1 AND user_id = $2',
+      [plantId, userId]
+    );
+
+    if (plantCheck.rows.length === 0) {
+      return null; // Plant not found or doesn't belong to user
+    }
+
+    const plant = plantCheck.rows[0];
+
+    // Check for duplicate name if name is being updated
+    if (updateData.plantName && updateData.plantName !== plant.name) {
+      const duplicateCheck = await pool.query(
+        'SELECT plant_id FROM plants WHERE user_id = $1 AND name = $2 AND plant_id != $3',
+        [userId, updateData.plantName, plantId]
+      );
+
+      if (duplicateCheck.rows.length > 0) {
+        return { error: 'DUPLICATE_NAME' };
+      }
+    }
+
+    // Build update query dynamically
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    if (updateData.plantName !== undefined) {
+      updateFields.push(`name = $${paramIndex++}`);
+      updateValues.push(updateData.plantName);
+    }
+
+    if (updateData.desiredMoisture !== undefined) {
+      updateFields.push(`ideal_moisture = $${paramIndex++}`);
+      updateValues.push(updateData.desiredMoisture);
+    }
+
+    if (updateData.waterLimit !== undefined) {
+      updateFields.push(`water_limit = $${paramIndex++}`);
+      updateValues.push(updateData.waterLimit);
+    }
+
+    // Add updated_at timestamp
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+    // Add plant_id to values
+    updateValues.push(plantId);
+
+    if (updateFields.length === 1) {
+      // Only updated_at was added, no actual changes
+      return plant;
+    }
+
+    const updateQuery = `
+      UPDATE plants 
+      SET ${updateFields.join(', ')}
+      WHERE plant_id = $${paramIndex}
+      RETURNING *
+    `;
+
+    const result = await pool.query(updateQuery, updateValues);
+    return result.rows[0];
+
+  } catch (error) {
+    console.error('Error updating plant details:', error);
+    return null;
+  }
+}
+
 // Get current moisture and ideal moisture for a plant
 async function getCurrentMoisture(plantId) {
   const currentMoisture = Math.floor(Math.random() * 61) + 20; // ערך אקראי בין 20 ל-80
@@ -91,5 +165,6 @@ module.exports = {
   updatePlantSchedule,
   getCurrentMoisture,
   irrigatePlant,
-  deletePlantById
+  deletePlantById,
+  updatePlantDetails
 };

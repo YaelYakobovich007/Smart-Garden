@@ -11,9 +11,15 @@ export const connectAndSend = (payload, onMessage, onError) => {
   websocketService.onMessage('LOGIN_FAIL', messageHandler);
   websocketService.onMessage('REGISTER_SUCCESS', messageHandler);
   websocketService.onMessage('REGISTER_FAIL', messageHandler);
+  websocketService.onMessage('FORGOT_PASSWORD_SUCCESS', messageHandler);
+  websocketService.onMessage('FORGOT_PASSWORD_FAIL', messageHandler);
+  websocketService.onMessage('VALIDATE_RESET_TOKEN_SUCCESS', messageHandler);
+  websocketService.onMessage('VALIDATE_RESET_TOKEN_FAIL', messageHandler);
+  websocketService.onMessage('RESET_PASSWORD_SUCCESS', messageHandler);
+  websocketService.onMessage('RESET_PASSWORD_FAIL', messageHandler);
 
   // Send the payload
   websocketService.send(payload);
-}; 
+};
 
 
