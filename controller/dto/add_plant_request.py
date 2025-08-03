@@ -7,7 +7,7 @@ class AddPlantRequest(BaseModel):
     Data Transfer Object for Pi → Server communication when a plant is added.
     Used by the Pi to notify the server that a plant has been added to the Smart Garden Engine.
     """
-    plant_id: int                           # internal plant ID used by the Pi engine
+    plant_id: Optional[int] = None          # internal plant ID used by the Pi engine
     status: str                             # "success" or "error" 
     desired_moisture: float                 # target moisture level that was set
     assigned_valve: Optional[int] = None    # valve ID assigned to this plant

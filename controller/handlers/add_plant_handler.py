@@ -18,6 +18,16 @@ def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
     
     # Extract data from server message
     plant_id = data.get("plant_id")
+    
+    # Validate plant_id
+    if plant_id is None:
+        logger.error("plant_id is missing from server message")
+        response = AddPlantRequest.error(
+            plant_id=0,  # Use 0 as fallback
+            error_message="plant_id is required but was not provided by server"
+        )
+        return False, response
+    
     plant_name = data.get("plant_name", f"plant_{plant_id}")
     desired_moisture = data.get("desired_moisture", 60.0)
     water_limit = data.get("water_limit", 1.0)
