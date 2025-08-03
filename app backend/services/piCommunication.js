@@ -51,6 +51,62 @@ class PiCommunication {
             return { success: false, error: error.message };
         }
     }
+
+    /**
+     * Request moisture data for a single plant from Pi
+     */
+    getMoisture(plantId) {
+        const piSocket = getPiSocket();
+        if (!piSocket) {
+            console.log('Pi not connected - cannot get moisture data');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        try {
+            const request = {
+                type: 'GET_PLANT_MOISTURE',
+                data: {
+                    plant_id: plantId
+                }
+            };
+
+            console.log(`🌿 Requesting moisture for plant ${plantId}`);
+            piSocket.send(JSON.stringify(request));
+
+            return { success: true };
+
+        } catch (error) {
+            console.error('Error requesting moisture from Pi:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Request moisture data for all plants from Pi
+     */
+    getAllMoisture() {
+        const piSocket = getPiSocket();
+        if (!piSocket) {
+            console.log('Pi not connected - cannot get moisture data');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        try {
+            const request = {
+                type: 'GET_ALL_MOISTURE',
+                data: {}
+            };
+
+            console.log('🌿 Requesting moisture for all plants');
+            piSocket.send(JSON.stringify(request));
+
+            return { success: true };
+
+        } catch (error) {
+            console.error('Error requesting all moisture from Pi:', error);
+            return { success: false, error: error.message };
+        }
+    }
 }
 
 // Create single instance

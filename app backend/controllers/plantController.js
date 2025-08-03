@@ -10,7 +10,9 @@ const plantHandlers = {
   GET_MY_PLANTS: handleGetMyPlants,
   GET_PLANT_DETAILS: handleGetPlantDetails,
   DELETE_PLANT: handleDeletePlant,
-  UPDATE_PLANT_DETAILS: handleUpdatePlantDetails
+  UPDATE_PLANT_DETAILS: handleUpdatePlantDetails,
+  GET_PLANT_MOISTURE: handleGetPlantMoisture,
+  GET_ALL_PLANTS_MOISTURE: handleGetAllPlantsMoisture
 };
 
 async function handlePlantMessage(data, ws) {
@@ -251,6 +253,67 @@ async function processAndSaveImage(imageData, userId, plantName) {
   } catch (error) {
     console.error('Error in processAndSaveImage:', error);
     throw new Error('Failed to upload image to cloud storage');
+  }
+}
+
+// Handle request for single plant moisture
+async function handleGetPlantMoisture(data, ws, email) {
+  const { plantName } = data;
+
+  if (!plantName) {
+    return sendError(ws, 'GET_MOISTURE_FAIL', 'Plant name is required');
+  }
+
+  try {
+    const user = await getUser(email);
+    if (!user) {
+      return sendError(ws, 'GET_MOISTURE_FAIL', 'User not found');
+    }
+
+    const plant = await getPlantByName(user.id, plantName);
+    if (!plant) {
+      return sendError(ws, 'GET_MOISTURE_FAIL', 'Plant not found');
+    }
+
+    // Request moisture from Pi
+    const piResult = piCommunication.getMoisture(plant.plant_id);
+
+    if (piResult.success) {
+      sendSuccess(ws, 'GET_MOISTURE_SUCCESS', {
+        message: 'Moisture request sent to Pi',
+        plantName: plantName,
+        plantId: plant.plant_id
+      });
+    } else {
+      sendError(ws, 'GET_MOISTURE_FAIL', piResult.error || 'Failed to request moisture from Pi');
+    }
+  } catch (error) {
+    console.error('Error in handleGetPlantMoisture:', error);
+    sendError(ws, 'GET_MOISTURE_FAIL', 'Internal server error');
+  }
+}
+
+// Handle request for all plants moisture
+async function handleGetAllPlantsMoisture(data, ws, email) {
+  try {
+    const user = await getUser(email);
+    if (!user) {
+      return sendError(ws, 'GET_ALL_MOISTURE_FAIL', 'User not found');
+    }
+
+    // Request all moisture from Pi
+    const piResult = piCommunication.getAllMoisture();
+
+    if (piResult.success) {
+      sendSuccess(ws, 'GET_ALL_MOISTURE_SUCCESS', {
+        message: 'All plants moisture request sent to Pi'
+      });
+    } else {
+      sendError(ws, 'GET_ALL_MOISTURE_FAIL', piResult.error || 'Failed to request moisture from Pi');
+    }
+  } catch (error) {
+    console.error('Error in handleGetAllPlantsMoisture:', error);
+    sendError(ws, 'GET_ALL_MOISTURE_FAIL', 'Internal server error');
   }
 }
 
