@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+"""
+Smart Garden Raspberry Pi Client Startup Script
+
+This script starts the WebSocket client that connects the Raspberry Pi 
+to the main Smart Garden server for irrigation control and sensor monitoring.
+
+Usage:
+    python3 run_pi_client.py
+    
+Or make it executable and run directly:
+    chmod +x run_pi_client.py
+    ./run_pi_client.py
+"""
+
+import sys
+import os
+import asyncio
+import signal
+import logging
+
+# Add the current directory to Python path so we can import our modules
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from services.websocket_client import SmartGardenPiClient
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('/var/log/smart_garden_pi.log'),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+class PiClientRunner:
+    def __init__(self, server_url: str = "ws://192.168.68.59:8080"):
+        self.server_url = server_url
+        self.client = None
+        self.running = False
+        
+    async def start(self):
+        """Start the Pi client and handle reconnections"""
+        self.running = True
+        
+        while self.running:
+            try:
+                logger.info("=== Starting Smart Garden Pi Client ===")
+                self.client = SmartGardenPiClient(self.server_url)
+                
+                if await self.client.connect():
+                    logger.info("✅ Connected to Smart Garden server")
+                    
+                    # Send initial sensor/valve assignments if needed
+                    await self._send_initial_assignments()
+                    
+                    # Listen for messages (this will block until disconnection)
+                    await self.client.listen_for_messages()
+                
+                if self.running:  # Only try to reconnect if we weren't manually stopped
+                    logger.warning("⚠️ Connection lost. Retrying in 5 seconds...")
+                    await asyncio.sleep(5)
+                    
+            except Exception as e:
+                logger.error(f"❌ Pi client error: {e}")
+                if self.running:
+                    logger.info("🔄 Retrying in 10 seconds...")
+                    await asyncio.sleep(10)
+    
+    async def _send_initial_assignments(self):
+        """Send initial sensor and valve assignments to server"""
+        try:
+            # Example assignments - update these based on your actual hardware setup
+            assignments = [
+                {"type": "sensor", "sensor_id": "moisture_01", "plant_id": "plant_001"},
+                {"type": "sensor", "sensor_id": "moisture_02", "plant_id": "plant_002"},
+                {"type": "valve", "valve_id": "valve_01", "plant_id": "plant_001"},
+                {"type": "valve", "valve_id": "valve_02", "plant_id": "plant_002"}
+            ]
+            
+            for assignment in assignments:
+                if assignment["type"] == "sensor":
+                    await self.client.send_sensor_assigned(
+                        assignment["sensor_id"], 
+                        assignment["plant_id"]
+                    )
+                elif assignment["type"] == "valve":
+                    await self.client.send_valve_assigned(
+                        assignment["valve_id"], 
+                        assignment["plant_id"]
+                    )
+                
+                # Small delay between assignments
+                await asyncio.sleep(0.5)
+                
+        except Exception as e:
+            logger.error(f"Failed to send initial assignments: {e}")
+    
+    async def stop(self):
+        """Stop the Pi client gracefully"""
+        logger.info("🛑 Stopping Smart Garden Pi Client...")
+        self.running = False
+        
+        if self.client:
+            await self.client.disconnect()
+        
+        logger.info("✅ Pi Client stopped successfully")
+
+
+# Global client runner instance
+client_runner = None
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully"""
+    logger.info(f"Received signal {signum}. Shutting down...")
+    if client_runner:
+        asyncio.create_task(client_runner.stop())
+
+async def main():
+    global client_runner
+    
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    # You can change this URL to match your server's IP address
+    server_url = "ws://192.168.68.59:8080"
+    
+    # Override with environment variable if set
+    server_url = os.getenv('SMART_GARDEN_SERVER_URL', server_url)
+    
+    logger.info(f"🌱 Smart Garden Pi Client starting...")
+    logger.info(f"🔗 Server URL: {server_url}")
+    
+    client_runner = PiClientRunner(server_url)
+    
+    try:
+        await client_runner.start()
+    except KeyboardInterrupt:
+        logger.info("👋 Shutdown requested by user")
+    except Exception as e:
+        logger.error(f"❌ Fatal error: {e}")
+    finally:
+        if client_runner:
+            await client_runner.stop()
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n👋 Smart Garden Pi Client stopped")
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        sys.exit(1)

@@ -493,8 +493,8 @@ const ForecastScreen = ({ navigation, route }) => {
               {weatherData?.city || 'MADRID'}
             </Text>
             <Text style={styles.dateText}>{currentDateTime}</Text>
-          </View>
-
+              </View>
+              
           {/* Spacer to push the forecast area to the bottom */}
           <View style={{ flex: 1 }} />
 
@@ -513,7 +513,7 @@ const ForecastScreen = ({ navigation, route }) => {
                 </Text>
               </View>
             </View>
-            
+
             <Svg
               width={CARD_WIDTH_SINGLE}
               height={CURVE_HEIGHT + CURVE_GAP + FORECAST_HEIGHT}
