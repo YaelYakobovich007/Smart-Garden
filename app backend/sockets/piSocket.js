@@ -1,5 +1,5 @@
 const { sendSuccess, sendError } = require('../utils/wsResponses');
-const {handleSensorAssigned, handleValveAssigned} = require('../controllers/plantAssignmentController');
+const { handleSensorAssigned, handleValveAssigned } = require('../controllers/plantAssignmentController');
 
 let piSocket = null;
 
@@ -7,7 +7,7 @@ function handlePiSocket(ws) {
   piSocket = ws;
   console.log('Pi connected: raspberrypi_main_controller');
   sendSuccess(ws, 'WELCOME', { message: 'Hello Pi' });
-  
+
   ws.on('message', (msg) => {
     let data;
     try {
@@ -26,15 +26,20 @@ function handlePiSocket(ws) {
       return handleValveAssigned(data, ws);
     }
 
-    if (data.type === 'ADD_PLANT_COMPLETE') {
-      console.log(`Received add plant completion: Plant ${data.data?.plant_id} (${data.data?.plant_name}) - Status: ${data.data?.status}`);
-      if (data.data?.status === 'success') {
-        console.log(`  ✅ Plant successfully added to Pi with internal ID ${data.data?.internal_plant_id}`);
-        console.log(`  📊 Assigned sensor: ${data.data?.assigned_sensor}, valve: ${data.data?.assigned_valve}`);
+    // Handle ADD_PLANT_RESPONSE from Pi
+    if (data.type === 'ADD_PLANT_RESPONSE') {
+      if (data.status === 'success') {
+        console.log(`Pi assigned hardware for plant ${data.plant_id}: sensor=${data.assigned_sensor}, valve=${data.assigned_valve}`);
+
+        // Update plant in database with hardware IDs
+        const { updatePlantHardware } = require('../models/plantModel');
+        updatePlantHardware(data.plant_id, data.assigned_sensor, data.assigned_valve)
+          .then(() => console.log(`Plant ${data.plant_id} hardware updated successfully`))
+          .catch(err => console.error(`Failed to update plant ${data.plant_id} hardware:`, err));
       } else {
-        console.error(`  ❌ Failed to add plant to Pi: ${data.data?.error_message}`);
+        console.error(`Pi failed to assign hardware for plant ${data.plant_id}: ${data.error_message}`);
       }
-      return; // No response needed for this notification
+      return;
     }
 
     sendError(ws, 'UNKNOWN_TYPE', `Unknown message type: ${data.type}`);

@@ -1,9 +1,9 @@
 const { addPlant, getPlants, getPlantByName, deletePlant } = require('../models/plantModel');
 const { getUser } = require('../models/userModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
-const { getPiSocket } = require('../sockets/piSocket');
 const { getEmailBySocket } = require('../models/userSessions');
 const googleCloudStorage = require('../services/googleCloudStorage');
+const piCommunication = require('../services/piCommunication');
 
 const plantHandlers = {
   ADD_PLANT: handleAddPlant,
@@ -95,55 +95,27 @@ async function handleAddPlant(data, ws, email) {
     image_url: imageUrl // Add image URL to plant data
   };
 
+  // Step 1: Save plant to database without hardware IDs
   const result = await addPlant(user.id, plantDataToSave);
   if (result.error === 'DUPLICATE_NAME') {
     return sendError(ws, 'ADD_PLANT_FAIL', 'You already have a plant with this name');
   }
-  if (result.error === 'NO_HARDWARE') {
-    return sendError(ws, 'ADD_PLANT_FAIL', 'No available hardware for this plant');
-  }
 
-  // Return success with plant data including image URL
+  // Step 2: Send request to Pi (no waiting - fire and forget)
+  const piResult = piCommunication.addPlant(result.plant);
+
+  // Step 3: Return success to user immediately
+  const message = piResult.success
+    ? 'Plant added successfully (hardware assignment in progress)'
+    : 'Plant added successfully (Pi not connected - hardware will be assigned when Pi reconnects)';
+
   sendSuccess(ws, 'ADD_PLANT_SUCCESS', {
-    message: 'Plant added successfully',
+    message: message,
     plant: {
       ...result.plant,
       image_url: imageUrl
     }
   });
-
-  // Notify Pi socket about the new plant
-  const piSocket = getPiSocket();
-  if (piSocket) {
-    const addPlantMessage = {
-      type: 'ADD_PLANT',
-      data: {
-        plant_id: result.plant.plant_id,
-        plant_name: plantName,
-        desired_moisture: desiredMoisture,
-        water_limit: waterLimit,
-        irrigation_days: irrigationDays,
-        irrigation_time: irrigationTime,
-        plant_type: plantType || 'default',
-        // Convert irrigation schedule to the format expected by Pi
-        schedule_data: irrigationDays && irrigationTime ? 
-          irrigationDays.map(day => ({
-            day: day,
-            time: irrigationTime,
-            valve_number: result.plant.valve_id || 1
-          })) : null
-      }
-    };
-    
-    try {
-      piSocket.send(JSON.stringify(addPlantMessage));
-      console.log(`Sent ADD_PLANT message to Pi for plant ${plantName} (ID: ${result.plant.plant_id})`);
-    } catch (error) {
-      console.error('Error sending ADD_PLANT message to Pi:', error);
-    }
-  } else {
-    console.warn('Pi socket not connected, unable to send new plant data');
-  }
 }
 
 async function handleGetPlantDetails(data, ws, email) {
