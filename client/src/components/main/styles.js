@@ -170,6 +170,16 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     overflow: 'visible',
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    paddingBottom: 100, // Add bottom padding to ensure content is not cut off by bottom toolbar
+  },
+  articlesSection: {
+    marginTop: 24,
+    marginBottom: 24,
+  },
   greetingContainer: {
     paddingLeft: 24,
     paddingBottom: 24,

@@ -1,3 +1,16 @@
+/**
+ * Plant Detail Component - Individual Plant Information and Management
+ * 
+ * This component displays detailed information about a specific plant including:
+ * - Plant image with overlay information
+ * - Plant type/genus information
+ * - Current conditions (humidity, temperature)
+ * - Plant management actions (water, schedule, delete)
+ * 
+ * The component handles WebSocket communication for plant management
+ * and provides a comprehensive view for individual plant care.
+ */
+
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -21,6 +34,12 @@ const PlantDetail = () => {
   const route = useRoute();
   const { plant } = route.params || {};
 
+  /**
+   * Get plant image based on plant type
+   * Maps plant types to local image assets for display
+   * @param {string} plantType - Type of plant
+   * @returns {Object} Image source object
+   */
   const getPlantImage = (plantType) => {
     // Use actual plant images based on plant type
     switch (plantType.toLowerCase()) {
@@ -44,6 +63,10 @@ const PlantDetail = () => {
     }
   };
 
+  /**
+   * Render error state when plant data is not available
+   * Shows error message when plant parameter is missing
+   */
   if (!plant) {
     return (
       <SafeAreaView style={styles.container}>
@@ -54,30 +77,62 @@ const PlantDetail = () => {
     );
   }
 
-  // Handler for irrigation responses
+  /**
+   * Set up WebSocket message handlers for plant management
+   * Handles irrigation responses and plant deletion responses
+   */
   useEffect(() => {
+    /**
+     * Handle successful irrigation response
+     * Shows success alert to user
+     * @param {Object} data - Server response data
+     */
     const handleSuccess = (data) => {
       Alert.alert('Irrigation', data?.message || 'Irrigation performed successfully!');
     };
+
+    /**
+     * Handle failed irrigation response
+     * Shows error alert to user
+     * @param {Object} data - Server response data
+     */
     const handleFail = (data) => {
       Alert.alert('Irrigation', data?.message || 'Failed to irrigate the plant.');
     };
+
+    // Register WebSocket message handlers
     websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleFail);
     websocketService.onMessage('IRRIGATE_SKIPPED', handleFail);
 
-    // Handler for delete plant responses
+    /**
+     * Handle successful plant deletion
+     * Shows success alert and navigates back to main screen
+     * @param {Object} data - Server response data
+     */
     const handleDeleteSuccess = (data) => {
       Alert.alert('Success', 'Plant deleted successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     };
+
+    /**
+     * Handle failed plant deletion
+     * Shows error alert to user
+     * @param {Object} data - Server response data
+     */
     const handleDeleteFail = (data) => {
       Alert.alert('Error', data?.message || 'Failed to delete the plant.');
     };
+
+    // Register deletion message handlers
     websocketService.onMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
     websocketService.onMessage('DELETE_PLANT_FAIL', handleDeleteFail);
 
+    /**
+     * Cleanup function to remove message handlers
+     * Prevents memory leaks when component unmounts
+     */
     return () => {
       websocketService.onMessage('IRRIGATE_SUCCESS', () => { });
       websocketService.onMessage('IRRIGATE_FAIL', () => { });
@@ -87,7 +142,10 @@ const PlantDetail = () => {
     };
   }, [navigation]);
 
-  // Water plant button handler
+  /**
+   * Handle plant watering action
+   * Sends irrigation command to server via WebSocket
+   */
   const handleWaterPlant = () => {
     if (!plant?.name) {
       Alert.alert('Error', 'Plant name is missing.');
@@ -100,7 +158,10 @@ const PlantDetail = () => {
     Alert.alert('Irrigation', 'Irrigation command sent. Please wait for result.');
   };
 
-  // Delete plant button handler
+  /**
+   * Handle plant deletion action
+   * Shows confirmation dialog and sends deletion command
+   */
   const handleDeletePlant = () => {
     if (!plant?.name) {
       Alert.alert('Error', 'Plant name is missing.');
@@ -126,11 +187,15 @@ const PlantDetail = () => {
     );
   };
 
+  /**
+   * Render the plant detail screen
+   * Includes header, plant image, information, and action buttons
+   */
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
+      {/* Header with back button and title */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Feather name="chevron-left" size={24} color="#2C3E50" />
@@ -140,7 +205,7 @@ const PlantDetail = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Plant Image and Info */}
+        {/* Plant Image and Name Overlay */}
         <View style={styles.imageContainer}>
           {console.log('PlantDetail image debug:', {
             plantName: plant.name,
@@ -168,12 +233,16 @@ const PlantDetail = () => {
             <View style={styles.separator} />
             <Text style={styles.infoLabel}>Plant Name</Text>
             <Text style={styles.plantName}>{plant.name}</Text>
-            <Text style={styles.infoLabel}>Genus</Text>
-            <Text style={styles.plantType}>{plant.type}</Text>
           </View>
         </View>
 
-        {/* Stats */}
+        {/* Plant Type Information */}
+        <View style={styles.plantTypeContainer}>
+          <Text style={styles.infoLabel}>Genus</Text>
+          <Text style={styles.plantType}>{plant.type}</Text>
+        </View>
+
+        {/* Current Conditions Section */}
         <View style={styles.statsContainer}>
           <Text style={styles.sectionTitle}>Current Conditions</Text>
 
@@ -190,7 +259,7 @@ const PlantDetail = () => {
           </View>
         </View>
 
-        {/* Actions */}
+        {/* Plant Management Actions */}
         <View style={styles.actionsContainer}>
           <Text style={styles.sectionTitle}>Actions</Text>
           <TouchableOpacity style={styles.waterButton} onPress={handleWaterPlant}>

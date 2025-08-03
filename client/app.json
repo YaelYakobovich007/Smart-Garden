@@ -5,14 +5,14 @@
     "owner": "yael.y",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/Smart_Garden_Logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "scheme": "smartgarden",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/images/Smart_Garden_Logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#EAF5E4"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -23,12 +23,12 @@
     "android": {
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/Smart_Garden_Logo.png",
+        "backgroundColor": "#EAF5E4"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/images/Smart_Garden_Logo.png"
     },
     "extra": {
       "GOOGLE_CLIENT_ID": "883722498169-aqp6oi2tmplgecpnus3acde813hp6emg.apps.googleusercontent.com"

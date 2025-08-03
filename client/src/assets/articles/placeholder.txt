@@ -1,0 +1,9 @@
+This directory contains article images.
+Place the following images here:
+- watering-practices.jpg
+- soil-mix.jpg
+- pest-control.jpg
+- light-requirements.jpg
+- propagation.jpg
+
+For now, you can use any gardening-related images or create placeholder images. 

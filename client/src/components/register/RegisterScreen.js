@@ -269,7 +269,7 @@ const RegisterScreen = () => {
   // --- UI RENDERING ---
   // Renders the registration form
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: '#F0F4F8' }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -460,7 +460,7 @@ const RegisterScreen = () => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 

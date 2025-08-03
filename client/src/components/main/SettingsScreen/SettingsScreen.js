@@ -2,7 +2,6 @@ import React from 'react';
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   ScrollView,
@@ -13,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { styles } from './styles';
 import sessionService from '../../../services/sessionService';
+import onboardingService from '../../../services/onboardingService';
 
 const SettingsScreen = () => {
   const navigation = useNavigation();
@@ -77,8 +77,26 @@ const SettingsScreen = () => {
     Alert.alert('Help', 'Help and support will be implemented here');
   };
 
+  const handleResetOnboarding = async () => {
+    Alert.alert(
+      'Reset Onboarding',
+      'This will reset the onboarding screens so you can see them again. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            await onboardingService.resetOnboarding();
+            Alert.alert('Success', 'Onboarding has been reset. Please restart the app to see the onboarding screens again.');
+          }
+        }
+      ]
+    );
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: '#F0F4F8' }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
       {/* Header */}
@@ -156,10 +174,16 @@ const SettingsScreen = () => {
               <Text style={[styles.settingText, styles.clearSessionText]}>Clear Session (Debug)</Text>
             </View>
           </TouchableOpacity>
+          <TouchableOpacity style={[styles.settingItem, styles.clearSessionItem]} onPress={handleResetOnboarding}>
+            <View style={styles.settingLeft}>
+              <Feather name="play-circle" size={20} color="#9B59B6" />
+              <Text style={[styles.settingText, styles.clearSessionText]}>Reset Onboarding (Debug)</Text>
+            </View>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+              </ScrollView>
+      </View>
+    );
 };
 
 export default SettingsScreen; 

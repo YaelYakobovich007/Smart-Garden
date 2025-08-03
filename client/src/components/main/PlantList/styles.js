@@ -91,6 +91,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
+    paddingBottom: 120,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     margin: 16,
@@ -108,22 +109,25 @@ export const styles = StyleSheet.create({
   emptyStateIcon: {
     width: 48,
     height: 48,
-    marginBottom: 12,
+    marginBottom: 20,
+    marginTop: -20, // Move image higher up
   },
   emptyStateText: {
     fontSize: 18,
     color: '#BDC3C7',
-    marginTop: 12,
-    marginBottom: 4,
+    marginTop: 0, // Reduced top margin since image is higher
+    marginBottom: 8,
     textAlign: 'center',
   },
   emptyStateSubtext: {
     fontSize: 14,
     color: '#95A5A6',
     textAlign: 'center',
+    marginBottom: 24, // Add more space before button
+    paddingHorizontal: 20, // Add horizontal padding for better text wrapping
   },
   addFirstPlantButton: {
-    marginTop: 0,
+    marginTop: 24,
     backgroundColor: '#4CAF50',
     borderRadius: 8,
     paddingVertical: 12,

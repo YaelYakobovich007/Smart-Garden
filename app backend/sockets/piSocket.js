@@ -5,6 +5,7 @@ let piSocket = null;
 
 function handlePiSocket(ws) {
   piSocket = ws;
+  console.log('Pi connected: raspberrypi_main_controller');
   sendSuccess(ws, 'WELCOME', { message: 'Hello Pi' });
   
   ws.on('message', (msg) => {
@@ -16,10 +17,12 @@ function handlePiSocket(ws) {
     }
 
     if (data.type === 'SENSOR_ASSIGNED') {
+      console.log(`Received sensor assignment: ${data.data?.sensor_id} for ${data.data?.plant_id}`);
       return handleSensorAssigned(data, ws);
     }
 
     if (data.type === 'VALVE_ASSIGNED') {
+      console.log(`Received valve assignment: ${data.data?.valve_id} for ${data.data?.plant_id}`);
       return handleValveAssigned(data, ws);
     }
 
@@ -27,6 +30,7 @@ function handlePiSocket(ws) {
   });
 
   ws.on('close', () => {
+    console.log('Pi disconnected: raspberrypi_main_controller');
     piSocket = null;
   });
 }

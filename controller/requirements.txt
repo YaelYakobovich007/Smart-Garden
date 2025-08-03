@@ -1,0 +1,35 @@
+# Smart Garden Raspberry Pi Controller Requirements
+
+# WebSocket client library
+websockets>=11.0.0
+
+# JSON handling (built-in, but listing for clarity)
+# json
+
+# Async support (built-in, but listing for clarity) 
+# asyncio
+
+# Logging (built-in, but listing for clarity)
+# logging
+
+# Additional packages you might need for hardware control:
+
+# GPIO control for Raspberry Pi
+# RPi.GPIO>=0.7.1
+
+# Alternative GPIO library (more modern)
+# gpiozero>=1.6.2
+
+# I2C/SPI communication for sensors
+# adafruit-circuitpython-busdevice>=5.2.0
+
+# Sensor libraries (uncomment as needed)
+# adafruit-circuitpython-ssd1306  # For OLED displays
+# adafruit-circuitpython-dht       # For DHT temperature/humidity sensors
+# w1thermsensor                   # For DS18B20 temperature sensors
+
+# System monitoring
+# psutil>=5.9.0
+
+# Configuration management
+# python-dotenv>=1.0.0

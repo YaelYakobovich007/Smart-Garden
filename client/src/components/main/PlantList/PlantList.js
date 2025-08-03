@@ -1,3 +1,17 @@
+/**
+ * Plant List Component - Plant Display and Management
+ * 
+ * This component displays a list of user's plants in a horizontal scrollable format.
+ * It handles:
+ * - Plant data display with images and status indicators
+ * - Empty state when no plants are present
+ * - Plant interaction (watering, navigation to details)
+ * - Plant status visualization (moisture, temperature, health)
+ * 
+ * The component supports both individual plant cards and an empty state
+ * with an "Add your first plant" button.
+ */
+
 import React from 'react';
 import {
   View,
@@ -13,23 +27,42 @@ import { styles } from './styles';
 import MoistureCircle from './MoistureCircle';
 import TempCircle from './TempCircle';
 
-const CARD_WIDTH = Math.floor(Dimensions.get('window').width * 0.8);
+// Calculate card width based on screen dimensions for responsive design
+const CARD_WIDTH = Math.floor(Dimensions.get('window').width * 0.65);
 
 const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
   const navigation = useNavigation();
 
+  /**
+   * Get color for moisture level visualization
+   * Returns appropriate color based on moisture percentage
+   * @param {number} moisture - Moisture percentage (0-100)
+   * @returns {string} Color hex code
+   */
   const getMoistureColor = (moisture) => {
-    if (moisture < 30) return '#EF4444';
-    if (moisture < 60) return '#F59E0B';
-    return '#10B981';
+    if (moisture < 30) return '#EF4444'; // Red for dry
+    if (moisture < 60) return '#F59E0B'; // Orange for moderate
+    return '#10B981'; // Green for good
   };
 
+  /**
+   * Get text status for moisture level
+   * Returns human-readable status based on moisture percentage
+   * @param {number} moisture - Moisture percentage (0-100)
+   * @returns {string} Status text
+   */
   const getMoistureStatus = (moisture) => {
     if (moisture < 30) return 'Dry';
     if (moisture < 60) return 'Moderate';
     return 'Good';
   };
 
+  /**
+   * Determine overall plant health status
+   * Combines moisture, health, and other factors for status determination
+   * @param {Object} plant - Plant object with health data
+   * @returns {string} Plant status
+   */
   const getPlantStatus = (plant) => {
     if (plant.moisture < 30) return 'critical';
     if (plant.moisture < 60) return 'needs-water';
@@ -37,6 +70,12 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
     return 'healthy';
   };
 
+  /**
+   * Get color scheme for plant status indicators
+   * Returns colors for text, background, and border based on status
+   * @param {string} status - Plant status
+   * @returns {Object} Color scheme object
+   */
   const getStatusColor = (status) => {
     switch (status) {
       case 'healthy': return { text: '#059669', bg: '#D1FAE5', border: '#A7F3D0' };
@@ -46,6 +85,12 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
     }
   };
 
+  /**
+   * Get icon for plant status visualization
+   * Returns appropriate Feather icon based on plant status
+   * @param {string} status - Plant status
+   * @returns {JSX.Element} Icon component
+   */
   const getStatusIcon = (status) => {
     switch (status) {
       case 'healthy': return <Feather name="check-circle" size={16} color="#059669" />;
@@ -55,6 +100,12 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
     }
   };
 
+  /**
+   * Get text description for plant status
+   * Returns human-readable status text
+   * @param {string} status - Plant status
+   * @returns {string} Status text
+   */
   const getStatusText = (status) => {
     switch (status) {
       case 'healthy': return 'Healthy';
@@ -64,6 +115,12 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
     }
   };
 
+  /**
+   * Get plant image based on plant type
+   * Maps plant types to local image assets
+   * @param {string} plantType - Type of plant
+   * @returns {Object} Image source object
+   */
   const getPlantImage = (plantType) => {
     // Use actual plant images based on plant type
     switch (plantType.toLowerCase()) {
@@ -87,6 +144,11 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
     }
   };
 
+  /**
+   * Handle plant watering action
+   * Triggers watering command and logs the action
+   * @param {string} plantId - ID of the plant to water
+   */
   const handleWaterPlant = (plantId) => {
     if (onWaterPlant) {
       onWaterPlant(plantId);
@@ -95,11 +157,20 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
     console.log('Watering plant:', plantId);
   };
 
+  /**
+   * Handle plant card press
+   * Navigates to plant detail screen with plant data
+   * @param {Object} plant - Plant object to view details for
+   */
   const handlePlantPress = (plant) => {
     // Navigate to plant detail screen
     navigation.navigate('PlantDetail', { plant });
   };
 
+  /**
+   * Render empty state when no plants are present
+   * Shows encouraging message and add plant button
+   */
   if (plants.length === 0) {
     return (
       <View style={styles.emptyState}>
@@ -121,6 +192,10 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
     );
   }
 
+  /**
+   * Render plant list with horizontal scrolling
+   * Displays plant cards in a FlatList for smooth scrolling
+   */
   return (
     <View style={styles.plantsSection}>
       <FlatList
@@ -138,6 +213,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
             style={[styles.plantCard, { width: CARD_WIDTH }]}
             onPress={() => handlePlantPress(plant)}
           >
+            {/* Plant Image Container */}
             <View style={styles.plantImageContainer}>
               {console.log('Plant image debug:', {
                 plantName: plant.name,
@@ -162,10 +238,14 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
                 onError={(error) => console.log('Image load error for:', plant.name, error.nativeEvent)}
               />
             </View>
+
+            {/* Plant Information */}
             <View style={styles.plantContent}>
               <Text style={styles.plantName}>{plant.name}</Text>
               <Text style={styles.plantType}>{plant.type}</Text>
             </View>
+
+            {/* Plant Status Indicators */}
             <View style={styles.plantStats}>
               <View style={styles.statItem}>
                 <MoistureCircle percent={plant.moisture} />
