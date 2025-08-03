@@ -164,6 +164,36 @@ class SmartGardenPiClient:
             self.logger.error(f"Irrigation failed for plant {plant_id_str}: {e}")
             await self.send_irrigation_complete(plant_id_str, duration, "error")
     
+    async def handle_add_plant_command(self, data: Dict[Any, Any]):
+        """Handle add plant command from server using Smart Garden Engine."""
+        from controller.handlers.add_plant_handler import handle
+        
+        self.logger.info(f"Received ADD_PLANT command from server")
+        
+        # Call the handler to do all the business logic
+        success, response, updated_next_plant_id = handle(
+            data=data,
+            smart_engine=self.engine,
+            plant_id_map=self.plant_id_map,
+            next_plant_id=self.next_plant_id
+        )
+        
+        # Update next_plant_id
+        self.next_plant_id = updated_next_plant_id
+        
+        # Send response back to server using DTO
+        response_data = response.to_websocket_data()
+        
+        # Add server plant_id to response for server's reference
+        response_data["server_plant_id"] = data.get("plant_id")
+        
+        await self.send_message("ADD_PLANT_COMPLETE", response_data)
+        
+        if success:
+            self.logger.info(f"✅ Successfully processed ADD_PLANT command")
+        else:
+            self.logger.error(f"❌ Failed to process ADD_PLANT command: {response.error_message}")
+
     async def handle_sensor_request(self, data: Dict[Any, Any]):
         """Handle sensor data request from server using Smart Garden Engine."""
         sensor_id = data.get("sensor_id")
@@ -221,6 +251,9 @@ class SmartGardenPiClient:
             
             elif message_type == "GET_SENSOR_DATA":
                 await self.handle_sensor_request(message_data)
+            
+            elif message_type == "ADD_PLANT":
+                await self.handle_add_plant_command(message_data)
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")
