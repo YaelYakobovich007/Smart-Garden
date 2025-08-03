@@ -33,31 +33,39 @@ def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
         )
         return False, response
     
-    plant_name = data.get("plant_name", f"plant_{plant_id}")
     desired_moisture = data.get("desiredMoisture", 60.0)
     water_limit = data.get("waterLimit", 1.0)
-    irrigation_days = data.get("irrigationDays")
-    irrigation_time = data.get("irrigationTime")
-    plant_type = data.get("plantType", "default")
     schedule_data = data.get("scheduleData")
-    
-    logger.info(f"Adding plant {plant_name} (ID: {plant_id}) with desired moisture {desired_moisture}%")
     
     try:
         # Use the plant_id directly from the server (no conversion needed)
         logger.info(f"Using plant_id {plant_id} directly from server")
         
         # Convert schedule_data to the format expected by the engine
+        # Engine expects: List[Dict[str, str]] = [{"day": "monday", "time": "06:00"}, ...]
         engine_schedule_data = None
-        if schedule_data and isinstance(schedule_data, list):
-            engine_schedule_data = []
-            for schedule_entry in schedule_data:
-                if isinstance(schedule_entry, dict):
-                    engine_schedule_data.append({
-                        "day": schedule_entry.get("day"),
-                        "time": schedule_entry.get("time"),
-                        "valve_number": schedule_entry.get("valve_number", 1)
-                    })
+        if schedule_data:
+            if isinstance(schedule_data, dict):
+                # Handle backend format: {irrigation_days: [...], irrigation_time: "..."}
+                irrigation_days = schedule_data.get("irrigation_days")
+                irrigation_time = schedule_data.get("irrigation_time")
+                
+                if irrigation_days and isinstance(irrigation_days, list) and irrigation_time:
+                    engine_schedule_data = []
+                    for day in irrigation_days:
+                        engine_schedule_data.append({
+                            "day": day.lower(),
+                            "time": irrigation_time
+                        })
+            elif isinstance(schedule_data, list):
+                # Handle legacy format: [{"day": "...", "time": "..."}]
+                engine_schedule_data = []
+                for schedule_entry in schedule_data:
+                    if isinstance(schedule_entry, dict):
+                        engine_schedule_data.append({
+                            "day": schedule_entry.get("day"),
+                            "time": schedule_entry.get("time")
+                        })
         
         # Add plant to engine with provided parameters
         smart_engine.add_plant(
@@ -71,7 +79,6 @@ def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
             water_limit=water_limit
         )
         
-        logger.info(f"Successfully added plant {plant_name} to engine with ID {plant_id}")
         
         # Get assigned hardware info
         assigned_valve = None
@@ -92,7 +99,6 @@ def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
         return True, response
         
     except Exception as e:
-        logger.error(f"Failed to add plant {plant_name}: {e}")
         
         # Create error response using DTO
         response = AddPlantRequest.error(
