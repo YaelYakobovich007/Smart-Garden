@@ -29,7 +29,7 @@ function handleUserSocket(ws) {
       handleGetWeather(ws);
     } else if (['UPDATE_PLANT_SCHEDULE', 'GET_IRRIGATION_RESULT', 'IRRIGATE_PLANT'].includes(data.type)) {
       handleIrrigationMessage(data, ws);
-    } else if (['GET_USER_NAME', 'UPDATE_FULL_NAME', 'UPDATE_LOCATION', 'UPDATE_PASSWORD'].includes(data.type)) {
+    } else if (['GET_USER_NAME', 'UPDATE_FULL_NAME', 'UPDATE_LOCATION', 'UPDATE_PASSWORD', 'FORGOT_PASSWORD', 'RESET_PASSWORD', 'VALIDATE_RESET_TOKEN'].includes(data.type)) {
       handleUserMessage(data, ws);
     } else {
       handlePlantMessage(data, ws);

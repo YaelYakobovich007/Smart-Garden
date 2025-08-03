@@ -48,7 +48,7 @@ const LoginScreen = () => {
   useEffect(() => {
     // Check initial connection status
     setIsConnected(websocketService.isConnected());
-    
+
     // Listen for connection changes
     const handleConnectionChange = (connected) => {
       setIsConnected(connected);
@@ -56,7 +56,7 @@ const LoginScreen = () => {
         setMessage('Connection lost. Please check your network.');
       }
     };
-    
+
     websocketService.onConnectionChange(handleConnectionChange);
   }, []);
 
@@ -93,7 +93,7 @@ const LoginScreen = () => {
   const handleAuthResponse = async (data) => {
     if (data.type === 'LOGIN_SUCCESS') {
       setMessage('Login successful!');
-      
+
       // Save user session
       const userData = {
         email: data.userId || email,
@@ -101,7 +101,7 @@ const LoginScreen = () => {
         timestamp: new Date().toISOString()
       };
       await sessionService.saveSession(userData);
-      
+
       // Navigate to the main app screen
       navigation.navigate('Main');
     } else if (data.type === 'LOGIN_FAIL') {
@@ -111,7 +111,7 @@ const LoginScreen = () => {
 
   // Handles any WebSocket connection errors
   const handleConnectionError = () => {
-      setMessage('Connection error. Please try again.');
+    setMessage('Connection error. Please try again.');
   }
 
   // Validates inputs and sends login request to the backend
@@ -152,7 +152,7 @@ const LoginScreen = () => {
       setMessage('Not connected to server. Please wait...');
       return;
     }
-    
+
     try {
       await promptAsync({ useProxy: true });
     } catch (error) {
@@ -177,79 +177,79 @@ const LoginScreen = () => {
         </View>
 
         <View style={styles.formContainer}>
-            <Text style={styles.welcomeTitle}>Welcome</Text>
-            <Text style={styles.welcomeSubtitle}>Sign in to your garden</Text>
+          <Text style={styles.welcomeTitle}>Welcome</Text>
+          <Text style={styles.welcomeSubtitle}>Sign in to your garden</Text>
 
-            <View style={[
-              styles.inputContainer, 
-              emailError && styles.inputError
-            ]}>
-              <Feather name="mail" size={20} color={emailError ? "#D32F2F" : "#888"} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email address"
-                placeholderTextColor="#888"
-                value={email}
-                onChangeText={handleEmailChange}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            {emailErrorMessage ? <Text style={styles.fieldError}>{emailErrorMessage}</Text> : null}
+          <View style={[
+            styles.inputContainer,
+            emailError && styles.inputError
+          ]}>
+            <Feather name="mail" size={20} color={emailError ? "#D32F2F" : "#888"} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email address"
+              placeholderTextColor="#888"
+              value={email}
+              onChangeText={handleEmailChange}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+          {emailErrorMessage ? <Text style={styles.fieldError}>{emailErrorMessage}</Text> : null}
 
-            <View style={[
-              styles.inputContainer, 
-              passwordError && styles.inputError
-            ]}>
-                <Feather name="lock" size={20} color={passwordError ? "#D32F2F" : "#888"} style={styles.inputIcon} />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    placeholderTextColor="#888"
-                    value={password}
-                    onChangeText={handlePasswordChange}
-                    secureTextEntry={secureTextEntry}
-                />
-                <TouchableOpacity onPress={() => setSecureTextEntry(!secureTextEntry)}>
-                    <Feather name={secureTextEntry ? 'eye-off' : 'eye'} size={20} color={passwordError ? "#D32F2F" : "#888"} />
-                </TouchableOpacity>
-            </View>
-            {passwordErrorMessage ? <Text style={styles.fieldError}>{passwordErrorMessage}</Text> : null}
-
-            <TouchableOpacity>
-                <Text style={styles.forgotPassword}>Forgot Password?</Text>
+          <View style={[
+            styles.inputContainer,
+            passwordError && styles.inputError
+          ]}>
+            <Feather name="lock" size={20} color={passwordError ? "#D32F2F" : "#888"} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#888"
+              value={password}
+              onChangeText={handlePasswordChange}
+              secureTextEntry={secureTextEntry}
+            />
+            <TouchableOpacity onPress={() => setSecureTextEntry(!secureTextEntry)}>
+              <Feather name={secureTextEntry ? 'eye-off' : 'eye'} size={20} color={passwordError ? "#D32F2F" : "#888"} />
             </TouchableOpacity>
+          </View>
+          {passwordErrorMessage ? <Text style={styles.fieldError}>{passwordErrorMessage}</Text> : null}
 
-            <TouchableOpacity 
-              style={[styles.signInButton, !isConnected && styles.disabledButton]} 
-              onPress={handleLogin}
-              disabled={!isConnected}
-            >
-                <Text style={styles.signInButtonText}>Sign In</Text>
-            </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+            <Text style={styles.forgotPassword}>Forgot Password?</Text>
+          </TouchableOpacity>
 
-            <View style={styles.separatorContainer}>
-                <View style={styles.separatorLine} />
-                <Text style={styles.separatorText}>or</Text>
-                <View style={styles.separatorLine} />
-            </View>
+          <TouchableOpacity
+            style={[styles.signInButton, !isConnected && styles.disabledButton]}
+            onPress={handleLogin}
+            disabled={!isConnected}
+          >
+            <Text style={styles.signInButtonText}>Sign In</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.googleButton, !isConnected && styles.disabledButton]} 
-              onPress={handleGoogleLogin}
-              disabled={!isConnected || !request}
-            >
-                <Image source={GoogleLogo} style={styles.googleIcon} />
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
+          <View style={styles.separatorContainer}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>or</Text>
+            <View style={styles.separatorLine} />
+          </View>
 
-            {message ? <Text style={styles.message}>{message}</Text> : null}
+          <TouchableOpacity
+            style={[styles.googleButton, !isConnected && styles.disabledButton]}
+            onPress={handleGoogleLogin}
+            disabled={!isConnected || !request}
+          >
+            <Image source={GoogleLogo} style={styles.googleIcon} />
+            <Text style={styles.googleButtonText}>Continue with Google</Text>
+          </TouchableOpacity>
+
+          {message ? <Text style={styles.message}>{message}</Text> : null}
         </View>
         <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.signUpText}>Sign Up</Text>
-            </TouchableOpacity>
+          <Text style={styles.footerText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.signUpText}>Sign Up</Text>
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

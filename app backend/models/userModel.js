@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 
 async function createUser(email, hashedPassword, fullName, country, city) {
     // Check if user already exists
@@ -14,6 +15,11 @@ async function createUser(email, hashedPassword, fullName, country, city) {
 
 async function getUser(email) {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    return result.rows[0] || null;
+}
+
+async function getUserById(id) {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
     return result.rows[0] || null;
 }
 
@@ -42,10 +48,105 @@ async function updateUserPassword(email, newPassword) {
     return result.rows.length > 0;
 }
 
+// Password Reset Functions
+async function createPasswordResetToken(email) {
+    try {
+        // Check if user exists
+        const user = await getUser(email);
+        if (!user) {
+            return null;
+        }
+
+        // Generate 6-digit numeric code
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Set expiration (1 hour from now)
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        // Delete any existing tokens for this user
+        await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
+
+        // Insert new code
+        await pool.query(
+            'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+            [user.id, resetCode, expiresAt]
+        );
+
+        return {
+            token: resetCode, // Keep token field name for compatibility
+            email: user.email,
+            fullName: user.full_name
+        };
+    } catch (error) {
+        console.error('Error creating password reset code:', error);
+        return null;
+    }
+}
+
+async function validatePasswordResetToken(token) {
+    try {
+        const result = await pool.query(`
+            SELECT prt.*, u.email, u.full_name 
+            FROM password_reset_tokens prt
+            JOIN users u ON prt.user_id = u.id
+            WHERE prt.token = $1 AND prt.used = FALSE AND prt.expires_at > NOW()
+        `, [token]);
+
+        return result.rows[0] || null;
+    } catch (error) {
+        console.error('Error validating password reset code:', error);
+        return null;
+    }
+}
+
+async function usePasswordResetToken(token, newPassword) {
+    try {
+        // Get token info
+        const tokenInfo = await validatePasswordResetToken(token);
+        if (!tokenInfo) {
+            return false;
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update user password
+        await pool.query(
+            'UPDATE users SET password = $1 WHERE id = $2',
+            [hashedPassword, tokenInfo.user_id]
+        );
+
+        // Mark token as used
+        await pool.query(
+            'UPDATE password_reset_tokens SET used = TRUE WHERE token = $1',
+            [token]
+        );
+
+        return true;
+    } catch (error) {
+        console.error('Error using password reset token:', error);
+        return false;
+    }
+}
+
+async function cleanupExpiredTokens() {
+    try {
+        await pool.query('DELETE FROM password_reset_tokens WHERE expires_at < NOW() OR used = TRUE');
+        console.log('Expired password reset tokens cleaned up');
+    } catch (error) {
+        console.error('Error cleaning up expired tokens:', error);
+    }
+}
+
 module.exports = {
     createUser,
     getUser,
+    getUserById,
     updateUserName,
     updateUserLocation,
     updateUserPassword,
+    createPasswordResetToken,
+    validatePasswordResetToken,
+    usePasswordResetToken,
+    cleanupExpiredTokens,
 };
