@@ -45,10 +45,10 @@ class PiClientRunner:
         self.running = False
         
         # Create the Smart Garden Engine ONCE at startup (not per connection)
-        logger.info(f"🔧 Initializing Smart Garden Engine with {total_valves} valves and {total_sensors} sensors")
+        logger.info(f"Initializing Smart Garden Engine with {total_valves} valves and {total_sensors} sensors")
         from controller.engine.smart_garden_engine import SmartGardenEngine
         self.engine = SmartGardenEngine(total_valves=total_valves, total_sensors=total_sensors)
-        logger.info(f"✅ Smart Garden Engine initialized and ready")
+        logger.info(f"Smart Garden Engine initialized and ready")
         
     async def start(self):
         """Start the Pi client and handle reconnections"""
@@ -57,7 +57,7 @@ class PiClientRunner:
         while self.running:
             try:
                 logger.info("=== Starting Smart Garden WebSocket Client ===")
-                logger.info(f"🔗 Connecting to server using existing engine instance")
+                logger.info(f"Connecting to server using existing engine instance")
                 
                 # Create WebSocket client with the SAME engine instance (no recreation)
                 self.client = SmartGardenPiClient(self.server_url, self.engine)
@@ -66,13 +66,13 @@ class PiClientRunner:
                 await self.client.run()
                 
                 if self.running:  # Only try to reconnect if we weren't manually stopped
-                    logger.warning("⚠️ Connection lost. Retrying in 5 seconds...")
+                    logger.warning("Connection lost. Retrying in 5 seconds...")
                     await asyncio.sleep(5)
                     
             except Exception as e:
-                logger.error(f"❌ Pi client error: {e}")
+                logger.error(f"Pi client error: {e}")
                 if self.running:
-                    logger.info("🔄 Retrying in 10 seconds...")
+                    logger.info("Retrying in 10 seconds...")
                     await asyncio.sleep(10)
     
     async def _send_initial_assignments(self):
@@ -106,13 +106,13 @@ class PiClientRunner:
     
     async def stop(self):
         """Stop the Pi client gracefully"""
-        logger.info("🛑 Stopping Smart Garden Pi Client...")
+        logger.info("Stopping Smart Garden Pi Client...")
         self.running = False
         
         if self.client:
             await self.client.disconnect()
         
-        logger.info("✅ Pi Client stopped successfully")
+        logger.info("Pi Client stopped successfully")
 
 
 # Global client runner instance
@@ -139,19 +139,19 @@ async def main():
     total_valves = int(os.getenv('SMART_GARDEN_TOTAL_VALVES', '2'))
     total_sensors = int(os.getenv('SMART_GARDEN_TOTAL_SENSORS', '2'))
     
-    logger.info(f"🌱 Smart Garden Pi Client starting...")
-    logger.info(f"🔗 Server URL: {server_url}")
-    logger.info(f"🚰 Total Valves: {total_valves}")
-    logger.info(f"📊 Total Sensors: {total_sensors}")
+    logger.info(f"Smart Garden Pi Client starting...")
+    logger.info(f"Server URL: {server_url}")
+    logger.info(f"Total Valves: {total_valves}")
+    logger.info(f"Total Sensors: {total_sensors}")
     
     client_runner = PiClientRunner(server_url, total_valves, total_sensors)
     
     try:
         await client_runner.start()
     except KeyboardInterrupt:
-        logger.info("👋 Shutdown requested by user")
+        logger.info("Shutdown requested by user")
     except Exception as e:
-        logger.error(f"❌ Fatal error: {e}")
+        logger.error(f"Fatal error: {e}")
     finally:
         if client_runner:
             await client_runner.stop()
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n👋 Smart Garden Pi Client stopped")
+        print("\nSmart Garden Pi Client stopped")
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         sys.exit(1)

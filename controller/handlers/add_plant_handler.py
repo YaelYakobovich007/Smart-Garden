@@ -4,18 +4,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def handle(data: Dict[Any, Any], smart_engine, plant_id_map: Dict[str, int], next_plant_id: int) -> Tuple[bool, AddPlantRequest, int]:
+def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
     """
     Handle add plant request from server and add plant to Smart Garden Engine.
     
     Args:
         data: Raw data from server WebSocket message
         smart_engine: SmartGardenEngine instance
-        plant_id_map: Mapping from server plant IDs to internal engine IDs
-        next_plant_id: Next available internal plant ID
         
     Returns:
-        Tuple of (success: bool, response: AddPlantRequest, updated_next_plant_id: int)
+        Tuple of (success: bool, response: AddPlantRequest)
     """
     
     # Extract data from server message
@@ -31,18 +29,8 @@ def handle(data: Dict[Any, Any], smart_engine, plant_id_map: Dict[str, int], nex
     logger.info(f"Adding plant {plant_name} (ID: {plant_id}) with desired moisture {desired_moisture}%")
     
     try:
-        # Convert server plant_id to internal engine plant_id if not already mapped
-        plant_id_str = str(plant_id)
-        if plant_id_str in plant_id_map:
-            logger.warning(f"Plant {plant_id_str} already exists, updating configuration")
-            internal_plant_id = plant_id_map[plant_id_str]
-            # Remove existing plant first
-            smart_engine.remove_plant(internal_plant_id)
-        else:
-            # Create new internal ID
-            internal_plant_id = next_plant_id
-            plant_id_map[plant_id_str] = internal_plant_id
-            next_plant_id += 1
+        # Use the plant_id directly from the server (no conversion needed)
+        logger.info(f"Using plant_id {plant_id} directly from server")
         
         # Convert schedule_data to the format expected by the engine
         engine_schedule_data = None
@@ -58,7 +46,7 @@ def handle(data: Dict[Any, Any], smart_engine, plant_id_map: Dict[str, int], nex
         
         # Add plant to engine with provided parameters
         smart_engine.add_plant(
-            plant_id=internal_plant_id,
+            plant_id=plant_id,
             desired_moisture=desired_moisture,
             schedule_data=engine_schedule_data,
             plant_lat=32.7940,  # Default coordinates (Israel)
@@ -68,25 +56,25 @@ def handle(data: Dict[Any, Any], smart_engine, plant_id_map: Dict[str, int], nex
             water_limit=water_limit
         )
         
-        logger.info(f" Successfully added plant {plant_name} to engine with internal ID {internal_plant_id}")
+        logger.info(f"Successfully added plant {plant_name} to engine with ID {plant_id}")
         
         # Get assigned hardware info
         assigned_valve = None
         assigned_sensor = None
-        if internal_plant_id in smart_engine.plants:
-            plant = smart_engine.plants[internal_plant_id]
+        if plant_id in smart_engine.plants:
+            plant = smart_engine.plants[plant_id]
             assigned_valve = plant.valve.valve_id
             assigned_sensor = plant.sensor.modbus_id
         
         # Create success response using DTO
         response = AddPlantRequest.success(
-            plant_id=internal_plant_id,  # Use internal ID for Pi's reference
+            plant_id=plant_id,
             desired_moisture=desired_moisture,
             assigned_valve=assigned_valve,
             assigned_sensor=assigned_sensor
         )
         
-        return True, response, next_plant_id
+        return True, response
         
     except Exception as e:
         logger.error(f"Failed to add plant {plant_name}: {e}")
@@ -97,4 +85,4 @@ def handle(data: Dict[Any, Any], smart_engine, plant_id_map: Dict[str, int], nex
             error_message=str(e)
         )
         
-        return False, response, next_plant_id
+        return False, response
