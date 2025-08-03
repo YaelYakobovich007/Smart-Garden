@@ -153,6 +153,43 @@ const MainScreen = () => {
   };
 
   /**
+   * Handle moisture response for a specific plant
+   * Updates the plant's moisture value with real data from server
+   * @param {Object} data - Server moisture response data
+   */
+  const handlePlantMoistureResponse = (data) => {
+    if (data.plant_id && data.moisture !== undefined) {
+      setPlants(prevPlants => 
+        prevPlants.map(plant => 
+          plant.id === data.plant_id 
+            ? { ...plant, moisture: data.moisture }
+            : plant
+        )
+      );
+      console.log('Updated moisture for plant:', data.plant_id, 'to:', data.moisture);
+    }
+  };
+
+  /**
+   * Handle moisture response for all plants
+   * Updates all plants' moisture values with real data from server
+   * @param {Object} data - Server moisture response data
+   */
+  const handleAllPlantsMoistureResponse = (data) => {
+    if (data.plants && Array.isArray(data.plants)) {
+      setPlants(prevPlants => 
+        prevPlants.map(plant => {
+          const moistureData = data.plants.find(p => p.plant_id === plant.id);
+          return moistureData && moistureData.moisture !== undefined
+            ? { ...plant, moisture: moistureData.moisture }
+            : plant;
+        })
+      );
+      console.log('Updated moisture for all plants');
+    }
+  };
+
+  /**
    * Set up WebSocket message handlers and connection management
    * Registers handlers for various server messages and manages connection state
    */
@@ -165,6 +202,8 @@ const MainScreen = () => {
     websocketService.onMessage('GET_USER_NAME_SUCCESS', handleUserNameReceived);
     websocketService.onMessage('GET_USER_NAME_FAIL', handleUserNameError);
     websocketService.onMessage('UNAUTHORIZED', handleUnauthorized);
+    websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handlePlantMoistureResponse);
+    websocketService.onMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
 
     /**
      * Handle WebSocket connection status changes
@@ -208,6 +247,8 @@ const MainScreen = () => {
       websocketService.offMessage('GET_USER_NAME_SUCCESS', handleUserNameReceived);
       websocketService.offMessage('GET_USER_NAME_FAIL', handleUserNameError);
       websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
+      websocketService.offMessage('PLANT_MOISTURE_RESPONSE', handlePlantMoistureResponse);
+      websocketService.offMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
       websocketService.offConnectionChange(handleConnectionChange);
     };
   }, []);
