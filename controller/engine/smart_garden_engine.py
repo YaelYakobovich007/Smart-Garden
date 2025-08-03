@@ -105,3 +105,46 @@ class SmartGardenEngine:
         Returns a list of currently unassigned valve IDs.
         """
         return self.valves_manager.get_available_valves()
+
+    async def get_plant_moisture(self, plant_id: int) -> Optional[float]:
+        """
+        Get moisture level for a specific plant.
+        
+        Args:
+            plant_id (int): ID of the plant to get moisture for
+            
+        Returns:
+            Optional[float]: Current moisture level percentage, or None if plant not found or sensor unavailable
+        """
+        if plant_id not in self.plants:
+            raise ValueError(f"Plant {plant_id} not found")
+        
+        plant = self.plants[plant_id]
+        try:
+            moisture_level = await plant.get_moisture()
+            return moisture_level
+        except Exception as e:
+            # Log error but don't crash - return None to indicate unavailable
+            print(f"Error reading moisture for plant {plant_id}: {e}")
+            return None
+
+    async def get_all_plants_moisture(self) -> Dict[int, Optional[float]]:
+        """
+        Get moisture levels for all plants in the system.
+        
+        Returns:
+            Dict[int, Optional[float]]: Dictionary mapping plant_id to moisture level.
+                                       None values indicate sensor read failures.
+        """
+        moisture_data = {}
+        
+        for plant_id, plant in self.plants.items():
+            try:
+                moisture_level = await plant.get_moisture()
+                moisture_data[plant_id] = moisture_level
+            except Exception as e:
+                # Log error but continue with other plants
+                print(f"Error reading moisture for plant {plant_id}: {e}")
+                moisture_data[plant_id] = None
+        
+        return moisture_data
