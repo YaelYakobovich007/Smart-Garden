@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Linking } from 'react-native';
 import { useFonts as useNunito, Nunito_400Regular, Nunito_500Medium, Nunito_700Bold } from '@expo-google-fonts/nunito';
 
 import LoginScreen from './src/components/login/LoginScreen';
+import ForgotPasswordScreen from './src/components/forgotPassword/ForgotPasswordScreen';
+import EnterCodeScreen from './src/components/enterCode/EnterCodeScreen';
+import ResetPasswordScreen from './src/components/resetPassword/ResetPasswordScreen';
 import RegisterScreen from './src/components/register/RegisterScreen';
 import MainScreen from './src/components/main/MainScreen';
 import PlantDetail from './src/components/main/PlantDetail/PlantDetail';
@@ -23,7 +26,7 @@ export default function App() {
   const navigationRef = useRef(null);
 
   // Load Nunito fonts using the pattern from the user's example
-  const [fontsLoaded] = useNunito({ 
+  const [fontsLoaded] = useNunito({
     Nunito_400Regular,
     Nunito_500Medium,
     Nunito_700Bold
@@ -35,34 +38,34 @@ export default function App() {
       try {
         // Check if user is already logged in locally
         const isLoggedIn = await sessionService.isLoggedIn();
-        
+
         // Establish WebSocket connection first
         console.log('App: Initializing WebSocket connection...');
         websocketService.connect();
-        
+
         if (isLoggedIn) {
           console.log('App: Local session found, validating with server...');
-          
+
           // Wait for WebSocket connection before validating session
           const checkConnection = () => {
             if (websocketService.isConnected()) {
               // Validate session with server by requesting user name
               websocketService.sendMessage({ type: 'GET_USER_NAME' });
-              
+
               // Set up a timeout to handle server response
               const validationTimeout = setTimeout(() => {
                 console.log('App: Session validation timeout, redirecting to login');
                 setInitialRoute('Login');
                 setIsLoading(false);
               }, 3000); // 3 second timeout
-              
+
               // Listen for session validation response
               const handleValidation = (data) => {
                 clearTimeout(validationTimeout);
                 websocketService.offMessage('GET_USER_NAME_SUCCESS', handleValidation);
                 websocketService.offMessage('GET_USER_NAME_FAIL', handleValidation);
                 websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
-                
+
                 if (data.type === 'GET_USER_NAME_SUCCESS') {
                   console.log('App: Session validated successfully, navigating to Main');
                   setInitialRoute('Main');
@@ -73,19 +76,19 @@ export default function App() {
                 }
                 setIsLoading(false);
               };
-              
+
               const handleUnauthorized = (data) => {
                 clearTimeout(validationTimeout);
                 websocketService.offMessage('GET_USER_NAME_SUCCESS', handleValidation);
                 websocketService.offMessage('GET_USER_NAME_FAIL', handleValidation);
                 websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
-                
+
                 console.log('App: Unauthorized response, clearing session and redirecting to login');
                 sessionService.clearSession(); // Clear invalid session
                 setInitialRoute('Login');
                 setIsLoading(false);
               };
-              
+
               websocketService.onMessage('GET_USER_NAME_SUCCESS', handleValidation);
               websocketService.onMessage('GET_USER_NAME_FAIL', handleValidation);
               websocketService.onMessage('UNAUTHORIZED', handleUnauthorized);
@@ -94,7 +97,7 @@ export default function App() {
               setTimeout(checkConnection, 500);
             }
           };
-          
+
           checkConnection();
         } else {
           console.log('App: No local session found, navigating to Login');
@@ -118,11 +121,48 @@ export default function App() {
 
     websocketService.onConnectionChange(handleConnectionChange);
 
+    // Handle deep links
+    const handleDeepLink = (url) => {
+      if (url) {
+        console.log('App: Received deep link:', url);
+        // Extract token from URL
+        const token = extractTokenFromUrl(url);
+        if (token) {
+          console.log('App: Token extracted from deep link:', token);
+          // Navigate to reset password screen with token
+          navigationRef.current?.navigate('ResetPassword', { token });
+        }
+      }
+    };
+
+    const extractTokenFromUrl = (url) => {
+      try {
+        const urlObj = new URL(url);
+        return urlObj.searchParams.get('token');
+      } catch (error) {
+        console.error('Error extracting token from URL:', error);
+        return null;
+      }
+    };
+
+    // Set up deep link listeners
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    // Check for initial deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink(url);
+      }
+    });
+
     // Cleanup function to disconnect when app is closed
     return () => {
       console.log('App closing, disconnecting WebSocket...');
       websocketService.offConnectionChange(handleConnectionChange);
       websocketService.disconnect();
+      subscription?.remove();
     };
   }, []);
 
@@ -142,6 +182,9 @@ export default function App() {
         initialRouteName={initialRoute}
       >
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Screen name="EnterCode" component={EnterCodeScreen} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Main" component={MainScreen} />
         <Stack.Screen name="PlantDetail" component={PlantDetail} />

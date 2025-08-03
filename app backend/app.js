@@ -1,7 +1,8 @@
+require('dotenv').config();
 const WebSocket = require('ws');
 const { handleSocketConnection } = require('./sockets/index');
 const { sendSuccess, sendError } = require('./utils/wsResponses');
-const { testConnection } = require('./config/database'); 
+const { testConnection } = require('./config/database');
 // Test the database connection at startup
 const wss = new WebSocket.Server({ port: 8080 });
 testConnection();

@@ -4,7 +4,6 @@ async function setupDatabase() {
   try {
     console.log('Creating database tables...');
 
-
     // Users table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -138,7 +137,7 @@ async function setupDatabase() {
     `);
     console.log('Irrigation events table created');
 
-   
+
 
     // Create indexes for irrigation events
     await pool.query(`
