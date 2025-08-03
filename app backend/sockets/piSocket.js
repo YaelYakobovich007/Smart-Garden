@@ -12,7 +12,9 @@ function handlePiSocket(ws) {
     let data;
     try {
       data = JSON.parse(msg);
+      console.log(`📨 Pi message: ${data.type}`);
     } catch {
+      console.error('❌ Invalid JSON from Pi:', msg);
       return sendError(ws, 'INVALID_JSON', 'Invalid JSON format');
     }
 
@@ -28,16 +30,18 @@ function handlePiSocket(ws) {
 
     // Handle ADD_PLANT_RESPONSE from Pi
     if (data.type === 'ADD_PLANT_RESPONSE') {
-      if (data.status === 'success') {
-        console.log(`Pi assigned hardware for plant ${data.plant_id}: sensor=${data.assigned_sensor}, valve=${data.assigned_valve}`);
+      const responseData = data.data || {};
+
+      if (responseData.status === 'success') {
+        console.log(`✅ Plant ${responseData.plant_id}: assigned sensor=${responseData.assigned_sensor}, valve=${responseData.assigned_valve}`);
 
         // Update plant in database with hardware IDs
         const { updatePlantHardware } = require('../models/plantModel');
-        updatePlantHardware(data.plant_id, data.assigned_sensor, data.assigned_valve)
-          .then(() => console.log(`Plant ${data.plant_id} hardware updated successfully`))
-          .catch(err => console.error(`Failed to update plant ${data.plant_id} hardware:`, err));
+        updatePlantHardware(responseData.plant_id, responseData.assigned_sensor, responseData.assigned_valve)
+          .then(() => console.log(`✅ Plant ${responseData.plant_id} database updated`))
+          .catch(err => console.error(`❌ Plant ${responseData.plant_id} database update failed:`, err));
       } else {
-        console.error(`Pi failed to assign hardware for plant ${data.plant_id}: ${data.error_message}`);
+        console.error(`❌ Plant ${responseData.plant_id} hardware assignment failed: ${responseData.error_message}`);
       }
       return;
     }
