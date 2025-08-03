@@ -35,14 +35,18 @@ export const styles = StyleSheet.create({
     height: 300,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    margin: 16,
+    marginLeft: 16,
+    marginRight: 16,
+    marginTop: 16,
+    marginBottom: 16,
     overflow: 'hidden',
     position: 'relative',
   },
   plantImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    resizeMode: 'cover', // Back to cover for better visual appearance
+    borderRadius: 16, // Match container border radius
   },
   infoOverlay: {
     position: 'absolute',
@@ -52,6 +56,7 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.85)',
     padding: 16,
     paddingTop: 20,
+    paddingBottom: 16, // Reduced padding since we only have plant name now
   },
   separator: {
     height: 1,
@@ -65,6 +70,13 @@ export const styles = StyleSheet.create({
     fontFamily: 'Nunito_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  plantTypeContainer: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 16,
   },
   infoContainer: {
     backgroundColor: '#FFFFFF',

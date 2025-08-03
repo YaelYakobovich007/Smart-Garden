@@ -1,3 +1,18 @@
+/**
+ * Add Plant Screen Component - Plant Registration and Configuration
+ * 
+ * This component allows users to add new plants to their smart garden.
+ * It handles:
+ * - Plant information input (name, type, care settings)
+ * - Image capture and selection
+ * - Watering schedule configuration
+ * - Form validation and error handling
+ * - WebSocket communication for plant creation
+ * 
+ * The component provides a comprehensive form for plant setup
+ * with real-time validation and server communication.
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -21,10 +36,13 @@ import { Feather } from '@expo/vector-icons';
 import styles from './styles';
 import websocketService from '../../services/websocketService';
 
+// Days of the week for schedule configuration
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function AddPlantScreen() {
   const navigation = useNavigation();
+  
+  // Form data state management
   const [formData, setFormData] = useState({
     plantName: '',
     plantType: '',
@@ -38,14 +56,23 @@ export default function AddPlantScreen() {
     },
   });
 
+  // UI state management
   const [errors, setErrors] = useState({});
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
+  /**
+   * Set up WebSocket message handlers for plant creation responses
+   * Handles success and failure responses from the server
+   */
   useEffect(() => {
-    // Handler for success
+    /**
+     * Handle successful plant creation
+     * Shows success alert and navigates back to main screen
+     * @param {Object} data - Server response data
+     */
     const handleSuccess = (data) => {
       setIsSaving(false);
       Alert.alert(
@@ -59,7 +86,12 @@ export default function AddPlantScreen() {
         ]
       );
     };
-    // Handler for failure
+
+    /**
+     * Handle failed plant creation
+     * Shows error alert to user
+     * @param {Object} data - Server response data
+     */
     const handleFail = (data) => {
       setIsSaving(false);
       Alert.alert(
@@ -70,26 +102,40 @@ export default function AddPlantScreen() {
         ]
       );
     };
+
+    // Register WebSocket message handlers
     websocketService.onMessage('ADD_PLANT_SUCCESS', handleSuccess);
     websocketService.onMessage('ADD_PLANT_FAIL', handleFail);
+
+    /**
+     * Cleanup function to remove message handlers
+     * Prevents memory leaks when component unmounts
+     */
     return () => {
-      // Remove handlers on unmount
       websocketService.offMessage('ADD_PLANT_SUCCESS', handleSuccess);
       websocketService.offMessage('ADD_PLANT_FAIL', handleFail);
     };
   }, [navigation]);
 
+  /**
+   * Validate form data before submission
+   * Checks required fields and value ranges
+   * @returns {boolean} True if form is valid
+   */
   const validateForm = () => {
     const newErrors = {};
 
+    // Validate plant name (required)
     if (!formData.plantName.trim()) {
       newErrors.plantName = 'Plant name is required';
     }
 
+    // Validate humidity range (0-100%)
     if (formData.humidity < 0 || formData.humidity > 100) {
       newErrors.humidity = 'Humidity must be between 0-100%';
     }
 
+    // Validate water limit (must be positive)
     if (formData.waterLimit <= 0) {
       newErrors.waterLimit = 'Water limit must be greater than 0';
     }
@@ -98,11 +144,15 @@ export default function AddPlantScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
+  /**
+   * Handle form submission and plant creation
+   * Validates form, processes image, and sends data to server
+   */
   const handleSave = async () => {
     if (validateForm()) {
       setIsSaving(true);
       try {
-        // Prepare irrigationDays and irrigationTime if schedule is enabled
+        // Prepare irrigation schedule data if enabled
         let irrigationDays = null;
         let irrigationTime = null;
         if (formData.useSchedule) {
@@ -113,11 +163,11 @@ export default function AddPlantScreen() {
           irrigationTime = `${pad(t.getHours())}:${pad(t.getMinutes())}`;
         }
 
-        // Prepare image data if an image is selected
+        // Process image data if an image is selected
         let imageData = null;
         if (formData.image) {
           try {
-            // Convert image to base64
+            // Convert image to base64 for server transmission
             const response = await fetch(formData.image);
             const blob = await response.blob();
             
@@ -133,6 +183,7 @@ export default function AddPlantScreen() {
               return;
             }
             
+            // Convert blob to base64
             const base64 = await new Promise((resolve, reject) => {
               const reader = new FileReader();
               reader.onload = () => resolve(reader.result);
@@ -140,7 +191,7 @@ export default function AddPlantScreen() {
               reader.readAsDataURL(blob);
             });
 
-            // Extract filename from URI
+            // Extract filename and mime type from image
             const filename = formData.image.split('/').pop() || 'plant_image.jpg';
             const mimeType = blob.type || 'image/jpeg';
 
@@ -167,6 +218,7 @@ export default function AddPlantScreen() {
           }
         }
 
+        // Prepare message for server
         const message = {
           type: 'ADD_PLANT',
           plantData: {
@@ -194,13 +246,16 @@ export default function AddPlantScreen() {
     }
   };
 
+  /**
+   * Launch image picker to select image from gallery
+   * Allows user to choose an existing photo from their device
+   */
   const pickImage = async () => {
-    // TODO: Optionally upload selected image to server
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      aspect: [1, 1], // Square aspect ratio
+      quality: 0.8, // 80% quality for file size optimization
     });
 
     if (!result.canceled) {
@@ -209,7 +264,12 @@ export default function AddPlantScreen() {
     setShowImagePicker(false);
   };
 
+  /**
+   * Launch camera to take a new photo
+   * Handles camera permissions and captures new plant image
+   */
   const takePhoto = async () => {
+    // Check camera permissions
     if (!cameraPermission?.granted) {
       const permission = await requestCameraPermission();
       if (!permission.granted) {
@@ -218,11 +278,10 @@ export default function AddPlantScreen() {
       }
     }
 
-    // TODO: Optionally upload taken photo to server
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      aspect: [1, 1], // Square aspect ratio
+      quality: 0.8, // 80% quality for file size optimization
     });
 
     if (!result.canceled) {
@@ -231,6 +290,11 @@ export default function AddPlantScreen() {
     setShowImagePicker(false);
   };
 
+  /**
+   * Toggle day selection in watering schedule
+   * Updates the schedule days array when user selects/deselects days
+   * @param {number} index - Index of the day to toggle
+   */
   const toggleDay = (index) => {
     const newDays = [...formData.schedule.days];
     newDays[index] = !newDays[index];
@@ -240,6 +304,12 @@ export default function AddPlantScreen() {
     });
   };
 
+  /**
+   * Handle time picker changes
+   * Updates the watering time in the schedule
+   * @param {Object} event - Time picker event
+   * @param {Date} selectedTime - Selected time from picker
+   */
   const handleTimeChange = (event, selectedTime) => {
     setShowTimePicker(Platform.OS === 'ios');
     if (selectedTime) {
@@ -250,21 +320,36 @@ export default function AddPlantScreen() {
     }
   };
 
+  /**
+   * Update form data fields
+   * Generic function to update any form field
+   * @param {string} field - Field name to update
+   * @param {any} value - New value for the field
+   */
   const updateFormData = (field, value) => {
-    // TODO: Optionally sync or validate field with server
     setFormData({ ...formData, [field]: value });
   };
 
+  /**
+   * Update schedule-specific form data
+   * Updates nested schedule object fields
+   * @param {string} field - Schedule field name
+   * @param {any} value - New value for the field
+   */
   const updateSchedule = (field, value) => {
-    // TODO: Optionally sync or validate schedule with server
     setFormData({
       ...formData,
       schedule: { ...formData.schedule, [field]: value },
     });
   };
 
+  /**
+   * Render the add plant screen with form sections
+   * Includes plant info, care settings, image, and schedule
+   */
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: '#EAF5E4' }}>
+      {/* Header with back button and title */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Feather name="chevron-left" size={24} color="#2C3E50" />
@@ -277,7 +362,7 @@ export default function AddPlantScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Plant Basic Info */}
+        {/* Plant Basic Information Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Plant Information</Text>
           
@@ -312,7 +397,7 @@ export default function AddPlantScreen() {
           </View>
         </View>
 
-        {/* Plant Care Settings */}
+        {/* Plant Care Settings Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Care Settings</Text>
           
@@ -373,7 +458,7 @@ export default function AddPlantScreen() {
           </View>
         </View>
 
-        {/* Plant Image */}
+        {/* Plant Image Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Plant Photo</Text>
           <TouchableOpacity
@@ -391,7 +476,7 @@ export default function AddPlantScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Watering Schedule */}
+        {/* Watering Schedule Section */}
         <View style={styles.section}>
           <View style={styles.scheduleHeader}>
             <View style={styles.labelContainer}>
@@ -460,6 +545,7 @@ export default function AddPlantScreen() {
           )}
         </View>
 
+        {/* Save Button */}
         <TouchableOpacity 
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
           onPress={handleSave}
@@ -507,7 +593,7 @@ export default function AddPlantScreen() {
         </View>
       </Modal>
 
-      {/* Time Picker */}
+      {/* Time Picker Component */}
       {showTimePicker && (
         <DateTimePicker
           value={formData.schedule.time}
@@ -517,6 +603,6 @@ export default function AddPlantScreen() {
           onChange={handleTimeChange}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }

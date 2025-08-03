@@ -3,7 +3,8 @@ const { handleSocketConnection } = require('./sockets/index');
 const { sendSuccess, sendError } = require('./utils/wsResponses');
 const { testConnection } = require('./config/database'); 
 // Test the database connection at startup
-const wss = new WebSocket.Server({ port: 8080 });
+//const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ port: 8080, host: '0.0.0.0' });
 testConnection();
 
 // Handle incoming WebSocket connections
