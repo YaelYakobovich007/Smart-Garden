@@ -24,20 +24,22 @@ class PiCommunication {
 
             const request = {
                 type: 'ADD_PLANT',
-                plantId: plantData.plant_id,
-                desiredMoisture: plantData.ideal_moisture,
-                waterLimit: plantData.water_limit,
-                scheduleData: {
-                    irrigation_days: plantData.irrigation_days || null,
-                    irrigation_time: plantData.irrigation_time || null
+                data: {
+                    plantId: plantData.plant_id,
+                    desiredMoisture: plantData.ideal_moisture,
+                    waterLimit: plantData.water_limit,
+                    scheduleData: {
+                        irrigation_days: plantData.irrigation_days || null,
+                        irrigation_time: plantData.irrigation_time || null
+                    }
                 }
             };
 
             console.log('🚀 Sending ADD_PLANT to Pi:');
-            console.log(`   - Plant ID: ${request.plantId} (type: ${typeof request.plantId})`);
-            console.log(`   - Desired Moisture: ${request.desiredMoisture} (type: ${typeof request.desiredMoisture})`);
-            console.log(`   - Water Limit: ${request.waterLimit} (type: ${typeof request.waterLimit})`);
-            console.log(`   - Schedule Data: ${request.scheduleData} (type: ${typeof request.scheduleData})`);
+            console.log(`   - Plant ID: ${request.data.plantId} (type: ${typeof request.data.plantId})`);
+            console.log(`   - Desired Moisture: ${request.data.desiredMoisture} (type: ${typeof request.data.desiredMoisture})`);
+            console.log(`   - Water Limit: ${request.data.waterLimit} (type: ${typeof request.data.waterLimit})`);
+            console.log(`   - Schedule Data: ${JSON.stringify(request.data.scheduleData)} (type: ${typeof request.data.scheduleData})`);
             console.log(`   - Full JSON: ${JSON.stringify(request)}`);
 
             piSocket.send(JSON.stringify(request));
