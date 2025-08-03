@@ -16,8 +16,13 @@ def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
         Tuple of (success: bool, response: AddPlantRequest)
     """
     
+    # Debug: Log the entire message to see what we're receiving
+    logger.info(f"Received add plant message from server: {data}")
+    logger.info(f"Message type: {type(data)}")
+    logger.info(f"Available keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+    
     # Extract data from server message
-    plant_id = data.get("plant_id")
+    plant_id = data.get("plantId")
     
     # Validate plant_id
     if plant_id is None:
@@ -29,12 +34,12 @@ def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
         return False, response
     
     plant_name = data.get("plant_name", f"plant_{plant_id}")
-    desired_moisture = data.get("desired_moisture", 60.0)
-    water_limit = data.get("water_limit", 1.0)
-    irrigation_days = data.get("irrigation_days")
-    irrigation_time = data.get("irrigation_time")
-    plant_type = data.get("plant_type", "default")
-    schedule_data = data.get("schedule_data")
+    desired_moisture = data.get("desiredMoisture", 60.0)
+    water_limit = data.get("waterLimit", 1.0)
+    irrigation_days = data.get("irrigationDays")
+    irrigation_time = data.get("irrigationTime")
+    plant_type = data.get("plantType", "default")
+    schedule_data = data.get("scheduleData")
     
     logger.info(f"Adding plant {plant_name} (ID: {plant_id}) with desired moisture {desired_moisture}%")
     

@@ -155,6 +155,10 @@ class SmartGardenPiClient:
             message_data = data.get("data", {})
             
             self.logger.info(f"Received {message_type} message")
+            self.logger.info(f"Full message: {message}")
+            self.logger.info(f"Parsed data: {data}")
+            self.logger.info(f"Message type: {message_type}")
+            self.logger.info(f"Message data: {message_data}")
             
             if message_type == "WELCOME":
                 self.logger.info("Received welcome message from server")
