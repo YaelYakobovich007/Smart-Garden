@@ -31,7 +31,7 @@ function handleUserSocket(ws) {
       handleIrrigationMessage(data, ws);
     } else if (['GET_USER_NAME', 'UPDATE_FULL_NAME', 'UPDATE_LOCATION', 'UPDATE_PASSWORD', 'FORGOT_PASSWORD', 'RESET_PASSWORD', 'VALIDATE_RESET_TOKEN'].includes(data.type)) {
       handleUserMessage(data, ws);
-    } else if (['ADD_PLANT', 'GET_MY_PLANTS', 'GET_PLANT_DETAILS', 'DELETE_PLANT', 'UPDATE_PLANT_DETAILS'].includes(data.type)) {
+    } else if (['ADD_PLANT', 'GET_MY_PLANTS', 'GET_PLANT_DETAILS', 'DELETE_PLANT', 'UPDATE_PLANT_DETAILS', 'GET_PLANT_MOISTURE', 'GET_ALL_PLANTS_MOISTURE'].includes(data.type)) {
       handlePlantMessage(data, ws);
     } else {
       sendError(ws, 'UNKNOWN_TYPE', `Unknown message type: ${data.type}`);
