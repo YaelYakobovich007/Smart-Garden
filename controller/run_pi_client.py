@@ -30,7 +30,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('/var/log/smart_garden_pi.log'),
+        logging.FileHandler('smart_garden_pi.log'),
         logging.StreamHandler()
     ]
 )
