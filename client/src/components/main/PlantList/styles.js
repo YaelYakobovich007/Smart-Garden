@@ -150,4 +150,25 @@ export const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
   },
+  moistureButtonContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  moistureButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  moistureButtonText: {
+    color: '#2563EB',
+    fontSize: 12,
+    fontWeight: '500',
+  },
 }); 

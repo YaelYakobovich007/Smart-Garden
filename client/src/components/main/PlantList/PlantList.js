@@ -26,6 +26,7 @@ import { useNavigation } from '@react-navigation/native';
 import { styles } from './styles';
 import MoistureCircle from './MoistureCircle';
 import TempCircle from './TempCircle';
+import websocketService from '../../../services/websocketService';
 
 // Calculate card width based on screen dimensions for responsive design
 const CARD_WIDTH = Math.floor(Dimensions.get('window').width * 0.65);
@@ -168,6 +169,20 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
   };
 
   /**
+   * Handle moisture request for a specific plant
+   * Sends WebSocket request to get current moisture data
+   * @param {number} plantId - ID of the plant to get moisture for
+   */
+  const handleMoistureRequest = (plantId) => {
+    if (websocketService.isConnected()) {
+      websocketService.requestPlantMoisture(plantId);
+      console.log('Requested moisture for plant:', plantId);
+    } else {
+      console.log('WebSocket not connected, cannot request moisture');
+    }
+  };
+
+  /**
    * Render empty state when no plants are present
    * Shows encouraging message and add plant button
    */
@@ -253,6 +268,17 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
               <View style={styles.statItem}>
                 <TempCircle value={plant.temperature} />
               </View>
+            </View>
+
+            {/* Moisture Request Button */}
+            <View style={styles.moistureButtonContainer}>
+              <TouchableOpacity
+                style={styles.moistureButton}
+                onPress={() => handleMoistureRequest(plant.id)}
+              >
+                <Feather name="refresh-cw" size={16} color="#2563EB" />
+                <Text style={styles.moistureButtonText}>Get Moisture</Text>
+              </TouchableOpacity>
             </View>
           </TouchableOpacity>
         )}
