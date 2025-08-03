@@ -67,6 +67,15 @@ class SmartGardenPiClient:
             if data:
                 message["data"] = data
             
+            # Log the message being sent
+            self.logger.info(f"=== SENDING MESSAGE DEBUG ===")
+            self.logger.info(f"Message type: {message_type}")
+            self.logger.info(f"Full message: {message}")
+            self.logger.info(f"Message keys: {list(message.keys())}")
+            self.logger.info(f"Message data keys: {list(data.keys()) if data else 'No data'}")
+            self.logger.info(f"Message data values: {data}")
+            self.logger.info("=============================")
+            
             await self.websocket.send(json.dumps(message))
             self.logger.info(f"Sent {message_type} message")
             return True
@@ -98,6 +107,14 @@ class SmartGardenPiClient:
         # Use server's plant_id as the main plant_id in response
         response_data["plant_id"] = data.get("plantId")  # Use server's plant ID
         
+        # Log the response message details
+        self.logger.info("=== ADD_PLANT RESPONSE DEBUG ===")
+        self.logger.info(f"Response success: {success}")
+        self.logger.info(f"Response DTO: {response}")
+        self.logger.info(f"Response data keys: {list(response_data.keys())}")
+        self.logger.info(f"Response data values: {response_data}")
+        self.logger.info("================================")
+        
         await self.send_message("ADD_PLANT_RESPONSE", response_data)
         
         if success:
@@ -105,7 +122,7 @@ class SmartGardenPiClient:
         else:
             self.logger.error(f"Failed to process ADD_PLANT command: {response.error_message}")
 
-    async def handle_plant_moisture_request(self, data: Dict[Any, Any]):
+    async def handle_plant_moisture_request(self, data):
         """Handle single plant moisture request from server."""
         from controller.handlers.get_plant_moisture_handler import handle
         
