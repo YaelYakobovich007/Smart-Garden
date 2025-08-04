@@ -86,7 +86,7 @@ def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
         if plant_id in smart_engine.plants:
             plant = smart_engine.plants[plant_id]
             assigned_valve = plant.valve.valve_id
-            assigned_sensor = plant.sensor.modbus_id
+            assigned_sensor = plant.sensor.port
         
         # Create success response using DTO
         response = AddPlantRequest.success(

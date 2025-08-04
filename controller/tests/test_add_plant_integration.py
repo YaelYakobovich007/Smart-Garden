@@ -84,7 +84,7 @@ async def test_add_plant_integration():
             print(f"   📊 Internal ID: {internal_id}")
             print(f"   💧 Desired Moisture: {plant.desired_moisture}%")
             print(f"   🚰 Valve ID: {plant.valve.valve_id}")
-            print(f"   📡 Sensor ID: {plant.sensor.modbus_id}")
+            print(f"   📡 Sensor Port: {plant.sensor.port}")
             
             # Check if schedule was set
             if plant.schedule:

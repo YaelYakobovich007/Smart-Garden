@@ -40,11 +40,11 @@ class SmartGardenEngine:
             raise ValueError(f"Plant ID {plant_id} already exists")
 
         valve_id = self.valves_manager.assign_valve(plant_id)
-        sensor_id = self.sensor_manager.assign_sensor(plant_id)
+        sensor_port = self.sensor_manager.assign_sensor(plant_id)
 
         valve = Valve(valve_id, pipe_diameter, water_limit, flow_rate, relay_controller=self.relay_controller,
                       simulation_mode=True)
-        sensor = Sensor(simulation_mode=False, modbus_id=sensor_id)
+        sensor = Sensor(simulation_mode=False, port=sensor_port)
 
         plant = Plant(plant_id, desired_moisture, sensor, valve, plant_lat, plant_lon)
         self.plants[plant_id] = plant

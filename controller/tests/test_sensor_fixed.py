@@ -37,7 +37,6 @@ async def test_sensor():
         # Create sensor with exact configuration
         sensor = Sensor(
             simulation_mode=False,
-            modbus_id=1,
             port="/dev/ttyUSB0",
             baudrate=4800
         )
@@ -73,7 +72,6 @@ async def test_sensor_1():
     try:
         sensor = Sensor(
             simulation_mode=False,
-            modbus_id=1,
             port="/dev/ttyUSB0",
             baudrate=4800
         )
@@ -107,7 +105,6 @@ async def test_sensor_2():
     try:
         sensor = Sensor(
             simulation_mode=False,
-            modbus_id=1,
             port="/dev/ttyUSB1",
             baudrate=4800
         )
@@ -142,14 +139,12 @@ async def test_both_sensors_together():
         # Create both sensors
         sensor_1 = Sensor(
             simulation_mode=False,
-            modbus_id=1,
             port="/dev/ttyUSB0",
             baudrate=4800
         )
         
         sensor_2 = Sensor(
             simulation_mode=False,
-            modbus_id=1,
             port="/dev/ttyUSB1",
             baudrate=4800
         )
