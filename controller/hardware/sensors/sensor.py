@@ -89,7 +89,7 @@ class Sensor:
                 result = await modbus_client.read_input_registers(
                     address=1,
                     count=2,
-                    slave=self.modbus_id
+                    unit=self.modbus_id
                 )
 
                 if result.isError():
