@@ -64,12 +64,13 @@ class Sensor:
         print(f"   Timeout: 3s")
         
         client = AsyncModbusSerialClient(
+            method='rtu',
             port=self.port,
             baudrate=self.baudrate,
             parity='N',
             stopbits=1,
             bytesize=8,
-            timeout=3,
+            timeout=1,
         )
 
         # Connect to the Modbus client
@@ -86,10 +87,10 @@ class Sensor:
                 print(f"   Register count: 2")
                 
                 # Read two registers starting from address 1 (matching mbpoll command)
-                result = await modbus_client.read_input_registers(
+                result = await modbus_client.read_holding_registers(
                     address=0x0001,
                     count=2,
-                    slave=self.modbus_id
+                    unit=self.modbus_id
                 )
 
                 if result.isError():
