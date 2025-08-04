@@ -33,17 +33,12 @@ class IrrigationAlgorithm:
         print(f"📈 Moisture Gap: {plant.desired_moisture - current_moisture:.1f}%")
         
         # Case 1: Skip irrigation if rain is expected
-        print(f"\n🌤️  Checking weather conditions...")
-        will_rain = self.weather_service.will_rain_today(plant.lat, plant.lon)
-        print(f"   Weather Check: {'🌧️  Rain expected' if will_rain else '☀️  No rain expected'}")
-        
-        if will_rain:
-            print(f"❌ SKIPPING IRRIGATION — Rain expected today!")
-            print(f"   Reason: Weather forecast indicates rain")
-            return IrrigationResult(
-                status="skipped",
-                reason="rain_expected",
-                moisture=current_moisture
+        if self.weather_service.will_rain_today(plant.lat, plant.lon):
+            print(f"Skipping irrigation for {plant.plant_id} — rain expected today.")
+            return IrrigationResult.skipped(
+                plant_id=plant.plant_id,
+                moisture=current_moisture,
+                reason="rain_expected"
             )
 
         # Case 2: Overwatered — block and stop
@@ -57,25 +52,18 @@ class IrrigationAlgorithm:
             print(f"   Desired Moisture: {plant.desired_moisture}%")
             print(f"   Excess: {current_moisture - plant.desired_moisture:.1f}%")
             plant.valve.block()
-            return IrrigationResult(
-                status="error",
-                reason="overwatered",
+            return IrrigationResult.error(
+                plant_id=plant.plant_id,
+                error_message="overwatered",
                 moisture=current_moisture
             )
 
         # Case 3: If soil is already moist enough, skip irrigation
-        print(f"\n✅ Checking if irrigation is needed...")
-        should_irrigate = self.should_irrigate(plant, current_moisture)
-        print(f"   Irrigation Needed: {'✅ YES' if should_irrigate else '❌ NO'}")
-        print(f"   Current: {current_moisture}% vs Desired: {plant.desired_moisture}%")
-        
-        if not should_irrigate:
-            print(f"⏭️  SKIPPING IRRIGATION — Already moist enough!")
-            print(f"   Current moisture ({current_moisture}%) >= Desired moisture ({plant.desired_moisture}%)")
-            return IrrigationResult(
-                status="skipped",
-                reason="already moist",
-                moisture=current_moisture
+        if not self.should_irrigate(plant, current_moisture):
+            return IrrigationResult.skipped(
+                plant_id=plant.plant_id,
+                moisture=current_moisture,
+                reason="already moist"
             )
 
         # Case 4: Otherwise, perform irrigation cycle
@@ -179,20 +167,19 @@ class IrrigationAlgorithm:
         print(f"   Target Moisture: {plant.desired_moisture:.1f}%")
         print(f"   Target Reached: {'✅ YES' if final_moisture >= plant.desired_moisture else '❌ NO'}")
 
-        # Fault detection: watered but moisture didn’t rise
+        # Fault detection: watered but moisture didn't rise
         if total_water >= water_limit and final_moisture < plant.desired_moisture:
             print(f"\n🚨 FAULT DETECTED!")
             print(f"   ❌ Watered {total_water:.2f}L but moisture is still low!")
             print(f"   📊 Final moisture ({final_moisture:.1f}%) < Target ({plant.desired_moisture:.1f}%)")
             print(f"   🔧 Possible issues: Sensor fault, valve malfunction, or soil drainage")
             plant.valve.block()
-            return IrrigationResult(
-                status="error",
-                reason="sensor mismatch or irrigation fault",
+            return IrrigationResult.error(
+                plant_id=plant.plant_id,
+                error_message="sensor mismatch or irrigation fault",
                 moisture=initial_moisture,
                 final_moisture=final_moisture,
-                water_added_liters=total_water,
-                irrigation_time=datetime.now()
+                water_added_liters=total_water
             )
 
         # Update last irrigation time
@@ -201,10 +188,9 @@ class IrrigationAlgorithm:
         print(f"   ⏰ Irrigation Time: {plant.last_irrigation_time}")
         print(f"   🎯 Target Reached: {'✅ YES' if final_moisture >= plant.desired_moisture else '⚠️  PARTIAL'}")
 
-        return IrrigationResult(
-            status="done",
+        return IrrigationResult.success(
+            plant_id=plant.plant_id,
             moisture=initial_moisture,
             final_moisture=final_moisture,
-            water_added_liters=total_water,
-            irrigation_time=plant.last_irrigation_time
+            water_added_liters=total_water
         )

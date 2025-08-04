@@ -148,3 +148,15 @@ class SmartGardenEngine:
                 moisture_data[plant_id] = None
         
         return moisture_data
+
+    def get_plant_by_id(self, plant_id: int) -> Optional[Plant]:
+        """
+        Get a plant by its ID.
+        
+        Args:
+            plant_id (int): The ID of the plant to retrieve
+            
+        Returns:
+            Optional[Plant]: The plant object if found, None otherwise
+        """
+        return self.plants.get(plant_id)
