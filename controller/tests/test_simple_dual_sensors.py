@@ -33,8 +33,8 @@ async def read_sensor(port, sensor_name):
         print(f"   ✅ Connected to {port}. Reading sensor data...")
 
         try:
-            # Read 2 registers starting from address 0x0000 (exactly like your working code)
-            result = await modbus_client.read_input_registers(address=0x0000, count=2, slave=1)
+            # Read 2 registers starting from address 0x0001 (register 1, like mbpoll -r 1)
+            result = await modbus_client.read_input_registers(address=0x0001, count=2, slave=1)
 
             if result.isError():
                 print(f"   ⚠️ Modbus error: {result}")
@@ -181,7 +181,7 @@ async def read_sensor_quick(port):
             if not modbus_client.connected:
                 return None
 
-            result = await modbus_client.read_input_registers(address=0x0000, count=2, slave=1)
+            result = await modbus_client.read_input_registers(address=0x0001, count=2, slave=1)
 
             if result.isError():
                 return None
