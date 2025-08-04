@@ -29,9 +29,13 @@ class IrrigationAlgorithm:
         
         # Get current moisture
         current_moisture = await plant.get_moisture()
-        print(f"💧 Current Moisture: {current_moisture}%")
-        print(f"📈 Moisture Gap: {plant.desired_moisture - current_moisture:.1f}%")
         
+        # Ensure current_moisture is float (safety check)
+        if current_moisture is not None:
+            current_moisture = float(current_moisture)
+        
+        print(f"Initial moisture for plant {plant.plant_id}: {current_moisture}%")
+
         # Case 1: Skip irrigation if rain is expected
         if self.weather_service.will_rain_today(plant.lat, plant.lon):
             print(f"Skipping irrigation for {plant.plant_id} — rain expected today.")

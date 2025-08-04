@@ -33,7 +33,7 @@ def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
         )
         return False, response
     
-    desired_moisture = data.get("desiredMoisture", 60.0)
+    desired_moisture = float(data.get("desiredMoisture", 60.0))
     water_limit = data.get("waterLimit", 1.0)
     schedule_data = data.get("scheduleData")
     
