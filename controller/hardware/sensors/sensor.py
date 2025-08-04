@@ -64,6 +64,7 @@ class Sensor:
         print(f"   Timeout: 3s")
         
         client = AsyncModbusSerialClient(
+            method='rtu',
             port=self.port,
             baudrate=self.baudrate,
             parity='N',
@@ -89,7 +90,7 @@ class Sensor:
                 result = await modbus_client.read_input_registers(
                     address=0x0001,
                     count=2,
-                    slave=self.modbus_id
+                    unit=self.modbus_id
                 )
 
                 if result.isError():
