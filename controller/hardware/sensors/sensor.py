@@ -64,7 +64,6 @@ class Sensor:
         print(f"   Timeout: 3s")
         
         client = AsyncModbusSerialClient(
-            method='rtu',
             port=self.port,
             baudrate=self.baudrate,
             parity='N',
