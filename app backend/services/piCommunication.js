@@ -108,6 +108,37 @@ class PiCommunication {
             return { success: false, error: error.message };
         }
     }
+
+    /**
+     * Send IRRIGATE_PLANT request to Pi (no waiting)
+     */
+    irrigatePlant(plantId) {
+        const piSocket = getPiSocket();
+        if (!piSocket) {
+            console.log('Pi not connected - cannot irrigate plant');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        try {
+            const request = {
+                type: 'IRRIGATE_PLANT',
+                data: {
+                    plantId: plantId
+                }
+            };
+
+            console.log('🚀 Sending IRRIGATE_PLANT to Pi:');
+            console.log(`   - Plant ID: ${plantId} (type: ${typeof plantId})`);
+            console.log(`   - Full JSON: ${JSON.stringify(request)}`);
+
+            piSocket.send(JSON.stringify(request));
+            return { success: true };
+
+        } catch (error) {
+            console.error('Error sending IRRIGATE_PLANT to Pi:', error);
+            return { success: false, error: error.message };
+        }
+    }
 }
 
 // Create single instance

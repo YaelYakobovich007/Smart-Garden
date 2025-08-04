@@ -163,6 +163,65 @@ class SmartGardenPiClient:
             self.logger.info(f"Successfully sent moisture for {response_dto.total_plants} plants")
         else:
             self.logger.error(f"Failed to get moisture for all plants: {response_dto.error_message}")
+
+    async def handle_irrigate_plant_request(self, data):
+        """Handle irrigation request from server."""
+        self.logger.info(f"Received IRRIGATE_PLANT command from server")
+        
+        plant_id = data.get("plantId")
+        if not plant_id:
+            # Create error DTO for missing plant ID
+            from controller.dto.irrigation_result import IrrigationResult
+            error_result = IrrigationResult.error(
+                plant_id=0,  # Use 0 for unknown plant_id
+                error_message="Missing plantId"
+            )
+            await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
+            return
+        
+        try:
+            # Get plant from engine
+            plant = self.engine.get_plant_by_id(plant_id)
+            if not plant:
+                # Create error DTO for plant not found
+                from controller.dto.irrigation_result import IrrigationResult
+                error_result = IrrigationResult.error(
+                    plant_id=plant_id,
+                    error_message=f"Plant {plant_id} not found"
+                )
+                await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
+                return
+            
+            # Use existing irrigation algorithm
+            from controller.irrigation.irrigation_algorithm import IrrigationAlgorithm
+            irrigation_algo = IrrigationAlgorithm()
+            
+            # Perform irrigation - this now returns the proper DTO
+            result = await irrigation_algo.irrigate(plant)
+            
+            # Send response back to server using DTO
+            response_data = result.to_websocket_data()
+            
+            # Log the response message details (like add_plant handler)
+            self.logger.info("=== IRRIGATE_PLANT RESPONSE DEBUG ===")
+            self.logger.info(f"Response DTO: {result}")
+            self.logger.info(f"Response data keys: {list(response_data.keys())}")
+            self.logger.info(f"Response data values: {response_data}")
+            self.logger.info("====================================")
+                
+            await self.send_message("IRRIGATE_PLANT_RESPONSE", response_data)
+            
+            self.logger.info(f"Irrigation request completed for plant {plant_id}: {result.status}")
+            
+        except Exception as e:
+            self.logger.error(f"Error during irrigation: {e}")
+            # Create error DTO for unexpected exceptions
+            from controller.dto.irrigation_result import IrrigationResult
+            error_result = IrrigationResult.error(
+                plant_id=plant_id,
+                error_message=str(e)
+            )
+            await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
     
     async def handle_message(self, message: str):
         """Process incoming messages from the server."""
@@ -188,6 +247,9 @@ class SmartGardenPiClient:
             
             elif message_type == "GET_ALL_MOISTURE":
                 await self.handle_all_plants_moisture_request(message_data)
+            
+            elif message_type == "IRRIGATE_PLANT":
+                await self.handle_irrigate_plant_request(message_data)
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")

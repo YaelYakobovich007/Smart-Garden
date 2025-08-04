@@ -3,6 +3,8 @@ const { getPlantByName, updatePlantSchedule, getCurrentMoisture } = require('../
 const irrigationModel = require('../models/irrigationModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getEmailBySocket } = require('../models/userSessions');
+const piCommunication = require('../services/piCommunication');
+const { addPendingIrrigation } = require('../services/pendingIrrigationTracker');
 
 const SIMULATION_MODE = process.env.SIMULATION_MODE === 'true';
 
@@ -53,49 +55,24 @@ async function handleIrrigatePlant(data, ws, email) {
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'IRRIGATE_FAIL', 'Plant not found');
 
-  // Get current and ideal moisture
-  const currentMoisture = await getCurrentMoisture(plant.plant_id);
-  const idealMoisture = plant.ideal_moisture;
-  
-  // TODO: integrate with real hardware to get current moisture, and check if irrigation is needed should be in hardware
-  // Check if irrigation is needed
-  if (currentMoisture >= idealMoisture) {
-    // Insert skipped event
-    const result = await irrigationModel.addIrrigationResult({
-      plant_id: plant.plant_id,
-      status: 'skipped',
-      reason: 'Moisture sufficient',
-      moisture: currentMoisture,
-      final_moisture: currentMoisture,
-      water_added_liters: 0,
-      irrigation_time: new Date(),
-      event_data: { simulation: SIMULATION_MODE }
-    });
-    return sendSuccess(ws, 'IRRIGATE_SKIPPED', { message: 'Irrigation not needed', result });
-  }
+  // Send irrigation request to Pi controller (let Pi decide if irrigation is needed)
+  const piResult = piCommunication.irrigatePlant(plant.plant_id);
 
-  // Perform irrigation (simulation or real)
-  let irrigationResult;
-  if (SIMULATION_MODE) {
-    // Simulate irrigation result
-    const added = 0.2; // liters
-    const finalMoisture = currentMoisture + 10;
-    irrigationResult = await irrigationModel.addIrrigationResult({
+  if (piResult.success) {
+    // Pi is connected - add to pending list and wait for irrigation result
+    addPendingIrrigation(plant.plant_id, ws, email, {
       plant_id: plant.plant_id,
-      status: 'success',
-      reason: 'Simulated irrigation',
-      moisture: currentMoisture,
-      final_moisture: finalMoisture,
-      water_added_liters: added,
-      irrigation_time: new Date(),
-      event_data: { simulation: true }
+      plant_name: plant.name,
+      ideal_moisture: plant.ideal_moisture
     });
+
+    console.log(`⏳ Irrigation request for plant ${plant.plant_id} (${plant.name}) sent to Pi controller...`);
+    // No immediate response - client will get success/failure when Pi responds with irrigation result
   } else {
-    // TODO: Real hardware integration should be implemented here
-    // For now, do nothing (no irrigation event is inserted)
-    irrigationResult = null;
+    // Pi not connected - return error 
+    return sendError(ws, 'IRRIGATE_FAIL',
+      'Pi controller not connected. Cannot irrigate plant. Please try again when Pi is online.');
   }
-  sendSuccess(ws, 'IRRIGATE_SUCCESS', { message: 'Irrigation performed', result: irrigationResult });
 }
 
 // Get all irrigation results for a plant by name

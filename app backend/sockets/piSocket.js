@@ -1,6 +1,7 @@
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { handleSensorAssigned, handleValveAssigned } = require('../controllers/plantAssignmentController');
 const { completePendingPlant } = require('../services/pendingPlantsTracker');
+const { completePendingIrrigation } = require('../services/pendingIrrigationTracker');
 
 let piSocket = null;
 
@@ -93,6 +94,125 @@ function handlePiSocket(ws) {
         if (pendingInfo && pendingInfo.ws) {
           sendError(pendingInfo.ws, 'ADD_PLANT_FAIL',
             `Hardware assignment failed: ${responseData.error_message || 'Unknown error'}. Plant removed.`);
+        }
+      }
+      return;
+    }
+
+    // Handle IRRIGATE_PLANT_RESPONSE from Pi
+    if (data.type === 'IRRIGATE_PLANT_RESPONSE') {
+      const responseData = data.data || {};
+      const plantId = responseData.plant_id;
+
+      // Get pending irrigation info (websocket + plant data)
+      const pendingInfo = completePendingIrrigation(plantId);
+
+      if (responseData.status === 'success') {
+        console.log(`✅ Plant ${plantId} irrigation completed successfully`);
+        console.log(`   - Water added: ${responseData.water_added_liters}L`);
+        console.log(`   - Final moisture: ${responseData.final_moisture}%`);
+
+        // Save irrigation result to database
+        const irrigationModel = require('../models/irrigationModel');
+
+        try {
+          const irrigationResult = await irrigationModel.addIrrigationResult({
+            plant_id: plantId,
+            status: responseData.status,
+            reason: responseData.reason || 'Pi irrigation completed',
+            moisture: responseData.moisture,
+            final_moisture: responseData.final_moisture,
+            water_added_liters: responseData.water_added_liters,
+            irrigation_time: responseData.irrigation_time ? new Date(responseData.irrigation_time) : new Date(),
+            event_data: responseData.event_data || {}
+          });
+
+          console.log(`✅ Irrigation result saved to database for plant ${plantId}`);
+
+          // Notify client of successful irrigation
+          if (pendingInfo && pendingInfo.ws) {
+            sendSuccess(pendingInfo.ws, 'IRRIGATE_SUCCESS', {
+              message: `Plant "${pendingInfo.plantData.plant_name}" irrigated successfully! Added ${responseData.water_added_liters}L of water.`,
+              result: irrigationResult,
+              irrigation_data: {
+                water_added_liters: responseData.water_added_liters,
+                final_moisture: responseData.final_moisture,
+                initial_moisture: responseData.moisture
+              }
+            });
+            console.log(`🎉 Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation successful!`);
+          } else {
+            console.log(`⚠️ No pending client found for plant ${plantId} irrigation - result saved but client not notified`);
+          }
+
+        } catch (err) {
+          console.error(`❌ Failed to save irrigation result for plant ${plantId}:`, err);
+
+          if (pendingInfo && pendingInfo.ws) {
+            sendError(pendingInfo.ws, 'IRRIGATE_FAIL',
+              `Irrigation completed but failed to save result: ${err.message}`);
+          }
+        }
+
+      } else if (responseData.status === 'skipped') {
+        console.log(`⏭️ Plant ${plantId} irrigation skipped: ${responseData.reason}`);
+
+        // Save skipped result to database
+        const irrigationModel = require('../models/irrigationModel');
+
+        try {
+          const irrigationResult = await irrigationModel.addIrrigationResult({
+            plant_id: plantId,
+            status: 'skipped',
+            reason: responseData.reason || 'Pi skipped irrigation',
+            moisture: responseData.moisture,
+            final_moisture: responseData.moisture, // Same as initial for skipped
+            water_added_liters: 0,
+            irrigation_time: new Date(),
+            event_data: responseData.event_data || {}
+          });
+
+          // Notify client that irrigation was skipped
+          if (pendingInfo && pendingInfo.ws) {
+            sendSuccess(pendingInfo.ws, 'IRRIGATE_SKIPPED', {
+              message: `Plant "${pendingInfo.plantData.plant_name}" irrigation skipped: ${responseData.reason}`,
+              result: irrigationResult,
+              reason: responseData.reason
+            });
+            console.log(`ℹ️ Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation skipped`);
+          }
+
+        } catch (err) {
+          console.error(`❌ Failed to save skipped irrigation result for plant ${plantId}:`, err);
+        }
+
+      } else {
+        // Irrigation failed
+        console.error(`❌ Plant ${plantId} irrigation failed: ${responseData.error_message}`);
+
+        // Save error result to database
+        const irrigationModel = require('../models/irrigationModel');
+
+        try {
+          const irrigationResult = await irrigationModel.addIrrigationResult({
+            plant_id: plantId,
+            status: 'error',
+            reason: responseData.error_message || 'Pi irrigation failed',
+            moisture: responseData.moisture || null,
+            final_moisture: responseData.moisture || null,
+            water_added_liters: 0,
+            irrigation_time: new Date(),
+            event_data: responseData
+          });
+
+          // Notify client of irrigation failure
+          if (pendingInfo && pendingInfo.ws) {
+            sendError(pendingInfo.ws, 'IRRIGATE_FAIL',
+              `Plant "${pendingInfo.plantData.plant_name}" irrigation failed: ${responseData.error_message || 'Unknown error'}`);
+          }
+
+        } catch (err) {
+          console.error(`❌ Failed to save error irrigation result for plant ${plantId}:`, err);
         }
       }
       return;
