@@ -47,11 +47,23 @@ class Plant:
         Returns:
             Optional[float]: Current soil moisture value, or None if unavailable.
         """
-        return await self.sensor.read()
+        sensor_data = await self.sensor.read()
+        
+        if sensor_data is None:
+            return None
+        
+        # Handle both simulation mode (returns float) and real mode (returns tuple)
+        if isinstance(sensor_data, tuple) and len(sensor_data) >= 2:
+            # Real sensor returns (moisture, temperature)
+            moisture, temperature = sensor_data
+            return moisture
+        else:
+            # Simulation mode returns just moisture value
+            return sensor_data
 
     async def update_moisture(self) -> None:
         """
         Updates the plant's internal moisture_level attribute
         with a new reading from the sensor.
         """
-        self.moisture_level = await self.sensor.read()
+        self.moisture_level = await self.get_moisture()
