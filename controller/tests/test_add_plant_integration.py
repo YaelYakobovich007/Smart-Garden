@@ -111,7 +111,7 @@ async def test_add_plant_integration():
                 print(f"   📛 Plant Name: {data.get('plant_name')}")
                 print(f"   🔢 Internal ID: {data.get('internal_plant_id')}")
                 print(f"   🚰 Assigned Valve: {data.get('assigned_valve')}")
-                print(f"   📡 Assigned Sensor: {data.get('assigned_sensor')}")
+                print(f"   📡 Sensor Port: {data.get('sensor_port')}")
             else:
                 print(f"❌ Error response: {data.get('error_message')}")
                 return False

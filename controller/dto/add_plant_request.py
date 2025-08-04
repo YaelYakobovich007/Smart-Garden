@@ -11,7 +11,7 @@ class AddPlantRequest(BaseModel):
     status: str                             # "success" or "error" 
     desired_moisture: float                 # target moisture level that was set
     assigned_valve: Optional[int] = None    # valve ID assigned to this plant
-    assigned_sensor: Optional[int] = None   # sensor ID assigned to this plant
+    sensor_port: Optional[str] = None       # sensor port assigned to this plant (e.g., "/dev/ttyUSB0")
     error_message: Optional[str] = None     # error details if status is "error"
     timestamp: Optional[float] = None       # when the plant was added
     
@@ -23,14 +23,14 @@ class AddPlantRequest(BaseModel):
     
     @classmethod
     def success(cls, plant_id: int, desired_moisture: float,
-                assigned_valve: int = None, assigned_sensor: int = None) -> "AddPlantRequest":
+                assigned_valve: int = None, sensor_port: str = None) -> "AddPlantRequest":
         """Create a success notification for when plant is added successfully."""
         return cls(
             plant_id=plant_id,
             status="success",
             desired_moisture=desired_moisture,
             assigned_valve=assigned_valve,
-            assigned_sensor=assigned_sensor
+            sensor_port=sensor_port
         )
     
     @classmethod  
@@ -50,7 +50,7 @@ class AddPlantRequest(BaseModel):
             "status": self.status,
             "desired_moisture": self.desired_moisture,
             "assigned_valve": self.assigned_valve,
-            "assigned_sensor": self.assigned_sensor,
+            "sensor_port": self.sensor_port,
             "error_message": self.error_message,
             "timestamp": self.timestamp
         }

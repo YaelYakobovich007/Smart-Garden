@@ -82,18 +82,18 @@ def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
         
         # Get assigned hardware info
         assigned_valve = None
-        assigned_sensor = None
+        sensor_port = None
         if plant_id in smart_engine.plants:
             plant = smart_engine.plants[plant_id]
             assigned_valve = plant.valve.valve_id
-            assigned_sensor = plant.sensor.port
+            sensor_port = plant.sensor.port
         
         # Create success response using DTO
         response = AddPlantRequest.success(
             plant_id=plant_id,
             desired_moisture=desired_moisture,
             assigned_valve=assigned_valve,
-            assigned_sensor=assigned_sensor
+            sensor_port=sensor_port
         )
         
         return True, response
