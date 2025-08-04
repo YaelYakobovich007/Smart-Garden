@@ -75,7 +75,7 @@ class Sensor:
             try:
                 # Read two registers starting from address 0x0000
                 result = await modbus_client.read_input_registers(
-                    address=REGISTER_START_ADDRESS,
+                    address=1,
                     count=2,
                     slave=self.modbus_id
                 )
