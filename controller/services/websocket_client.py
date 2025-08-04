@@ -13,7 +13,7 @@ class SmartGardenPiClient:
 
 
     #my ip is 192.168.68.59
-    def __init__(self, server_url: str = "ws://192.168.68.69:8080", engine: SmartGardenEngine = None):
+    def __init__(self, server_url: str = "ws://192.168.68.70:8080", engine: SmartGardenEngine = None):
         self.server_url = server_url
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
         self.device_id = "raspberrypi_main_controller"

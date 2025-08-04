@@ -17,8 +17,8 @@ const WS_CONFIG = {
   // Change this to your server's IP address or hostname
   // For local development, use 'localhost'
   // For production, use your server's actual IP address
-  SERVER_URL: 'ws://192.168.68.68:8080',
-  
+  SERVER_URL: 'ws://192.168.68.70:8080',
+
   // Alternative configurations for different environments:
   // LOCAL: 'ws://localhost:8080'
   // PRODUCTION: 'ws://your-server-ip:8080'
@@ -190,7 +190,7 @@ class WebSocketService {
     }
   }
 
- 
+
   //send message to server 
   sendMessage(message) {
     this.send(message);
