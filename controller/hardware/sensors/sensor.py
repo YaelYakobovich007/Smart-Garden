@@ -84,7 +84,7 @@ class Sensor:
                 # Read two registers starting from address 1 (matching mbpoll command)
                 # Try without unit parameter first
                 result = await modbus_client.read_input_registers(
-                    address=1,
+                    address=0,
                     count=2
                 )
 
