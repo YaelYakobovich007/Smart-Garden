@@ -25,27 +25,27 @@ class IrrigationAlgorithm:
         # Case 1: Skip irrigation if rain is expected
         if self.weather_service.will_rain_today(plant.lat, plant.lon):
             print(f"Skipping irrigation for {plant.plant_id} — rain expected today.")
-            return IrrigationResult(
-                status="skipped",
-                reason="rain_expected",
-                moisture=current_moisture
+            return IrrigationResult.skipped(
+                plant_id=plant.plant_id,
+                moisture=current_moisture,
+                reason="rain_expected"
             )
 
         # Case 2: Overwatered — block and stop
         if self.is_overwatered(plant, current_moisture):
             plant.valve.block()
-            return IrrigationResult(
-                status="error",
-                reason="overwatered",
+            return IrrigationResult.error(
+                plant_id=plant.plant_id,
+                error_message="overwatered",
                 moisture=current_moisture
             )
 
         # Case 3: If soil is already moist enough, skip irrigation
         if not self.should_irrigate(plant, current_moisture):
-            return IrrigationResult(
-                status="skipped",
-                reason="already moist",
-                moisture=current_moisture
+            return IrrigationResult.skipped(
+                plant_id=plant.plant_id,
+                moisture=current_moisture,
+                reason="already moist"
             )
 
         # Case 4: Otherwise, perform irrigation cycle
@@ -95,26 +95,24 @@ class IrrigationAlgorithm:
 
         final_moisture: float = await plant.get_moisture()
 
-        # Fault detection: watered but moisture didn’t rise
+        # Fault detection: watered but moisture didn't rise
         if total_water >= water_limit and final_moisture < plant.desired_moisture:
             print(f"Sensor or irrigation error — watered {total_water:.2f}L but moisture is still low!")
             plant.valve.block()
-            return IrrigationResult(
-                status="error",
-                reason="sensor mismatch or irrigation fault",
+            return IrrigationResult.error(
+                plant_id=plant.plant_id,
+                error_message="sensor mismatch or irrigation fault",
                 moisture=initial_moisture,
                 final_moisture=final_moisture,
-                water_added_liters=total_water,
-                irrigation_time=datetime.now()
+                water_added_liters=total_water
             )
 
         # Update last irrigation time
         plant.last_irrigation_time = datetime.now()
 
-        return IrrigationResult(
-            status="done",
+        return IrrigationResult.success(
+            plant_id=plant.plant_id,
             moisture=initial_moisture,
             final_moisture=final_moisture,
-            water_added_liters=total_water,
-            irrigation_time=plant.last_irrigation_time
+            water_added_liters=total_water
         )
