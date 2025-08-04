@@ -70,6 +70,7 @@ class Sensor:
             stopbits=1,
             bytesize=8,
             timeout=1,
+            unit=self.modbus_id,  # Set slave ID here
         )
 
         # Connect to the Modbus client
@@ -86,10 +87,10 @@ class Sensor:
                 print(f"   Register count: 2")
                 
                 # Read two registers starting from address 1 (matching mbpoll command)
-                result = await modbus_client.read_holding_registers(
-                    address=0x0001,
-                    count=2,
-                    unit=self.modbus_id
+                # Try without unit parameter first
+                result = await modbus_client.read_input_registers(
+                    address=1,
+                    count=2
                 )
 
                 if result.isError():
