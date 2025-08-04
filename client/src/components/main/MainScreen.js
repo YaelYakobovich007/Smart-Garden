@@ -137,10 +137,7 @@ const MainScreen = () => {
       console.log('Updated moisture for all plants');
     }
   };
-    } else {
-      console.log('MainScreen: No plants data in response');
-    }
-  };
+   
 
   /**
    * Handle plant data fetch errors
@@ -189,43 +186,6 @@ const MainScreen = () => {
     console.error('Failed to fetch user name:', data.message);
     // Don't force logout on connection issues - just log the error
     console.log('MainScreen: User name fetch failed, but keeping user logged in');
-  };
-
-  /**
-   * Handle moisture response for a specific plant
-   * Updates the plant's moisture value with real data from server
-   * @param {Object} data - Server moisture response data
-   */
-  const handlePlantMoistureResponse = (data) => {
-    if (data.plant_id && data.moisture !== undefined) {
-      setPlants(prevPlants => 
-        prevPlants.map(plant => 
-          plant.id === data.plant_id 
-            ? { ...plant, moisture: data.moisture }
-            : plant
-        )
-      );
-      console.log('Updated moisture for plant:', data.plant_id, 'to:', data.moisture);
-    }
-  };
-
-  /**
-   * Handle moisture response for all plants
-   * Updates all plants' moisture values with real data from server
-   * @param {Object} data - Server moisture response data
-   */
-  const handleAllPlantsMoistureResponse = (data) => {
-    if (data.plants && Array.isArray(data.plants)) {
-      setPlants(prevPlants => 
-        prevPlants.map(plant => {
-          const moistureData = data.plants.find(p => p.plant_id === plant.id);
-          return moistureData && moistureData.moisture !== undefined
-            ? { ...plant, moisture: moistureData.moisture }
-            : plant;
-        })
-      );
-      console.log('Updated moisture for all plants');
-    }
   };
 
   /**

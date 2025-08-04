@@ -130,6 +130,37 @@ const PlantDetail = () => {
     websocketService.onMessage('DELETE_PLANT_FAIL', handleDeleteFail);
 
     /**
+     * Handle successful moisture response
+     * Shows current humidity level to user
+     * @param {Object} data - Server response data
+     */
+    const handleMoistureSuccess = (data) => {
+      if (data.moisture !== undefined) {
+        Alert.alert(
+          'Current Humidity', 
+          `The current humidity level for ${plant.name} is ${data.moisture.toFixed(1)}%`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Humidity Data', data?.message || 'Humidity data received successfully!');
+      }
+    };
+
+    /**
+     * Handle failed moisture response
+     * Shows error alert to user
+     * @param {Object} data - Server response data
+     */
+    const handleMoistureFail = (data) => {
+      Alert.alert('Humidity Error', data?.message || 'Failed to get humidity data.');
+    };
+
+    // Register moisture message handlers
+    websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
+    websocketService.onMessage('GET_MOISTURE_SUCCESS', handleMoistureSuccess);
+    websocketService.onMessage('GET_MOISTURE_FAIL', handleMoistureFail);
+
+    /**
      * Cleanup function to remove message handlers
      * Prevents memory leaks when component unmounts
      */
@@ -139,6 +170,9 @@ const PlantDetail = () => {
       websocketService.onMessage('IRRIGATE_SKIPPED', () => { });
       websocketService.onMessage('DELETE_PLANT_SUCCESS', () => { });
       websocketService.onMessage('DELETE_PLANT_FAIL', () => { });
+      websocketService.onMessage('PLANT_MOISTURE_RESPONSE', () => { });
+      websocketService.onMessage('GET_MOISTURE_SUCCESS', () => { });
+      websocketService.onMessage('GET_MOISTURE_FAIL', () => { });
     };
   }, [navigation]);
 
@@ -156,6 +190,29 @@ const PlantDetail = () => {
       plantName: plant.name,
     });
     Alert.alert('Irrigation', 'Irrigation command sent. Please wait for result.');
+  };
+
+  /**
+   * Handle get current humidity action
+   * Requests current moisture level for the specific plant
+   */
+  const handleGetCurrentHumidity = () => {
+    if (!plant?.name) {
+      Alert.alert('Error', 'Plant name is missing.');
+      return;
+    }
+    
+    if (!websocketService.isConnected()) {
+      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
+      return;
+    }
+
+    // Request moisture for this specific plant using plant name
+    websocketService.sendMessage({
+      type: 'GET_PLANT_MOISTURE',
+      plantName: plant.name
+    });
+    Alert.alert('Humidity Request', 'Requesting current humidity level. Please wait...');
   };
 
   /**
@@ -262,9 +319,15 @@ const PlantDetail = () => {
         {/* Plant Management Actions */}
         <View style={styles.actionsContainer}>
           <Text style={styles.sectionTitle}>Actions</Text>
+          
           <TouchableOpacity style={styles.waterButton} onPress={handleWaterPlant}>
             <Feather name="droplet" size={20} color="#FFFFFF" />
             <Text style={styles.waterButtonText}>Water Now</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.humidityButton} onPress={handleGetCurrentHumidity}>
+            <Feather name="thermometer" size={20} color="#FFFFFF" />
+            <Text style={styles.humidityButtonText}>Get Current Humidity</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.scheduleButton}>

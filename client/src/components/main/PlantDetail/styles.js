@@ -190,6 +190,21 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
     fontFamily: 'Nunito_700Bold',
   },
+  humidityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2196F3',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  humidityButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontFamily: 'Nunito_700Bold',
+  },
   scheduleButton: {
     flexDirection: 'row',
     alignItems: 'center',
