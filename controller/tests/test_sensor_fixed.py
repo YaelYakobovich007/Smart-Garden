@@ -192,7 +192,7 @@ async def test_both_sensors_together():
 
 async def main():
     """Main function"""
-    print("🚀 Sensor Test - First Sensor Only")
+    print("🚀 Sensor Test - Both Sensors")
     print("=" * 60)
     
     print("📋 Testing Configuration:")
@@ -200,20 +200,33 @@ async def main():
     print("   Register: 1")
     print("   Baudrate: 4800")
     print("   Parity: None")
-    print("   Port: /dev/ttyUSB0")
+    print("   Ports: /dev/ttyUSB0, /dev/ttyUSB1")
     print()
     
-    # Test only Sensor 1
+    # Test Sensor 1
+    print("🔧 Testing Sensor 1...")
     sensor_1_working = await test_sensor_1()
+    
+    # Wait a moment between tests
+    await asyncio.sleep(1)
+    
+    # Test Sensor 2
+    print("\n🔧 Testing Sensor 2...")
+    sensor_2_working = await test_sensor_2()
     
     print(f"\n🎉 Sensor Test Summary:")
     print("=" * 30)
     print(f"   Sensor 1 (/dev/ttyUSB0): {'✅ WORKING' if sensor_1_working else '❌ FAILED'}")
+    print(f"   Sensor 2 (/dev/ttyUSB1): {'✅ WORKING' if sensor_2_working else '❌ FAILED'}")
     
-    if sensor_1_working:
-        print(f"\n🎉 Sensor 1 test passed!")
+    if sensor_1_working and sensor_2_working:
+        print(f"\n🎉 Both sensors test passed!")
+    elif sensor_1_working:
+        print(f"\n⚠️  Only Sensor 1 working")
+    elif sensor_2_working:
+        print(f"\n⚠️  Only Sensor 2 working")
     else:
-        print(f"\n❌ Sensor 1 test failed!")
+        print(f"\n❌ Both sensors failed!")
 
 if __name__ == "__main__":
     asyncio.run(main()) 
