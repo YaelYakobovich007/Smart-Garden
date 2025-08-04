@@ -17,7 +17,7 @@ def test_relay_switches():
     print("=" * 50)
     
     # Create relay controller in simulation mode
-    relay = RelayController(simulation_mode=True)
+    relay = RelayController(simulation_mode=False)
     print("Relay controller created in simulation mode")
     
     # Test switches 1-4
