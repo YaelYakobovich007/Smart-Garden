@@ -63,7 +63,7 @@ class Sensor:
             parity='N',
             stopbits=1,
             bytesize=8,
-            timeout=2,
+            timeout=3,
         )
 
         # Connect to the Modbus client
@@ -73,9 +73,9 @@ class Sensor:
                 return None
             
             try:
-                # Read two registers starting from address 0x0000
+                # Read two registers starting from address 1 (matching mbpoll command)
                 result = await modbus_client.read_input_registers(
-                    address=0x0000,
+                    address=1,
                     count=2,
                     slave=self.modbus_id
                 )
@@ -84,10 +84,18 @@ class Sensor:
                     print(f"Modbus error: {result}")
                     return None
 
-                humidity = result.registers[0] / 10.0
-                temperature = result.registers[1] / 10.0
-                print(f"Sensor {self.modbus_id} - Humidity: {humidity}%, Temperature: {temperature}°C")
-                return humidity, temperature
+                # Process raw register values (matching mbpoll output)
+                register_1 = result.registers[0]
+                register_2 = result.registers[1]
+                
+                # Convert to moisture and temperature (adjust these calculations based on your sensor)
+                # For now, using simple conversion - you may need to adjust based on your sensor specs
+                moisture = register_1 / 10.0 if register_1 > 0 else 0.0
+                temperature = register_2 / 10.0 if register_2 > 0 else 0.0
+                
+                print(f"Sensor {self.modbus_id} - Register 1: {register_1}, Register 2: {register_2}")
+                print(f"Sensor {self.modbus_id} - Moisture: {moisture:.1f}%, Temperature: {temperature:.1f}°C")
+                return moisture, temperature
             
             except ModbusException as e:
                 print(f"Modbus exception: {e}")
