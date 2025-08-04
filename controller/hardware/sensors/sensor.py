@@ -70,7 +70,6 @@ class Sensor:
             stopbits=1,
             bytesize=8,
             timeout=1,
-            unit=self.modbus_id,  # Set slave ID here
         )
 
         # Connect to the Modbus client
