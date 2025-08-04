@@ -133,7 +133,7 @@ async def main():
     signal.signal(signal.SIGTERM, signal_handler)
     
     # You can change this URL to match your server's IP address
-    server_url = "ws://192.168.68.69:8080"
+    server_url = "ws://192.168.68.70:8080"
     
     # Override with environment variable if set
     server_url = os.getenv('SMART_GARDEN_SERVER_URL', server_url)
