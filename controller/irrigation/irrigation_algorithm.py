@@ -20,6 +20,11 @@ class IrrigationAlgorithm:
         Main function that decides whether to irrigate a plant and performs the process.
         """
         current_moisture = await plant.get_moisture()
+        
+        # Ensure current_moisture is float (safety check)
+        if current_moisture is not None:
+            current_moisture = float(current_moisture)
+        
         print(f"Initial moisture for plant {plant.plant_id}: {current_moisture}%")
 
         # Case 1: Skip irrigation if rain is expected

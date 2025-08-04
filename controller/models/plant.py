@@ -56,10 +56,12 @@ class Plant:
         if isinstance(sensor_data, tuple) and len(sensor_data) >= 2:
             # Real sensor returns (moisture, temperature)
             moisture, temperature = sensor_data
-            return moisture
+            # Ensure moisture is float (in case sensor returns string)
+            return float(moisture) if moisture is not None else None
         else:
             # Simulation mode returns just moisture value
-            return sensor_data
+            # Ensure it's float (in case sensor returns string)
+            return float(sensor_data) if sensor_data is not None else None
 
     async def update_moisture(self) -> None:
         """
