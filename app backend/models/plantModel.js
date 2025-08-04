@@ -6,16 +6,22 @@ const { pool } = require('../config/database');
 // const plantStorage = new Map(); // Map<email, Array<Plant>>
 // const plantIdIndex = new Map(); // Map<plantId, { plant, email }>
 
+// Check for duplicate plant name (separate function for pre-validation)
+async function checkDuplicatePlantName(userId, plantName) {
+  const existing = await pool.query('SELECT plant_id FROM plants WHERE user_id = $1 AND name = $2', [userId, plantName]);
+  return existing.rows.length > 0;
+}
+
 async function addPlant(userId, plantData) {
   // Check for duplicate plant name for this user
-  const existing = await pool.query('SELECT plant_id FROM plants WHERE user_id = $1 AND name = $2', [userId, plantData.name]);
-  if (existing.rows.length > 0) {
+  const isDuplicate = await checkDuplicatePlantName(userId, plantData.name);
+  if (isDuplicate) {
     return { error: 'DUPLICATE_NAME' };
   }
 
   // Insert plant into DB without hardware IDs (will be assigned by Pi)
   const result = await pool.query(
-    `INSERT INTO plants (user_id, name, ideal_moisture, water_limit, irrigation_days, irrigation_time, plant_type, image_url, sensor_id, valve_id, last_watered)
+    `INSERT INTO plants (user_id, name, ideal_moisture, water_limit, irrigation_days, irrigation_time, plant_type, image_url, sensor_port, valve_id, last_watered)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
     [
       userId,
@@ -26,7 +32,7 @@ async function addPlant(userId, plantData) {
       plantData.irrigation_time || null,
       plantData.plantType || null,
       plantData.image_url || null,
-      null, // sensor_id - will be assigned by Pi
+      null, // sensor_port - will be assigned by Pi
       null, // valve_id - will be assigned by Pi
       null
     ]
@@ -151,15 +157,17 @@ async function deletePlantById(plantId) {
 }
 
 // Update plant with hardware IDs from Pi
-async function updatePlantHardware(plantId, sensorId, valveId) {
+async function updatePlantHardware(plantId, sensorPort, valveId) {
   await pool.query(
-    'UPDATE plants SET sensor_id = $1, valve_id = $2, updated_at = CURRENT_TIMESTAMP WHERE plant_id = $3',
-    [sensorId, valveId, plantId]
+    'UPDATE plants SET sensor_port = $1, valve_id = $2, updated_at = CURRENT_TIMESTAMP WHERE plant_id = $3',
+    [sensorPort, valveId, plantId]
   );
 }
 
+
 module.exports = {
   addPlant,
+  checkDuplicatePlantName,
   getPlants,
   getPlantById,
   getPlantByName,
@@ -168,5 +176,5 @@ module.exports = {
   irrigatePlant,
   deletePlantById,
   updatePlantDetails,
-  updatePlantHardware
+  updatePlantHardware,
 };

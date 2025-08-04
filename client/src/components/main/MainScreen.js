@@ -39,7 +39,7 @@ import styles from './styles';
 
 const MainScreen = () => {
   const navigation = useNavigation();
-  
+
   // State management for screen data and UI
   const [plants, setPlants] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -108,9 +108,9 @@ const MainScreen = () => {
    */
   const handlePlantMoistureResponse = (data) => {
     if (data.plant_id && data.moisture !== undefined) {
-      setPlants(prevPlants => 
-        prevPlants.map(plant => 
-          plant.id === data.plant_id 
+      setPlants(prevPlants =>
+        prevPlants.map(plant =>
+          plant.id === data.plant_id
             ? { ...plant, moisture: data.moisture }
             : plant
         )
@@ -126,7 +126,7 @@ const MainScreen = () => {
    */
   const handleAllPlantsMoistureResponse = (data) => {
     if (data.plants && Array.isArray(data.plants)) {
-      setPlants(prevPlants => 
+      setPlants(prevPlants =>
         prevPlants.map(plant => {
           const moistureData = data.plants.find(p => p.plant_id === plant.id);
           return moistureData && moistureData.moisture !== undefined
@@ -137,7 +137,7 @@ const MainScreen = () => {
       console.log('Updated moisture for all plants');
     }
   };
-   
+
 
   /**
    * Handle plant data fetch errors
@@ -455,7 +455,7 @@ const MainScreen = () => {
 
       {/* Main Content Card with ScrollView */}
       <View style={styles.mainContentCard}>
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
           showsVerticalScrollIndicator={false}
@@ -534,7 +534,7 @@ const MainScreen = () => {
           </View>
         </ScrollView>
       </View>
-      
+
       {/* Bottom Toolbar - moved outside mainContentCard for fixed bottom position */}
       <BottomToolbar
         onAddPlant={handleAddPlant}

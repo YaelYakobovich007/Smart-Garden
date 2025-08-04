@@ -4,6 +4,7 @@ const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getEmailBySocket } = require('../models/userSessions');
 const googleCloudStorage = require('../services/googleCloudStorage');
 const piCommunication = require('../services/piCommunication');
+const { addPendingPlant } = require('../services/pendingPlantsTracker');
 
 const plantHandlers = {
   ADD_PLANT: handleAddPlant,
@@ -97,27 +98,35 @@ async function handleAddPlant(data, ws, email) {
     image_url: imageUrl // Add image URL to plant data
   };
 
-  // Step 1: Save plant to database without hardware IDs
+  // Step 1: Save plant to database WITHOUT hardware IDs (get stable plant_id)
   const result = await addPlant(user.id, plantDataToSave);
   if (result.error === 'DUPLICATE_NAME') {
     return sendError(ws, 'ADD_PLANT_FAIL', 'You already have a plant with this name');
   }
 
-  // Step 2: Send request to Pi (no waiting - fire and forget)
+  console.log(`💾 Plant "${plantName}" saved to database with ID ${result.plant.plant_id}`);
+
+  // Step 2: Send request to Pi with REAL plant_id
   const piResult = piCommunication.addPlant(result.plant);
 
-  // Step 3: Return success to user immediately
-  const message = piResult.success
-    ? 'Plant added successfully (hardware assignment in progress)'
-    : 'Plant added successfully (Pi not connected - hardware will be assigned when Pi reconnects)';
-
-  sendSuccess(ws, 'ADD_PLANT_SUCCESS', {
-    message: message,
-    plant: {
+  if (piResult.success) {
+    // Pi is connected - add to pending list and wait for hardware assignment
+    addPendingPlant(result.plant.plant_id, ws, email, {
       ...result.plant,
       image_url: imageUrl
-    }
-  });
+    });
+
+    console.log(`⏳ Plant ${result.plant.plant_id} sent to Pi for hardware assignment...`);
+    // No immediate response - client will get success only after hardware assignment
+  } else {
+    // Pi not connected - DELETE the plant we just saved and return error
+    const { deletePlantById } = require('../models/plantModel');
+    await deletePlantById(result.plant.plant_id);
+    console.log(`🗑️ Deleted plant ${result.plant.plant_id} from database (Pi not connected)`);
+
+    return sendError(ws, 'ADD_PLANT_FAIL',
+      'Pi controller not connected. Cannot assign hardware to plant. Please try again when Pi is online.');
+  }
 }
 
 async function handleGetPlantDetails(data, ws, email) {

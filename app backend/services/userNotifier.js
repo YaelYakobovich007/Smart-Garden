@@ -4,7 +4,7 @@ const { getSocketByEmail } = require('../models/userSessions');
 function notifyUserOfSensorUpdate({ plant, email }) {
   const ws = getSocketByEmail(email);
   if (ws) {
-    sendSuccess(ws, 'SENSOR_ASSIGNED', { plantId: plant.id, sensorId: plant.sensorId });
+    sendSuccess(ws, 'SENSOR_ASSIGNED', { plantId: plant.id, sensorPort: plant.sensor_port });
   }
 }
 
@@ -15,10 +15,10 @@ function notifyUserOfValveUpdate({ plant, email }) {
   }
 }
 
-function notifyUserReadyToConnect(plantId, { sensorId, valveId, email }) {
+function notifyUserReadyToConnect(plantId, { sensorPort, valveId, email }) {
   const ws = getSocketByEmail(email);
   if (ws) {
-    sendSuccess(ws, 'READY_TO_CONNECT', { plantId, sensorId, valveId });
+    sendSuccess(ws, 'READY_TO_CONNECT', { plantId, sensorPort, valveId });
   }
 }
 

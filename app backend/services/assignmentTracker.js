@@ -5,7 +5,7 @@ function updateAssignedParts(plantId, update, callback) {
   const merged = { ...current, ...update };
   assignedParts.set(plantId, merged);
 
-  if (merged.sensorId && merged.valveId && merged.email) {
+  if (merged.sensorPort && merged.valveId && merged.email) {
     callback(plantId, merged);
     assignedParts.delete(plantId);
   }

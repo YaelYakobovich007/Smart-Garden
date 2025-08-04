@@ -5,16 +5,16 @@ const { updateAssignedParts } = require('../services/assignmentTracker');
 
 // הפונקציות כעת אסינכרוניות ועובדות מול הדאטהבייס
 async function handleSensorAssigned(data, ws) {
-  const { plantId, sensorId } = data;
-  if (!plantId || !sensorId) {
-    return sendError(ws, 'ASSIGN_SENSOR_FAIL', 'Missing plantId or sensorId');
+  const { plantId, sensorPort } = data;
+  if (!plantId || !sensorPort) {
+    return sendError(ws, 'ASSIGN_SENSOR_FAIL', 'Missing plantId or sensorPort');
   }
 
   try {
-    const updated = await assignSensor(plantId, sensorId);
+    const updated = await assignSensor(plantId, sensorPort);
     if (!updated) return sendError(ws, 'SENSOR_ASSIGN_FAIL', 'Plant not found');
     notifyUserOfSensorUpdate(updated);
-    updateAssignedParts(plantId, { sensorId, email: updated.email });
+    updateAssignedParts(plantId, { sensorPort, email: updated.email });
   } catch (err) {
     return sendError(ws, 'SENSOR_ASSIGN_FAIL', 'Database error');
   }

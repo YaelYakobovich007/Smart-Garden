@@ -35,7 +35,7 @@ async function setupDatabase() {
         irrigation_time TIME,
         plant_type VARCHAR(100),
         image_url VARCHAR(2000),
-        sensor_id VARCHAR(100),
+        sensor_port VARCHAR(100),
         valve_id VARCHAR(100),
         last_watered TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -70,7 +70,7 @@ async function setupDatabase() {
       CREATE INDEX IF NOT EXISTS idx_plants_user_id ON plants(user_id)
     `);
     await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_plants_sensor_id ON plants(sensor_id)
+      CREATE INDEX IF NOT EXISTS idx_plants_sensor_port ON plants(sensor_port)
     `);
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_plants_valve_id ON plants(valve_id)

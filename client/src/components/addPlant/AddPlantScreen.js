@@ -41,7 +41,7 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function AddPlantScreen() {
   const navigation = useNavigation();
-  
+
   // Form data state management
   const [formData, setFormData] = useState({
     plantName: '',
@@ -170,7 +170,7 @@ export default function AddPlantScreen() {
             // Convert image to base64 for server transmission
             const response = await fetch(formData.image);
             const blob = await response.blob();
-            
+
             // Check image size (limit to 5MB)
             const maxSize = 5 * 1024 * 1024; // 5MB in bytes
             if (blob.size > maxSize) {
@@ -182,7 +182,7 @@ export default function AddPlantScreen() {
               setIsSaving(false);
               return;
             }
-            
+
             // Convert blob to base64
             const base64 = await new Promise((resolve, reject) => {
               const reader = new FileReader();
@@ -365,7 +365,7 @@ export default function AddPlantScreen() {
         {/* Plant Basic Information Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Plant Information</Text>
-          
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>
               Plant Name <Text style={styles.required}>*</Text>
@@ -400,7 +400,7 @@ export default function AddPlantScreen() {
         {/* Plant Care Settings Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Care Settings</Text>
-          
+
           <View style={styles.inputContainer}>
             <View style={styles.labelContainer}>
               <Feather name="thermometer" size={20} color="#4CAF50" />
@@ -409,16 +409,16 @@ export default function AddPlantScreen() {
               </Text>
             </View>
             <View style={styles.sliderContainer}>
-            <TextInput
+              <TextInput
                 style={[styles.numberInput, errors.humidity && styles.inputError]}
                 value={formData.humidity.toString()}
                 onChangeText={(text) => {
                   const value = parseInt(text) || 0;
                   updateFormData('humidity', Math.min(100, Math.max(0, value)));
                 }}
-              keyboardType="numeric"
+                keyboardType="numeric"
                 maxLength={3}
-            />
+              />
               <Text style={styles.unit}>%</Text>
             </View>
             {errors.humidity && (
@@ -437,16 +437,16 @@ export default function AddPlantScreen() {
               </Text>
             </View>
             <View style={styles.sliderContainer}>
-            <TextInput
+              <TextInput
                 style={[styles.numberInput, errors.waterLimit && styles.inputError]}
                 value={formData.waterLimit.toString()}
                 onChangeText={(text) => {
                   const value = parseFloat(text) || 0;
                   updateFormData('waterLimit', Math.max(0, value));
                 }}
-              keyboardType="numeric"
+                keyboardType="numeric"
                 placeholder="0.0"
-            />
+              />
               <Text style={styles.unit}>L</Text>
             </View>
             {errors.waterLimit && (
@@ -481,7 +481,7 @@ export default function AddPlantScreen() {
           <View style={styles.scheduleHeader}>
             <View style={styles.labelContainer}>
               <Feather name="calendar" size={20} color="#4CAF50" />
-            <Text style={styles.sectionTitle}>Watering Schedule</Text>
+              <Text style={styles.sectionTitle}>Watering Schedule</Text>
             </View>
             <Switch
               value={formData.useSchedule}
@@ -496,10 +496,10 @@ export default function AddPlantScreen() {
               <Text style={styles.scheduleDescription}>
                 Select the days when you want your plant to be watered
               </Text>
-              
+
               <View style={styles.daysContainer}>
                 {DAYS.map((day, index) => (
-                    <TouchableOpacity
+                  <TouchableOpacity
                     key={day}
                     style={[
                       styles.dayButton,
@@ -514,11 +514,11 @@ export default function AddPlantScreen() {
                       ]}
                     >
                       {day}
-                      </Text>
-                    </TouchableOpacity>
+                    </Text>
+                  </TouchableOpacity>
                 ))}
-                  </View>
-                  
+              </View>
+
               <TouchableOpacity
                 style={styles.timeContainer}
                 onPress={() => setShowTimePicker(true)}
@@ -528,8 +528,8 @@ export default function AddPlantScreen() {
                   <Text style={styles.label}>Watering Time</Text>
                 </View>
                 <Text style={styles.timeText}>
-                  {formData.schedule.time.toLocaleTimeString([], { 
-                    hour: '2-digit', 
+                  {formData.schedule.time.toLocaleTimeString([], {
+                    hour: '2-digit',
                     minute: '2-digit',
                     hour12: true
                   }).replace('.', '').toUpperCase()}
@@ -537,17 +537,17 @@ export default function AddPlantScreen() {
               </TouchableOpacity>
             </>
           )}
-          
+
           {!formData.useSchedule && (
-              <Text style={styles.algorithmText}>
+            <Text style={styles.algorithmText}>
               Your plant will be watered using our smart algorithm based on humidity levels and plant needs.
-              </Text>
+            </Text>
           )}
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity 
-          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
+        <TouchableOpacity
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
           onPress={handleSave}
           disabled={isSaving}
         >

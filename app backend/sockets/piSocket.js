@@ -1,5 +1,6 @@
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { handleSensorAssigned, handleValveAssigned } = require('../controllers/plantAssignmentController');
+const { completePendingPlant } = require('../services/pendingPlantsTracker');
 
 let piSocket = null;
 
@@ -8,7 +9,7 @@ function handlePiSocket(ws) {
   console.log('Pi connected: raspberrypi_main_controller');
   sendSuccess(ws, 'WELCOME', { message: 'Hello Pi' });
 
-  ws.on('message', (msg) => {
+  ws.on('message', async (msg) => {
     let data;
     try {
       data = JSON.parse(msg);
@@ -19,7 +20,7 @@ function handlePiSocket(ws) {
     }
 
     if (data.type === 'SENSOR_ASSIGNED') {
-      console.log(`Received sensor assignment: ${data.data?.sensor_id} for ${data.data?.plant_id}`);
+      console.log(`Received sensor assignment: ${data.data?.sensor_port} for ${data.data?.plant_id}`);
       return handleSensorAssigned(data, ws);
     }
 
@@ -31,17 +32,68 @@ function handlePiSocket(ws) {
     // Handle ADD_PLANT_RESPONSE from Pi
     if (data.type === 'ADD_PLANT_RESPONSE') {
       const responseData = data.data || {};
+      const plantId = responseData.plant_id; // This is the real database plant_id
+
+      // Get pending plant info (websocket + plant data)
+      const pendingInfo = completePendingPlant(plantId);
 
       if (responseData.status === 'success') {
-        console.log(`✅ Plant ${responseData.plant_id}: assigned sensor=${responseData.assigned_sensor}, valve=${responseData.assigned_valve}`);
+        console.log(`✅ Plant ${plantId}: assigned sensor_port=${responseData.sensor_port}, valve=${responseData.assigned_valve}`);
 
         // Update plant in database with hardware IDs
         const { updatePlantHardware } = require('../models/plantModel');
-        updatePlantHardware(responseData.plant_id, responseData.assigned_sensor, responseData.assigned_valve)
-          .then(() => console.log(`✅ Plant ${responseData.plant_id} database updated`))
-          .catch(err => console.error(`❌ Plant ${responseData.plant_id} database update failed:`, err));
+
+        try {
+          await updatePlantHardware(plantId, responseData.sensor_port, responseData.assigned_valve);
+          console.log(`✅ Plant ${plantId} database updated with hardware assignments`);
+
+          // Notify client of successful plant creation with hardware assignment
+          if (pendingInfo && pendingInfo.ws) {
+            sendSuccess(pendingInfo.ws, 'ADD_PLANT_SUCCESS', {
+              message: `Plant "${pendingInfo.name}" added successfully! Assigned to sensor ${responseData.sensor_port} and valve ${responseData.assigned_valve}`,
+              plant: {
+                ...pendingInfo,
+                sensor_port: responseData.sensor_port,
+                valve_id: responseData.assigned_valve
+              },
+              hardware: {
+                sensor_port: responseData.sensor_port,
+                valve_id: responseData.assigned_valve
+              }
+            });
+            console.log(`🎉 Notified client: Plant ${pendingInfo.name} successfully added with hardware!`);
+          } else {
+            console.log(`⚠️ No pending client found for plant ${plantId} - hardware assigned but client not notified`);
+          }
+
+        } catch (err) {
+          console.error(`❌ Plant ${plantId} database update failed:`, err);
+
+          // Database update failed - delete the plant and notify client
+          const { deletePlantById } = require('../models/plantModel');
+          await deletePlantById(plantId);
+          console.log(`🗑️ Deleted plant ${plantId} from database (update failed)`);
+
+          if (pendingInfo && pendingInfo.ws) {
+            sendError(pendingInfo.ws, 'ADD_PLANT_FAIL',
+              `Hardware assigned but database update failed. Plant removed. Please try again.`);
+          }
+        }
+
       } else {
-        console.error(`❌ Plant ${responseData.plant_id} hardware assignment failed: ${responseData.error_message}`);
+        // Hardware assignment failed
+        console.error(`❌ Plant ${plantId} hardware assignment failed: ${responseData.error_message}`);
+
+        // Delete the plant from database since hardware assignment failed
+        const { deletePlantById } = require('../models/plantModel');
+        await deletePlantById(plantId);
+        console.log(`🗑️ Deleted plant ${plantId} from database (hardware assignment failed)`);
+
+        // Notify client of hardware assignment failure
+        if (pendingInfo && pendingInfo.ws) {
+          sendError(pendingInfo.ws, 'ADD_PLANT_FAIL',
+            `Hardware assignment failed: ${responseData.error_message || 'Unknown error'}. Plant removed.`);
+        }
       }
       return;
     }
