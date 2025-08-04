@@ -20,7 +20,7 @@ class SmartGardenEngine:
         Initializes the SmartGardenEngine with a given number of valves and sensors.
         """
         self.valves_manager: ValvesManager = ValvesManager(total_valves)
-        self.sensor_manager = SensorManager(total_sensors)
+        self.sensor_manager = SensorManager()
         self.irrigation_algorithm = IrrigationAlgorithm()
         self.plants: Dict[int, Plant] = {}
         self.relay_controller: RelayController = RelayController(simulation_mode=True)
