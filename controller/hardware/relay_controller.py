@@ -35,7 +35,7 @@ class RelayController:
         else:
             try:
                 import hid
-                self.device = hid.Device()
+                self.device = hid.device()
                 self.device.open(self.vendor_id, self.product_id)
                 self.device.set_nonblocking(1)
                 print("HID Relay connected successfully!")
