@@ -10,6 +10,7 @@ class MoistureUpdate(BaseModel):
     event: str                                 # Identifies the type of event (moisture_update)
     plant_id: int                              # ID of the plant being measured
     moisture: Optional[float] = None           # current moisture level in percentage (None if read failed)
+    temperature: Optional[float] = None        # current temperature in Celsius (None if read failed)
     status: str = "success"                    # "success" or "error"
     error_message: Optional[str] = None        # error details if status is "error"
     timestamp: Optional[float] = None          # when the measurement was taken (Unix timestamp)
@@ -21,12 +22,13 @@ class MoistureUpdate(BaseModel):
         super().__init__(**data)
     
     @classmethod
-    def success(cls, event: str, plant_id: int, moisture: float) -> "MoistureUpdate":
+    def success(cls, event: str, plant_id: int, moisture: float, temperature: float = None) -> "MoistureUpdate":
         """Create a success notification for when moisture is read successfully."""
         return cls(
             event=event,
             plant_id=plant_id,
             moisture=moisture,
+            temperature=temperature,
             status="success"
         )
     
@@ -37,26 +39,29 @@ class MoistureUpdate(BaseModel):
             event=event,
             plant_id=plant_id,
             moisture=None,
+            temperature=None,
             status="error",
             error_message=error_message
         )
     
     @classmethod
-    def plant_moisture(cls, plant_id: int, moisture: float) -> "MoistureUpdate":
+    def plant_moisture(cls, plant_id: int, moisture: float, temperature: float = None) -> "MoistureUpdate":
         """Create a moisture update for a single plant."""
         return cls.success(
             event="plant_moisture_update",
             plant_id=plant_id,
-            moisture=moisture
+            moisture=moisture,
+            temperature=temperature
         )
     
     @classmethod
-    def all_plants_moisture(cls, plant_id: int, moisture: float) -> "MoistureUpdate":
+    def all_plants_moisture(cls, plant_id: int, moisture: float, temperature: float = None) -> "MoistureUpdate":
         """Create a moisture update for all plants (individual plant entry)."""
         return cls.success(
             event="all_plants_moisture_update",
             plant_id=plant_id,
-            moisture=moisture
+            moisture=moisture,
+            temperature=temperature
         )
     
     def to_websocket_data(self) -> dict:
@@ -65,6 +70,7 @@ class MoistureUpdate(BaseModel):
             "event": self.event,
             "plant_id": self.plant_id,
             "moisture": self.moisture,
+            "temperature": self.temperature,
             "status": self.status,
             "error_message": self.error_message,
             "timestamp": self.timestamp

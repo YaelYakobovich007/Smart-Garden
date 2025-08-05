@@ -128,6 +128,28 @@ class SmartGardenEngine:
             print(f"Error reading moisture for plant {plant_id}: {e}")
             return None
 
+    async def get_plant_sensor_data(self, plant_id: int) -> Optional[tuple]:
+        """
+        Get complete sensor data (moisture, temperature) for a specific plant.
+        
+        Args:
+            plant_id (int): ID of the plant to get sensor data for
+            
+        Returns:
+            Optional[tuple]: (moisture, temperature) or None if plant not found or sensor unavailable
+        """
+        if plant_id not in self.plants:
+            raise ValueError(f"Plant {plant_id} not found")
+        
+        plant = self.plants[plant_id]
+        try:
+            sensor_data = await plant.get_sensor_data()
+            return sensor_data
+        except Exception as e:
+            # Log error but don't crash - return None to indicate unavailable
+            print(f"Error reading sensor data for plant {plant_id}: {e}")
+            return None
+
     async def get_all_plants_moisture(self) -> Dict[int, Optional[float]]:
         """
         Get moisture levels for all plants in the system.
@@ -148,6 +170,34 @@ class SmartGardenEngine:
                 moisture_data[plant_id] = None
         
         return moisture_data
+
+    async def get_all_plants_sensor_data(self) -> Dict[int, Optional[tuple]]:
+        """
+        Get complete sensor data (moisture, temperature) for all plants in the system.
+        
+        Returns:
+            Dict[int, Optional[tuple]]: Dictionary mapping plant_id to (moisture, temperature).
+                                       None values indicate sensor read failures.
+        """
+        sensor_data = {}
+        
+        for plant_id, plant in self.plants.items():
+            try:
+                plant_sensor_data = await plant.get_sensor_data()
+                sensor_data[plant_id] = plant_sensor_data
+            except Exception as e:
+                # Log error but continue with other plants
+                print(f"Error reading sensor data for plant {plant_id}: {e}")
+                sensor_data[plant_id] = None
+        
+        return sensor_data
+
+    async def update_all_sensor_data(self) -> None:
+        """
+        Updates sensor data (moisture, temperature) for all plants.
+        """
+        for plant in self.plants.values():
+            await plant.update_sensor_data()
 
     def get_plant_by_id(self, plant_id: int) -> Optional[Plant]:
         """

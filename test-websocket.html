@@ -20,7 +20,7 @@
 
         log('Attempting to connect to WebSocket server...');
         
-        const ws = new WebSocket('ws://localhost:8080');
+        const ws = new WebSocket('ws://192.168.68.54:8080');
         
         ws.onopen = function() {
             statusDiv.textContent = 'Connected!';

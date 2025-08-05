@@ -16,6 +16,7 @@ class Sensor:
     Attributes:
         simulation_mode (bool): If True, operates in simulated mode.
         simulated_value (float): The moisture level used in simulation mode.
+        simulated_temperature (float): The temperature level used in simulation mode.
         port (str): Serial port for Modbus communication (e.g., '/dev/ttyUSB0').
         baudrate (int): Baud rate (Speed of communication in bits per second) for Modbus communication.
     """
@@ -28,7 +29,8 @@ class Sensor:
         baudrate=DEFAULT_BAUDRATE
     ):
         self.simulation_mode = simulation_mode
-        self.simulated_value  = initial_moisture
+        self.simulated_value = initial_moisture
+        self.simulated_temperature = 25.0  # Default temperature in simulation
         self.port = port
         self.baudrate = baudrate
 
@@ -38,7 +40,7 @@ class Sensor:
 
         Returns:
             float | tuple | None: If in simulation mode, returns moisture (float).
-            Otherwise, returns (humidity, temperature) tuple or None on error.
+            Otherwise, returns (moisture, temperature) tuple or None on error.
         """
         if self.simulation_mode:
             return self.simulated_value
@@ -51,7 +53,7 @@ class Sensor:
         Reads data from the physical Modbus sensor.
 
         Returns:
-            tuple[float, float] | None: (humidity, temperature) in real units, or None on failure.
+            tuple[float, float] | None: (moisture, temperature) in real units, or None on failure.
         """
         print(f"🔌 Connecting to sensor on {self.port}...")
         print(f"   Modbus ID: 1")
@@ -128,6 +130,17 @@ class Sensor:
         if self.simulation_mode:
             self.simulated_value = min(100.0, self.simulated_value + amount)  
             print(f"[SIMULATION] Sensor moisture updated: {self.simulated_value}%")
+
+    def update_simulated_temperature(self, temperature):
+        """
+        Updates the simulated temperature value.
+
+        Args:
+            temperature (float): The temperature in Celsius to set.
+        """
+        if self.simulation_mode:
+            self.simulated_temperature = temperature
+            print(f"[SIMULATION] Sensor temperature updated: {self.simulated_temperature}°C")
 
     def generate_random_simulated_value(self):
         """

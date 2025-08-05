@@ -21,24 +21,27 @@ async def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AllPlantsMoi
     logger.info(f"Getting moisture data for all plants")
     
     try:
-        # Use engine function to get all plants moisture
-        all_moisture_data = await smart_engine.get_all_plants_moisture()
+        # Use engine function to get all plants sensor data
+        all_sensor_data = await smart_engine.get_all_plants_sensor_data()
         
         moisture_data = []
         
         # Convert engine data to MoistureUpdate DTOs
-        for internal_id, moisture_value in all_moisture_data.items():
-            if moisture_value is not None:  # Only include plants with valid readings
-                # Create MoistureUpdate DTO using convenience method
+        for internal_id, sensor_data in all_sensor_data.items():
+            if sensor_data is not None:  # Only include plants with valid readings
+                moisture, temperature = sensor_data
+                
+                # Create MoistureUpdate DTO using convenience method with temperature
                 moisture_update = MoistureUpdate.all_plants_moisture(
                     plant_id=internal_id,
-                    moisture=moisture_value
+                    moisture=moisture,
+                    temperature=temperature
                 )
                 
                 moisture_data.append(moisture_update)
-                logger.info(f"Plant (internal {internal_id}): {moisture_value:.1f}%")
+                logger.info(f"Plant (internal {internal_id}): moisture={moisture:.1f}%, temperature={temperature}")
             else:
-                logger.warning(f"Failed to read moisture for plant (internal {internal_id})")
+                logger.warning(f"Failed to read sensor data for plant (internal {internal_id})")
                 # Create error DTO for failed readings
                 error_update = MoistureUpdate.error(
                     event="all_plants_moisture_update",
@@ -48,29 +51,19 @@ async def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AllPlantsMoi
                 moisture_data.append(error_update)
         
         if moisture_data:
-            logger.info(f"Successfully retrieved moisture for {len(moisture_data)} plants")
-            # Create success response using the new DTO
-            response = AllPlantsMoistureResponse.success(moisture_data)
-            return True, response
-        else:
-            logger.warning("No plants found or no moisture data available")
-            # Create error response with empty data
-            response = AllPlantsMoistureResponse.error(
-                error_message="No plants found or no moisture data available"
+            logger.info(f"Successfully retrieved sensor data for {len(moisture_data)} plants")
+            return True, AllPlantsMoistureResponse.success(
+                total_plants=len(moisture_data),
+                plants=moisture_data
             )
-            return False, response
-        
+        else:
+            logger.warning("No plants found or all sensor readings failed")
+            return False, AllPlantsMoistureResponse.error(
+                error_message="No plants found or all sensor readings failed"
+            )
+            
     except Exception as e:
-        logger.error(f"Failed to get moisture for all plants: {e}")
-        # Create error DTO for general failure
-        error_update = MoistureUpdate.error(
-            event="all_plants_moisture_update",
-            plant_id=0,
-            error_message=str(e)
+        logger.error(f"Error getting all plants moisture: {e}")
+        return False, AllPlantsMoistureResponse.error(
+            error_message=f"Internal error: {str(e)}"
         )
-        # Create error response with the error DTO
-        response = AllPlantsMoistureResponse.error(
-            error_message=str(e),
-            error_updates=[error_update]
-        )
-        return False, response

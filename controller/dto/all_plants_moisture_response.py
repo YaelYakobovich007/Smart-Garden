@@ -21,15 +21,15 @@ class AllPlantsMoistureResponse(BaseModel):
         super().__init__(**data)
     
     @classmethod
-    def success(cls, moisture_updates: List[MoistureUpdate]) -> "AllPlantsMoistureResponse":
+    def success(cls, total_plants: int, plants: List[MoistureUpdate]) -> "AllPlantsMoistureResponse":
         """Create a success response from a list of MoistureUpdate DTOs."""
         plants_data = []
-        for moisture_update in moisture_updates:
+        for moisture_update in plants:
             plants_data.append(moisture_update.to_websocket_data())
         
         return cls(
             plants=plants_data,
-            total_plants=len(plants_data),
+            total_plants=total_plants,
             status="success"
         )
     

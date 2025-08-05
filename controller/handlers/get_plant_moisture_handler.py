@@ -26,20 +26,23 @@ async def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, Optional[Moi
         if plant_id is not None:
             logger.info(f"Using plant_id {plant_id} directly from server")
             
-            # Use engine function to get plant moisture
-            moisture_value = await smart_engine.get_plant_moisture(plant_id)
+            # Use engine function to get complete sensor data
+            sensor_data = await smart_engine.get_plant_sensor_data(plant_id)
             
-            if moisture_value is not None:
-                # Create MoistureUpdate DTO using convenience method
+            if sensor_data is not None:
+                moisture, temperature = sensor_data
+                
+                # Create MoistureUpdate DTO using convenience method with temperature
                 moisture_update = MoistureUpdate.plant_moisture(
                     plant_id=plant_id,
-                    moisture=moisture_value
+                    moisture=moisture,
+                    temperature=temperature
                 )
                 
-                logger.info(f"Successfully retrieved moisture for plant {plant_id}: {moisture_value:.1f}%")
+                logger.info(f"Successfully retrieved sensor data for plant {plant_id}: moisture={moisture:.1f}%, temperature={temperature}")
                 return True, moisture_update
             else:
-                logger.warning(f"Failed to read moisture for plant {plant_id}")
+                logger.warning(f"Failed to read sensor data for plant {plant_id}")
                 # Create error DTO
                 error_update = MoistureUpdate.error(
                     event="plant_moisture_update",
@@ -52,16 +55,16 @@ async def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, Optional[Moi
         logger.warning(f"Plant {plant_id} not found")
         error_update = MoistureUpdate.error(
             event="plant_moisture_update",
-            plant_id=plant_id or 0,  # Use 0 if plant_id is None
-            error_message=f"Plant {plant_id} not found"
+            plant_id=plant_id,
+            error_message="Plant not found"
         )
         return False, error_update
         
     except Exception as e:
-        logger.error(f"Failed to get moisture for plant {plant_id}: {e}")
+        logger.error(f"Error getting moisture for plant {plant_id}: {e}")
         error_update = MoistureUpdate.error(
             event="plant_moisture_update",
-            plant_id=plant_id or 0,  # Use 0 if plant_id is None
-            error_message=str(e)
+            plant_id=plant_id,
+            error_message=f"Internal error: {str(e)}"
         )
         return False, error_update

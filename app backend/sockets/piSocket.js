@@ -2,6 +2,7 @@ const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { handleSensorAssigned, handleValveAssigned } = require('../controllers/plantAssignmentController');
 const { completePendingPlant } = require('../services/pendingPlantsTracker');
 const { completePendingIrrigation } = require('../services/pendingIrrigationTracker');
+const { completePendingMoistureRequest } = require('../services/pendingMoistureTracker');
 
 let piSocket = null;
 
@@ -223,10 +224,38 @@ function handlePiSocket(ws) {
       const responseData = data.data || {};
 
       if (responseData.status === 'success') {
-        console.log(`🌿 Plant ${responseData.plant_id}: moisture=${responseData.moisture}%`);
-        // TODO: Send moisture data to requesting client
+        console.log(`🌿 Plant ${responseData.plant_id}: moisture=${responseData.moisture}%, temperature=${responseData.temperature}°C`);
+        
+        // Get pending moisture request info
+        const pendingInfo = completePendingMoistureRequest(responseData.plant_id);
+        
+        if (pendingInfo && pendingInfo.ws) {
+          // Send moisture data to requesting client
+          sendSuccess(pendingInfo.ws, 'PLANT_MOISTURE_RESPONSE', {
+            plant_id: responseData.plant_id,
+            moisture: responseData.moisture,
+            temperature: responseData.temperature,
+            status: 'success',
+            message: `Moisture data received for plant ${responseData.plant_id}`
+          });
+          console.log(`📊 Sent moisture data to client for plant ${responseData.plant_id}`);
+        } else {
+          console.log(`⚠️ No pending client found for plant ${responseData.plant_id} moisture request`);
+        }
       } else {
         console.error(`❌ Plant ${responseData.plant_id} moisture read failed: ${responseData.error_message}`);
+        
+        // Get pending moisture request info
+        const pendingInfo = completePendingMoistureRequest(responseData.plant_id);
+        
+        if (pendingInfo && pendingInfo.ws) {
+          // Send error to requesting client
+          sendError(pendingInfo.ws, 'PLANT_MOISTURE_FAIL', {
+            plant_id: responseData.plant_id,
+            error_message: responseData.error_message || 'Failed to read moisture data'
+          });
+          console.log(`❌ Sent moisture error to client for plant ${responseData.plant_id}`);
+        }
       }
       return;
     }
@@ -238,9 +267,12 @@ function handlePiSocket(ws) {
       if (responseData.status === 'success') {
         console.log(`🌿 All plants moisture: ${responseData.total_plants} plants received`);
         responseData.plants?.forEach(plant => {
-          console.log(`   Plant ${plant.plant_id}: ${plant.moisture}%`);
+          console.log(`   Plant ${plant.plant_id}: moisture=${plant.moisture}%, temperature=${plant.temperature}°C`);
         });
-        // TODO: Send all moisture data to requesting client
+        
+        // Broadcast to all connected clients (for now, we'll implement this later)
+        // For now, just log that we received the data
+        console.log(`📊 Received all plants moisture data - ${responseData.total_plants} plants`);
       } else {
         console.error(`❌ All plants moisture request failed: ${responseData.error_message}`);
       }

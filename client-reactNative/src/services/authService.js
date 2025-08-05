@@ -1,4 +1,4 @@
-const ws = new WebSocket('ws://192.168.68.59:8080');
+const ws = new WebSocket('ws://192.168.68.54:8080');
 
 export const connectAndSend = (payload, onMessage, onError) => {
   const handleMessage = (e) => {

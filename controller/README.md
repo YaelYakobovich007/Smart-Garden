@@ -66,7 +66,7 @@ controller/
 
 ### Server Connection
 
-The default server URL is `ws://192.168.68.59:8080`. Update this in:
+The default server URL is . Update this in:
 
 - `run_pi_client.py` (line with `server_url`)
 - `services/websocket_client.py` (default parameter)
@@ -128,7 +128,7 @@ WorkingDirectory=/home/pi/Smart-Garden/controller
 ExecStart=/usr/bin/python3 /home/pi/Smart-Garden/controller/run_pi_client.py
 Restart=always
 RestartSec=10
-Environment=SMART_GARDEN_SERVER_URL=ws://192.168.68.59:8080
+Environment=SMART_GARDEN_SERVER_URL=ws://192.168.68.54:8080
 
 [Install]
 WantedBy=multi-user.target
