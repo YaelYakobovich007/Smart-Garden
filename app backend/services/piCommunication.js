@@ -141,6 +141,56 @@ class PiCommunication {
     }
 
     /**
+     * Send CLOSE_VALVE request to Pi (no waiting)
+     */
+    closeValve(plantId) {
+        console.log('🔍 DEBUG - piCommunication.closeValve called:');
+        console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
+        
+        console.log('🔍 DEBUG - Getting Pi socket...');
+        const piSocket = getPiSocket();
+        console.log('🔍 DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
+        
+        if (!piSocket) {
+            console.log('❌ Pi not connected - cannot close valve');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        console.log('✅ DEBUG - Pi socket found, creating request...');
+        
+        try {
+            const request = {
+                type: 'CLOSE_VALVE',
+                data: {
+                    plant_id: plantId
+                }
+            };
+
+            console.log('📤 DEBUG - Created request object:');
+            console.log('   - type:', request.type);
+            console.log('   - data.plant_id:', request.data.plant_id, '(type:', typeof request.data.plant_id, ')');
+            console.log('   - Full JSON:', JSON.stringify(request));
+
+            console.log('🔍 DEBUG - Converting to JSON string...');
+            const jsonString = JSON.stringify(request);
+            console.log('✅ DEBUG - JSON string created, length:', jsonString.length);
+
+            console.log('🔍 DEBUG - Sending to Pi socket...');
+            piSocket.send(jsonString);
+            console.log('✅ DEBUG - CLOSE_VALVE message sent to Pi successfully');
+            
+            console.log('🔍 DEBUG - Returning success result');
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ ERROR - Error sending CLOSE_VALVE to Pi:');
+            console.error('   - Error message:', error.message);
+            console.error('   - Error stack:', error.stack);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
      * Send OPEN_VALVE request to Pi (no waiting)
      */
     openValve(plantId, timeMinutes) {

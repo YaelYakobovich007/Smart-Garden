@@ -15,7 +15,7 @@ class SmartGardenEngine:
     valve and sensor management, and execution of irrigation.
     """
 
-    def __init__(self, total_valves: int = 4, total_sensors: int = 2):
+    def __init__(self, total_valves: int = 2, total_sensors: int = 2):
         """
         Initializes the SmartGardenEngine with a given number of valves and sensors.
         """

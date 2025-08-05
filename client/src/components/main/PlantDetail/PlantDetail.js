@@ -212,9 +212,9 @@ const PlantDetail = () => {
     setIsManualMode(false);
     setWateringTimeLeft(0);
     
-    // Send stop irrigation command
+    // Send close valve command
     websocketService.sendMessage({
-      type: 'STOP_IRRIGATION',
+      type: 'CLOSE_VALVE',
       plantName: plant.name
     });
   };
@@ -385,11 +385,22 @@ const PlantDetail = () => {
       Alert.alert('Valve Control', data?.message || 'Failed to open valve.');
     };
 
+    const handleCloseValveSuccess = (data) => {
+      console.log('✅ CLOSE_VALVE success:', data);
+      // No alert needed - just update the UI state
+    };
+
+    const handleCloseValveFail = (data) => {
+      Alert.alert('Valve Control', data?.message || 'Failed to close valve.');
+    };
+
     websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleFail);
     websocketService.onMessage('IRRIGATE_SKIPPED', handleSkipped);
     websocketService.onMessage('OPEN_VALVE_SUCCESS', handleOpenValveSuccess);
     websocketService.onMessage('OPEN_VALVE_FAIL', handleOpenValveFail);
+    websocketService.onMessage('CLOSE_VALVE_SUCCESS', handleCloseValveSuccess);
+    websocketService.onMessage('CLOSE_VALVE_FAIL', handleCloseValveFail);
     websocketService.onMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
     websocketService.onMessage('DELETE_PLANT_FAIL', handleDeleteFail);
     websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
@@ -402,6 +413,8 @@ const PlantDetail = () => {
       websocketService.offMessage('IRRIGATE_SKIPPED', handleSkipped);
       websocketService.offMessage('OPEN_VALVE_SUCCESS', handleOpenValveSuccess);
       websocketService.offMessage('OPEN_VALVE_FAIL', handleOpenValveFail);
+      websocketService.offMessage('CLOSE_VALVE_SUCCESS', handleCloseValveSuccess);
+      websocketService.offMessage('CLOSE_VALVE_FAIL', handleCloseValveFail);
       websocketService.offMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
       websocketService.offMessage('DELETE_PLANT_FAIL', handleDeleteFail);
       websocketService.offMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);

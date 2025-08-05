@@ -324,6 +324,105 @@ function handlePiSocket(ws) {
       return;
     }
 
+    // Handle CLOSE_VALVE_RESPONSE from Pi
+    if (data.type === 'CLOSE_VALVE_RESPONSE') {
+      console.log('🔍 DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
+      console.log('   - Full data:', JSON.stringify(data));
+      
+      const responseData = data.data || {};
+      const plantId = responseData.plant_id;
+
+      console.log('🔍 DEBUG - Extracted response data:');
+      console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
+      console.log('   - status:', responseData.status);
+
+      // Get pending irrigation info (websocket + plant data)
+      console.log('🔍 DEBUG - Getting pending irrigation info for plantId:', plantId);
+      const pendingInfo = completePendingIrrigation(plantId);
+      console.log('🔍 DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
+
+      if (responseData.status === 'success') {
+        console.log(`✅ DEBUG - Plant ${plantId} valve closed successfully`);
+        console.log(`   - Message: ${responseData.message}`);
+
+        // Save valve operation result to database
+        const irrigationModel = require('../models/irrigationModel');
+
+        try {
+          const irrigationResult = await irrigationModel.addIrrigationResult({
+            plant_id: plantId,
+            status: 'valve_closed',
+            reason: responseData.message || 'Pi valve closed',
+            moisture: responseData.moisture || null,
+            final_moisture: responseData.moisture || null,
+            water_added_liters: 0, // No water added during valve closing
+            irrigation_time: new Date(),
+            event_data: {
+              ...responseData.event_data || {},
+              valve_operation: 'close'
+            }
+          });
+
+          console.log(`Valve operation result saved to database for plant ${plantId}`);
+
+          // Notify client of successful valve closing
+          if (pendingInfo && pendingInfo.ws) {
+            sendSuccess(pendingInfo.ws, 'CLOSE_VALVE_SUCCESS', {
+              message: `Plant "${pendingInfo.plantData.plant_name}" valve closed successfully!`,
+              result: irrigationResult,
+              valve_data: {
+                operation: 'close'
+              }
+            });
+            console.log(`Notified client: Plant ${pendingInfo.plantData.plant_name} valve closed successfully!`);
+          } else {
+            console.log(`No pending client found for plant ${plantId} valve operation - result saved but client not notified`);
+          }
+
+        } catch (err) {
+          console.error(`❌ Failed to save valve operation result for plant ${plantId}:`, err);
+
+          if (pendingInfo && pendingInfo.ws) {
+            sendError(pendingInfo.ws, 'CLOSE_VALVE_FAIL',
+              `Valve closed but failed to save result: ${err.message}`);
+          }
+        }
+
+      } else {
+        // Valve closing failed
+        console.error(`❌ Plant ${plantId} valve closing failed: ${responseData.error_message}`);
+
+        // Save error result to database
+        const irrigationModel = require('../models/irrigationModel');
+
+        try {
+          const irrigationResult = await irrigationModel.addIrrigationResult({
+            plant_id: plantId,
+            status: 'error',
+            reason: responseData.error_message || 'Pi valve closing failed',
+            moisture: responseData.moisture || null,
+            final_moisture: responseData.moisture || null,
+            water_added_liters: 0,
+            irrigation_time: new Date(),
+            event_data: {
+              ...responseData.event_data || {},
+              valve_operation: 'close_failed'
+            }
+          });
+
+          // Notify client of valve closing failure
+          if (pendingInfo && pendingInfo.ws) {
+            sendError(pendingInfo.ws, 'CLOSE_VALVE_FAIL',
+              `Valve closing failed: ${responseData.error_message || 'Unknown error'}`);
+          }
+
+        } catch (err) {
+          console.error(`❌ Failed to save valve operation error result for plant ${plantId}:`, err);
+        }
+      }
+      return;
+    }
+
     // Handle PLANT_MOISTURE_RESPONSE from Pi
     if (data.type === 'PLANT_MOISTURE_RESPONSE') {
       const responseData = data.data || {};

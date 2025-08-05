@@ -247,6 +247,46 @@ class SmartGardenPiClient:
                 error_message=str(e)
             )
             await self.send_message("OPEN_VALVE_RESPONSE", error_result.to_websocket_data())
+
+    async def handle_close_valve_request(self, data):
+        """Handle close valve request from server."""
+        try:
+            plant_id = data.get("plant_id")
+            
+            if not plant_id:
+                self.logger.error("No plant_id provided in close valve request")
+                return
+            
+            self.logger.info(f"Received CLOSE_VALVE request for plant {plant_id}")
+            
+            # Call the close valve handler
+            from controller.handlers.close_valve_handler import CloseValveHandler
+            handler = CloseValveHandler(self.engine)
+            result = await handler.handle_close_valve_request(data)
+            
+            # Send response back to server
+            response_data = result.to_websocket_data()
+            
+            self.logger.info(f"=== CLOSE_VALVE RESPONSE DEBUG ===")
+            self.logger.info(f"Result status: {result.status}")
+            self.logger.info(f"Result message: {result.message}")
+            self.logger.info(f"Response data keys: {list(response_data.keys())}")
+            self.logger.info(f"Response data values: {response_data}")
+            self.logger.info("====================================")
+                
+            await self.send_message("CLOSE_VALVE_RESPONSE", response_data)
+            
+            self.logger.info(f"Close valve request completed for plant {plant_id}: {result.status}")
+            
+        except Exception as e:
+            self.logger.error(f"Error during close valve: {e}")
+            # Create error DTO for unexpected exceptions
+            from controller.dto.close_valve_request import CloseValveResponse
+            error_result = CloseValveResponse.error(
+                plant_id=plant_id if 'plant_id' in locals() else 0,
+                error_message=str(e)
+            )
+            await self.send_message("CLOSE_VALVE_RESPONSE", error_result.to_websocket_data())
     
     async def handle_message(self, message: str):
         """Process incoming messages from the server."""
@@ -278,6 +318,9 @@ class SmartGardenPiClient:
             
             elif message_type == "OPEN_VALVE":
                 await self.handle_open_valve_request(message_data)
+            
+            elif message_type == "CLOSE_VALVE":
+                await self.handle_close_valve_request(message_data)
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")
@@ -321,6 +364,7 @@ class SmartGardenPiClient:
             self.logger.info("  - GET_ALL_MOISTURE: Get moisture for all plants")
             self.logger.info("  - IRRIGATE_PLANT: Smart irrigation for a specific plant")
             self.logger.info("  - OPEN_VALVE: Open valve for a specific plant for a given duration")
+            self.logger.info("  - CLOSE_VALVE: Close valve for a specific plant")
             
             # Start listening for messages
             await self.listen_for_messages()
