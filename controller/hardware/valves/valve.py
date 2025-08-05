@@ -49,31 +49,52 @@ class Valve:
         Opens the valve for irrigation. If the valve is blocked, raises an error.
         In simulation mode, only prints a message. Otherwise, activates the hardware relay.
         """
+        print(f"🔍 DEBUG - Valve.request_open() called for valve {self.valve_id}")
+        print(f"   - is_blocked: {self.is_blocked}")
+        print(f"   - simulation_mode: {self.simulation_mode}")
+        print(f"   - relay_controller: {self.relay_controller}")
+        
         if self.is_blocked:
+            print(f"❌ ERROR - Valve {self.valve_id} is blocked")
             raise RuntimeError(f"Error: Valve {self.valve_id} is blocked")
 
         if self.simulation_mode:
-            print(f"[SIMULATION] Valve {self.valve_id} ON")
+            print(f"✅ [SIMULATION] Valve {self.valve_id} ON")
         elif self.relay_controller:
+            print(f"🔍 DEBUG - Calling relay_controller.turn_on({self.valve_id})")
             self.relay_controller.turn_on(self.valve_id)
+            print(f"✅ DEBUG - relay_controller.turn_on() completed")
         else:
+            print(f"❌ ERROR - No RelayController connected to Valve {self.valve_id}")
             raise RuntimeError(f"Error: No RelayController connected to Valve {self.valve_id}!")
 
         self.last_irrigation_time = datetime.now()
+        print(f"✅ DEBUG - Valve {self.valve_id} opened successfully")
 
     def request_close(self) -> None:
         """
         Closes the valve. If blocked, raises an error.
         In simulation mode, only prints a message. Otherwise, deactivates the hardware relay.
         """
+        print(f"🔍 DEBUG - Valve.request_close() called for valve {self.valve_id}")
+        print(f"   - is_blocked: {self.is_blocked}")
+        print(f"   - simulation_mode: {self.simulation_mode}")
+        print(f"   - relay_controller: {self.relay_controller}")
+        
         if self.is_blocked:
+            print(f"❌ ERROR - Valve {self.valve_id} is blocked")
             raise RuntimeError(f"Error: Valve {self.valve_id} is blocked")
         if self.simulation_mode:
-            print(f"[SIMULATION] Valve {self.valve_id} OFF")
+            print(f"✅ [SIMULATION] Valve {self.valve_id} OFF")
         elif self.relay_controller:
+            print(f"🔍 DEBUG - Calling relay_controller.turn_off({self.valve_id})")
             self.relay_controller.turn_off(self.valve_id)
+            print(f"✅ DEBUG - relay_controller.turn_off() completed")
         else:
+            print(f"❌ ERROR - No RelayController connected to Valve {self.valve_id}")
             raise RuntimeError(f"Error: No RelayController connected to Valve {self.valve_id}")
+        
+        print(f"✅ DEBUG - Valve {self.valve_id} closed successfully")
 
     def block(self) -> None:
         """

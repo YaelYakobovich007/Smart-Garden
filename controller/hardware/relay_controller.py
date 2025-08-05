@@ -50,12 +50,24 @@ class RelayController:
         Args:
             valve_number (int): The number of the valve to activate.
         """
+        print(f"🔍 DEBUG - RelayController.turn_on() called for valve {valve_number}")
+        print(f"   - simulation_mode: {self.simulation_mode}")
+        print(f"   - device: {self.device}")
+        
+        if self.simulation_mode:
+            print(f"✅ [SIMULATION] Valve {valve_number} ON")
+            return
+            
         if self.device:
             report = [0x00, 0xFF, valve_number]
+            print(f"🔍 DEBUG - Sending report to HID device: {report}")
             self.device.write(report)
-            print(f"Valve {valve_number} ON")
+            print(f"✅ DEBUG - HID write completed for valve {valve_number}")
+            print(f"✅ Valve {valve_number} ON")
         else:
-            print("HID device not connected")
+            print("❌ ERROR - HID device not connected")
+            print("   - simulation_mode:", self.simulation_mode)
+            print("   - device:", self.device)
 
     def turn_off(self, valve_number: int):
         """
@@ -64,12 +76,24 @@ class RelayController:
         Args:
             valve_number (int): The number of the valve to deactivate.
         """
+        print(f"🔍 DEBUG - RelayController.turn_off() called for valve {valve_number}")
+        print(f"   - simulation_mode: {self.simulation_mode}")
+        print(f"   - device: {self.device}")
+        
+        if self.simulation_mode:
+            print(f"✅ [SIMULATION] Valve {valve_number} OFF")
+            return
+            
         if self.device:
             report = [0x00, 0xFD, valve_number]
-            self.device.write(report) 
-            print(f"Valve {valve_number} OFF")
+            print(f"🔍 DEBUG - Sending report to HID device: {report}")
+            self.device.write(report)
+            print(f"✅ DEBUG - HID write completed for valve {valve_number}")
+            print(f"✅ Valve {valve_number} OFF")
         else:
-            print("HID device not connected")
+            print("❌ ERROR - HID device not connected")
+            print("   - simulation_mode:", self.simulation_mode)
+            print("   - device:", self.device)
 
     def close(self):
         """

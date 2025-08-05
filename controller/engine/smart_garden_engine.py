@@ -23,7 +23,7 @@ class SmartGardenEngine:
         self.sensor_manager = SensorManager()
         self.irrigation_algorithm = IrrigationAlgorithm()
         self.plants: Dict[int, Plant] = {}
-        self.relay_controller: RelayController = RelayController(simulation_mode=True)
+        self.relay_controller: RelayController = RelayController(simulation_mode=False)
 
     def add_plant(
             self,
@@ -43,7 +43,7 @@ class SmartGardenEngine:
         sensor_port = self.sensor_manager.assign_sensor(plant_id)
 
         valve = Valve(valve_id, pipe_diameter, water_limit, flow_rate, relay_controller=self.relay_controller,
-                      simulation_mode=True)
+                      simulation_mode=False)
         sensor = Sensor(simulation_mode=False, port=sensor_port)
 
         plant = Plant(plant_id, desired_moisture, sensor, valve, plant_lat, plant_lon)
@@ -225,33 +225,44 @@ class SmartGardenEngine:
         Raises:
             ValueError: If plant_id is not found
         """
+        print(f"🔍 DEBUG - SmartGardenEngine.open_valve() called:")
+        print(f"   - plant_id: {plant_id}")
+        print(f"   - time_minutes: {time_minutes}")
+        
         if plant_id not in self.plants:
+            print(f"❌ ERROR - Plant {plant_id} not found")
             raise ValueError(f"Plant {plant_id} not found")
         
         plant = self.plants[plant_id]
+        print(f"✅ DEBUG - Found plant: {plant_id}")
+        print(f"   - plant.valve.valve_id: {plant.valve.valve_id}")
+        print(f"   - plant.valve.simulation_mode: {plant.valve.simulation_mode}")
+        print(f"   - plant.valve.relay_controller: {plant.valve.relay_controller}")
         
         try:
-            print(f"Opening valve for plant {plant_id} for {time_minutes} minutes")
+            print(f"🔍 DEBUG - Opening valve for plant {plant_id} for {time_minutes} minutes")
             
             # Open the valve using the correct method name
             plant.valve.request_open()
-            print(f"Valve opened successfully for plant {plant_id}")
+            print(f"✅ DEBUG - Valve opened successfully for plant {plant_id}")
             
             # Schedule valve closure after the specified time
             import asyncio
+            print(f"🔍 DEBUG - Waiting {time_minutes} minutes before closing valve")
             await asyncio.sleep(time_minutes * 60)  # Convert minutes to seconds
             
             # Close the valve after the time has elapsed using the correct method name
             plant.valve.request_close()
-            print(f"Valve closed for plant {plant_id} after {time_minutes} minutes")
+            print(f"✅ DEBUG - Valve closed for plant {plant_id} after {time_minutes} minutes")
             
             return True
             
         except Exception as e:
-            print(f"Error opening valve for plant {plant_id}: {e}")
+            print(f"❌ ERROR - Error opening valve for plant {plant_id}: {e}")
             # Ensure valve is closed in case of error
             try:
                 plant.valve.request_close()
-            except:
-                pass
+                print(f"✅ DEBUG - Valve closed due to error")
+            except Exception as close_error:
+                print(f"❌ ERROR - Failed to close valve after error: {close_error}")
             return False
