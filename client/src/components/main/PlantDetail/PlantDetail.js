@@ -34,6 +34,10 @@ const PlantDetail = () => {
   const route = useRoute();
   const { plant } = route.params || {};
 
+  // State for real-time sensor data
+  const [currentMoisture, setCurrentMoisture] = useState(plant?.moisture || 0);
+  const [currentTemperature, setCurrentTemperature] = useState(plant?.temperature || 0);
+
   /**
    * Get plant image based on plant type
    * Maps plant types to local image assets for display
@@ -100,50 +104,57 @@ const PlantDetail = () => {
       Alert.alert('Irrigation', data?.message || 'Failed to irrigate the plant.');
     };
 
-    // Register WebSocket message handlers
-    websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
-    websocketService.onMessage('IRRIGATE_FAIL', handleFail);
-    websocketService.onMessage('IRRIGATE_SKIPPED', handleFail);
+    /**
+     * Handle skipped irrigation response
+     * Shows info alert to user
+     * @param {Object} data - Server response data
+     */
+    const handleSkipped = (data) => {
+      Alert.alert('Irrigation', data?.message || 'Irrigation was skipped.');
+    };
 
     /**
-     * Handle successful plant deletion
-     * Shows success alert and navigates back to main screen
+     * Handle successful plant deletion response
+     * Shows success alert and navigates back
      * @param {Object} data - Server response data
      */
     const handleDeleteSuccess = (data) => {
-      Alert.alert('Success', 'Plant deleted successfully!', [
+      Alert.alert('Delete Plant', data?.message || 'Plant deleted successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     };
 
     /**
-     * Handle failed plant deletion
+     * Handle failed plant deletion response
      * Shows error alert to user
      * @param {Object} data - Server response data
      */
     const handleDeleteFail = (data) => {
-      Alert.alert('Error', data?.message || 'Failed to delete the plant.');
+      Alert.alert('Delete Plant', data?.message || 'Failed to delete plant.');
     };
-
-    // Register deletion message handlers
-    websocketService.onMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
-    websocketService.onMessage('DELETE_PLANT_FAIL', handleDeleteFail);
 
     /**
      * Handle successful moisture response
-     * Shows current humidity level to user
+     * Updates the moisture and temperature circles with real-time data
      * @param {Object} data - Server response data
      */
     const handleMoistureSuccess = (data) => {
       if (data.moisture !== undefined) {
-        Alert.alert(
-          'Current Humidity', 
-          `The current humidity level for ${plant.name} is ${data.moisture.toFixed(1)}%`,
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert('Humidity Data', data?.message || 'Humidity data received successfully!');
+        setCurrentMoisture(data.moisture);
+        console.log(`📊 Updated moisture for ${plant.name}: ${data.moisture}%`);
       }
+      
+      if (data.temperature !== undefined) {
+        setCurrentTemperature(data.temperature);
+        console.log(`🌡️ Updated temperature for ${plant.name}: ${data.temperature}°C`);
+      }
+      
+      // Show success alert
+      Alert.alert(
+        'Sensor Data Updated', 
+        `Current moisture: ${data.moisture?.toFixed(1) || 'N/A'}%\nCurrent temperature: ${data.temperature?.toFixed(1) || 'N/A'}°C`,
+        [{ text: 'OK' }]
+      );
     };
 
     /**
@@ -152,10 +163,15 @@ const PlantDetail = () => {
      * @param {Object} data - Server response data
      */
     const handleMoistureFail = (data) => {
-      Alert.alert('Humidity Error', data?.message || 'Failed to get humidity data.');
+      Alert.alert('Sensor Error', data?.message || 'Failed to get sensor data.');
     };
 
-    // Register moisture message handlers
+    // Register WebSocket message handlers
+    websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
+    websocketService.onMessage('IRRIGATE_FAIL', handleFail);
+    websocketService.onMessage('IRRIGATE_SKIPPED', handleSkipped);
+    websocketService.onMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
+    websocketService.onMessage('DELETE_PLANT_FAIL', handleDeleteFail);
     websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
     websocketService.onMessage('GET_MOISTURE_SUCCESS', handleMoistureSuccess);
     websocketService.onMessage('GET_MOISTURE_FAIL', handleMoistureFail);
@@ -174,7 +190,7 @@ const PlantDetail = () => {
       websocketService.onMessage('GET_MOISTURE_SUCCESS', () => { });
       websocketService.onMessage('GET_MOISTURE_FAIL', () => { });
     };
-  }, [navigation]);
+  }, [navigation, plant.name]);
 
   /**
    * Handle plant watering action
@@ -193,8 +209,8 @@ const PlantDetail = () => {
   };
 
   /**
-   * Handle get current humidity action
-   * Requests current moisture level for the specific plant
+   * Handle get current sensor data action
+   * Requests current moisture and temperature for the specific plant
    */
   const handleGetCurrentHumidity = () => {
     if (!plant?.name) {
@@ -212,7 +228,7 @@ const PlantDetail = () => {
       type: 'GET_PLANT_MOISTURE',
       plantName: plant.name
     });
-    Alert.alert('Humidity Request', 'Requesting current humidity level. Please wait...');
+    Alert.alert('Sensor Request', 'Requesting current moisture and temperature data. Please wait...');
   };
 
   /**
@@ -230,13 +246,13 @@ const PlantDetail = () => {
       `Are you sure you want to delete "${plant.name}"? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
+        { 
+          text: 'Delete', 
           style: 'destructive',
           onPress: () => {
             websocketService.sendMessage({
               type: 'DELETE_PLANT',
-              plantName: plant.name,
+              plantName: plant.name
             });
           }
         }
@@ -245,7 +261,7 @@ const PlantDetail = () => {
   };
 
   /**
-   * Render the plant detail screen
+   * Main render function for the PlantDetail component
    * Includes header, plant image, information, and action buttons
    */
   return (
@@ -305,12 +321,12 @@ const PlantDetail = () => {
 
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <MoistureCircle percent={plant.moisture} />
-              <Text style={styles.statLabel}>Humidity</Text>
+              <MoistureCircle percent={currentMoisture} />
+              <Text style={styles.statLabel}>Moisture</Text>
             </View>
 
             <View style={styles.statCard}>
-              <TempCircle value={plant.temperature} />
+              <TempCircle value={currentTemperature} />
               <Text style={styles.statLabel}>Temperature</Text>
             </View>
           </View>
@@ -327,7 +343,7 @@ const PlantDetail = () => {
 
           <TouchableOpacity style={styles.humidityButton} onPress={handleGetCurrentHumidity}>
             <Feather name="thermometer" size={20} color="#FFFFFF" />
-            <Text style={styles.humidityButtonText}>Get Current Humidity</Text>
+            <Text style={styles.humidityButtonText}>Get Current Sensor Data</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.scheduleButton}>
