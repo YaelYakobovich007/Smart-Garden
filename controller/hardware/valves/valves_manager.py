@@ -12,7 +12,8 @@ class ValvesManager:
     """
     def __init__(self, total_valves):
         self.total_valves: int = total_valves
-        self.available_valves: deque[int] = deque(range(total_valves))
+        # Relay channels are 1-4, so valves should be 1-4, not 0-3
+        self.available_valves: deque[int] = deque(range(1, total_valves + 1))
         self.plant_valve_map: Dict[int, int] = {}  # plant_id -> valve_id
 
     def get_valve_id(self, plant_id):
