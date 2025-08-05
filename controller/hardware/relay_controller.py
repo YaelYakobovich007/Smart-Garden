@@ -10,7 +10,7 @@ class RelayController:
         device (hid.device | None): The HID device object (or None in simulation/failure).
     """
      
-    def __init__(self,simulation_mode=True, vendor_id=0x16C0, product_id=0x05DF):
+    def __init__(self,simulation_mode=False, vendor_id=0x16C0, product_id=0x05DF):
         """
         Initializes the relay controller.
 
