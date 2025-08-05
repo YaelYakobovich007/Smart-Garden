@@ -167,45 +167,24 @@ class SmartGardenPiClient:
 
     async def handle_irrigate_plant_request(self, data):
         """Handle irrigation request from server."""
-        self.logger.info(f"Received IRRIGATE_PLANT command from server")
-        
-        plant_id = data.get("plantId")
-        if not plant_id:
-            # Create error DTO for missing plant ID
-            from controller.dto.irrigation_result import IrrigationResult
-            error_result = IrrigationResult.error(
-                plant_id=0,  # Use 0 for unknown plant_id
-                error_message="Missing plantId"
-            )
-            await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
-            return
-        
         try:
-            # Get plant from engine
-            plant = self.engine.get_plant_by_id(plant_id)
-            if not plant:
-                # Create error DTO for plant not found
-                from controller.dto.irrigation_result import IrrigationResult
-                error_result = IrrigationResult.error(
-                    plant_id=plant_id,
-                    error_message=f"Plant {plant_id} not found"
-                )
-                await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
+            plant_id = data.get("plant_id")
+            if not plant_id:
+                self.logger.error("No plant_id provided in irrigation request")
                 return
             
-            # Use existing irrigation algorithm
-            from controller.irrigation.irrigation_algorithm import IrrigationAlgorithm
-            irrigation_algo = IrrigationAlgorithm()
+            self.logger.info(f"Received IRRIGATE_PLANT request for plant {plant_id}")
             
-            # Perform irrigation - this now returns the proper DTO
-            result = await irrigation_algo.irrigate(plant)
+            # Call the irrigation algorithm
+            from controller.handlers.irrigate_plant_handler import handle
+            result = await handle(self.engine, plant_id)
             
-            # Send response back to server using DTO
+            # Send response back to server
             response_data = result.to_websocket_data()
             
-            # Log the response message details (like add_plant handler)
-            self.logger.info("=== IRRIGATE_PLANT RESPONSE DEBUG ===")
-            self.logger.info(f"Response DTO: {result}")
+            self.logger.info(f"=== IRRIGATION RESPONSE DEBUG ===")
+            self.logger.info(f"Result status: {result.status}")
+            self.logger.info(f"Result message: {result.message}")
             self.logger.info(f"Response data keys: {list(response_data.keys())}")
             self.logger.info(f"Response data values: {response_data}")
             self.logger.info("====================================")
@@ -223,6 +202,51 @@ class SmartGardenPiClient:
                 error_message=str(e)
             )
             await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
+
+    async def handle_open_valve_request(self, data):
+        """Handle open valve request from server."""
+        try:
+            plant_id = data.get("plant_id")
+            time_minutes = data.get("time_minutes")
+            
+            if not plant_id:
+                self.logger.error("No plant_id provided in open valve request")
+                return
+            
+            if not time_minutes:
+                self.logger.error("No time_minutes provided in open valve request")
+                return
+            
+            self.logger.info(f"Received OPEN_VALVE request for plant {plant_id}, duration: {time_minutes} minutes")
+            
+            # Call the open valve handler
+            from controller.handlers.open_valve_handler import OpenValveHandler
+            handler = OpenValveHandler(self.engine)
+            result = await handler.handle(plant_id, time_minutes)
+            
+            # Send response back to server
+            response_data = result.to_websocket_data()
+            
+            self.logger.info(f"=== OPEN_VALVE RESPONSE DEBUG ===")
+            self.logger.info(f"Result status: {result.status}")
+            self.logger.info(f"Result message: {result.message}")
+            self.logger.info(f"Response data keys: {list(response_data.keys())}")
+            self.logger.info(f"Response data values: {response_data}")
+            self.logger.info("====================================")
+                
+            await self.send_message("OPEN_VALVE_RESPONSE", response_data)
+            
+            self.logger.info(f"Open valve request completed for plant {plant_id}: {result.status}")
+            
+        except Exception as e:
+            self.logger.error(f"Error during open valve: {e}")
+            # Create error DTO for unexpected exceptions
+            from controller.dto.open_valve_request import OpenValveResponse
+            error_result = OpenValveResponse.error(
+                plant_id=plant_id if 'plant_id' in locals() else 0,
+                error_message=str(e)
+            )
+            await self.send_message("OPEN_VALVE_RESPONSE", error_result.to_websocket_data())
     
     async def handle_message(self, message: str):
         """Process incoming messages from the server."""
@@ -251,6 +275,9 @@ class SmartGardenPiClient:
             
             elif message_type == "IRRIGATE_PLANT":
                 await self.handle_irrigate_plant_request(message_data)
+            
+            elif message_type == "OPEN_VALVE":
+                await self.handle_open_valve_request(message_data)
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")
@@ -292,6 +319,8 @@ class SmartGardenPiClient:
             self.logger.info("  - ADD_PLANT: Add a new plant to the system")
             self.logger.info("  - GET_PLANT_MOISTURE: Get moisture for a specific plant")
             self.logger.info("  - GET_ALL_MOISTURE: Get moisture for all plants")
+            self.logger.info("  - IRRIGATE_PLANT: Smart irrigation for a specific plant")
+            self.logger.info("  - OPEN_VALVE: Open valve for a specific plant for a given duration")
             
             # Start listening for messages
             await self.listen_for_messages()

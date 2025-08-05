@@ -210,3 +210,48 @@ class SmartGardenEngine:
             Optional[Plant]: The plant object if found, None otherwise
         """
         return self.plants.get(plant_id)
+
+    async def open_valve(self, plant_id: int, time_minutes: int) -> bool:
+        """
+        Opens the valve for a specific plant for a given duration.
+        
+        Args:
+            plant_id (int): The ID of the plant whose valve should be opened
+            time_minutes (int): Duration in minutes to keep the valve open
+            
+        Returns:
+            bool: True if valve was successfully opened, False otherwise
+            
+        Raises:
+            ValueError: If plant_id is not found
+        """
+        if plant_id not in self.plants:
+            raise ValueError(f"Plant {plant_id} not found")
+        
+        plant = self.plants[plant_id]
+        
+        try:
+            print(f"Opening valve for plant {plant_id} for {time_minutes} minutes")
+            
+            # Open the valve
+            plant.valve.open()
+            print(f"Valve opened successfully for plant {plant_id}")
+            
+            # Schedule valve closure after the specified time
+            import asyncio
+            await asyncio.sleep(time_minutes * 60)  # Convert minutes to seconds
+            
+            # Close the valve after the time has elapsed
+            plant.valve.close()
+            print(f"Valve closed for plant {plant_id} after {time_minutes} minutes")
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error opening valve for plant {plant_id}: {e}")
+            # Ensure valve is closed in case of error
+            try:
+                plant.valve.close()
+            except:
+                pass
+            return False

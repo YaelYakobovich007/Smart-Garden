@@ -11,6 +11,7 @@ const SIMULATION_MODE = process.env.SIMULATION_MODE === 'true';
 const irrigationHandlers = {
   UPDATE_PLANT_SCHEDULE: handleUpdatePlantSchedule,
   IRRIGATE_PLANT: handleIrrigatePlant,
+  OPEN_VALVE: handleOpenValve,
   GET_IRRIGATION_RESULT: handleGetIrrigationResult
 };
 
@@ -72,6 +73,37 @@ async function handleIrrigatePlant(data, ws, email) {
     // Pi not connected - return error 
     return sendError(ws, 'IRRIGATE_FAIL',
       'Pi controller not connected. Cannot irrigate plant. Please try again when Pi is online.');
+  }
+}
+
+// Open valve for a specific duration
+async function handleOpenValve(data, ws, email) {
+  const { plantName, timeMinutes } = data;
+  if (!plantName) return sendError(ws, 'OPEN_VALVE_FAIL', 'Missing plantName');
+  if (!timeMinutes || timeMinutes <= 0) return sendError(ws, 'OPEN_VALVE_FAIL', 'Invalid timeMinutes');
+  
+  const user = await getUser(email);
+  if (!user) return sendError(ws, 'OPEN_VALVE_FAIL', 'User not found');
+  const plant = await getPlantByName(user.id, plantName);
+  if (!plant) return sendError(ws, 'OPEN_VALVE_FAIL', 'Plant not found');
+
+  // Send open valve request to Pi controller
+  const piResult = piCommunication.openValve(plant.plant_id, timeMinutes);
+
+  if (piResult.success) {
+    // Pi is connected - add to pending list and wait for open valve result
+    addPendingIrrigation(plant.plant_id, ws, email, {
+      plant_id: plant.plant_id,
+      plant_name: plant.name,
+      ideal_moisture: plant.ideal_moisture
+    });
+
+    console.log(`⏳ Open valve request for plant ${plant.plant_id} (${plant.name}) for ${timeMinutes} minutes sent to Pi controller...`);
+    // No immediate response - client will get success/failure when Pi responds with open valve result
+  } else {
+    // Pi not connected - return error 
+    return sendError(ws, 'OPEN_VALVE_FAIL',
+      'Pi controller not connected. Cannot open valve. Please try again when Pi is online.');
   }
 }
 

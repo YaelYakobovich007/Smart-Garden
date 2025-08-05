@@ -35,7 +35,7 @@ class PiCommunication {
                 }
             };
 
-            console.log('🚀 Sending ADD_PLANT to Pi:');
+            console.log('Sending ADD_PLANT to Pi:');
             console.log(`   - Plant ID: ${request.data.plantId} (type: ${typeof request.data.plantId})`);
             console.log(`   - Plant Name: ${plantData.name}`);
             console.log(`   - Desired Moisture: ${request.data.desiredMoisture} (type: ${typeof request.data.desiredMoisture})`);
@@ -71,7 +71,7 @@ class PiCommunication {
                 }
             };
 
-            console.log(`🌿 Requesting moisture for plant ${plantId}`);
+            console.log(`Requesting moisture for plant ${plantId}`);
             piSocket.send(JSON.stringify(request));
 
             return { success: true };
@@ -98,7 +98,7 @@ class PiCommunication {
                 data: {}
             };
 
-            console.log('🌿 Requesting moisture for all plants');
+            console.log('Requesting moisture for all plants');
             piSocket.send(JSON.stringify(request));
 
             return { success: true };
@@ -127,7 +127,7 @@ class PiCommunication {
                 }
             };
 
-            console.log('🚀 Sending IRRIGATE_PLANT to Pi:');
+            console.log('Sending IRRIGATE_PLANT to Pi:');
             console.log(`   - Plant ID: ${plantId} (type: ${typeof plantId})`);
             console.log(`   - Full JSON: ${JSON.stringify(request)}`);
 
@@ -136,6 +136,39 @@ class PiCommunication {
 
         } catch (error) {
             console.error('Error sending IRRIGATE_PLANT to Pi:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Send OPEN_VALVE request to Pi (no waiting)
+     */
+    openValve(plantId, timeMinutes) {
+        const piSocket = getPiSocket();
+        if (!piSocket) {
+            console.log('Pi not connected - cannot open valve');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        try {
+            const request = {
+                type: 'OPEN_VALVE',
+                data: {
+                    plant_id: plantId,
+                    time_minutes: timeMinutes
+                }
+            };
+
+            console.log('Sending OPEN_VALVE to Pi:');
+            console.log(`   - Plant ID: ${plantId} (type: ${typeof plantId})`);
+            console.log(`   - Time Minutes: ${timeMinutes} (type: ${typeof timeMinutes})`);
+            console.log(`   - Full JSON: ${JSON.stringify(request)}`);
+
+            piSocket.send(JSON.stringify(request));
+            return { success: true };
+
+        } catch (error) {
+            console.error('Error sending OPEN_VALVE to Pi:', error);
             return { success: false, error: error.message };
         }
     }

@@ -28,6 +28,7 @@ class WebSocketService {
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 1000;
     this.messageHandlers = new Map();
+    this.connectionHandlers = []; // Initialize the array
     this.connectionState = 'disconnected';
     
     // Auto-reconnect settings

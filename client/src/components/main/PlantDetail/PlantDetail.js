@@ -15,15 +15,17 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
+  Image,
+  TouchableOpacity,
+  ScrollView,
   SafeAreaView,
   StatusBar,
-  TouchableOpacity,
-  Image,
   Alert,
-  ScrollView,
+  Modal,
+  PanResponder
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
 import { styles } from './styles';
 import MoistureCircle from '../PlantList/MoistureCircle';
 import TempCircle from '../PlantList/TempCircle';
@@ -37,204 +39,248 @@ const PlantDetail = () => {
   // State for real-time sensor data
   const [currentMoisture, setCurrentMoisture] = useState(plant?.moisture || 0);
   const [currentTemperature, setCurrentTemperature] = useState(plant?.temperature || 0);
+  
+  // New state for enhanced features
+  const [isWateringActive, setIsWateringActive] = useState(false);
+  const [wateringTimeLeft, setWateringTimeLeft] = useState(0); // in seconds
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedTime, setSelectedTime] = useState(10); // default 10 minutes
+  const [isManualMode, setIsManualMode] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [timerInterval, setTimerInterval] = useState(null);
 
-  /**
-   * Get plant image based on plant type
-   * Maps plant types to local image assets for display
-   * @param {string} plantType - Type of plant
-   * @returns {Object} Image source object
-   */
-  const getPlantImage = (plantType) => {
-    // Use actual plant images based on plant type
-    switch (plantType.toLowerCase()) {
-      case 'rose':
-        return require('../../../data/plants/rose_plant.png');
-      case 'basil':
-        return require('../../../data/plants/basil_plant.png');
-      case 'monstera':
-        return require('../../../data/plants/monstera_plant.png');
-      case 'petunia':
-        return require('../../../data/plants/Petunia_plant.png');
-      case 'marigold':
-        return require('../../../data/plants/marigold_plant.png');
-      case 'cyclamen':
-        return require('../../../data/plants/cyclamen_plant.png');
-      case 'sansevieria':
-        return require('../../../data/plants/sansevieria_plant.png');
-      default:
-        // Fallback to the original image if plant type doesn't match
-        return require('../../../../assets/images/Branch_With_Leafs.png');
-    }
+  // Available irrigation times (in minutes) - using the enhanced timer options
+  const irrigationTimes = [5, 10, 15, 20, 30, 45, 60];
+
+  // Get angle from duration (matching the enhanced timer logic)
+  const getAngleFromDuration = (duration) => {
+    const index = irrigationTimes.indexOf(duration);
+    return (index * (360 / irrigationTimes.length)) - 90; // Evenly spaced around circle, starting from top
   };
 
-  /**
-   * Render error state when plant data is not available
-   * Shows error message when plant parameter is missing
-   */
-  if (!plant) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Plant not found</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  /**
-   * Set up WebSocket message handlers for plant management
-   * Handles irrigation responses and plant deletion responses
-   */
-  useEffect(() => {
-    /**
-     * Handle successful irrigation response
-     * Shows success alert to user
-     * @param {Object} data - Server response data
-     */
-    const handleSuccess = (data) => {
-      Alert.alert('Irrigation', data?.message || 'Irrigation performed successfully!');
-    };
-
-    /**
-     * Handle failed irrigation response
-     * Shows error alert to user
-     * @param {Object} data - Server response data
-     */
-    const handleFail = (data) => {
-      Alert.alert('Irrigation', data?.message || 'Failed to irrigate the plant.');
-    };
-
-    /**
-     * Handle skipped irrigation response
-     * Shows info alert to user
-     * @param {Object} data - Server response data
-     */
-    const handleSkipped = (data) => {
-      Alert.alert('Irrigation', data?.message || 'Irrigation was skipped.');
-    };
-
-    /**
-     * Handle successful plant deletion response
-     * Shows success alert and navigates back
-     * @param {Object} data - Server response data
-     */
-    const handleDeleteSuccess = (data) => {
-      Alert.alert('Delete Plant', data?.message || 'Plant deleted successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
-    };
-
-    /**
-     * Handle failed plant deletion response
-     * Shows error alert to user
-     * @param {Object} data - Server response data
-     */
-    const handleDeleteFail = (data) => {
-      Alert.alert('Delete Plant', data?.message || 'Failed to delete plant.');
-    };
-
-    /**
-     * Handle successful moisture response
-     * Updates the moisture and temperature circles with real-time data
-     * @param {Object} data - Server response data
-     */
-    const handleMoistureSuccess = (data) => {
-      if (data.moisture !== undefined) {
-        setCurrentMoisture(data.moisture);
-        console.log(`📊 Updated moisture for ${plant.name}: ${data.moisture}%`);
-      }
-      
-      if (data.temperature !== undefined) {
-        setCurrentTemperature(data.temperature);
-        console.log(`🌡️ Updated temperature for ${plant.name}: ${data.temperature}°C`);
-      }
-      
-      // Show success alert
-      Alert.alert(
-        'Sensor Data Updated', 
-        `Current moisture: ${data.moisture?.toFixed(1) || 'N/A'}%\nCurrent temperature: ${data.temperature?.toFixed(1) || 'N/A'}°C`,
-        [{ text: 'OK' }]
-      );
-    };
-
-    /**
-     * Handle failed moisture response
-     * Shows error alert to user
-     * @param {Object} data - Server response data
-     */
-    const handleMoistureFail = (data) => {
-      Alert.alert('Sensor Error', data?.message || 'Failed to get sensor data.');
-    };
-
-    // Register WebSocket message handlers
-    websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
-    websocketService.onMessage('IRRIGATE_FAIL', handleFail);
-    websocketService.onMessage('IRRIGATE_SKIPPED', handleSkipped);
-    websocketService.onMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
-    websocketService.onMessage('DELETE_PLANT_FAIL', handleDeleteFail);
-    websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
-    websocketService.onMessage('GET_MOISTURE_SUCCESS', handleMoistureSuccess);
-    websocketService.onMessage('GET_MOISTURE_FAIL', handleMoistureFail);
-
-    /**
-     * Cleanup function to remove message handlers
-     * Prevents memory leaks when component unmounts
-     */
-    return () => {
-      websocketService.onMessage('IRRIGATE_SUCCESS', () => { });
-      websocketService.onMessage('IRRIGATE_FAIL', () => { });
-      websocketService.onMessage('IRRIGATE_SKIPPED', () => { });
-      websocketService.onMessage('DELETE_PLANT_SUCCESS', () => { });
-      websocketService.onMessage('DELETE_PLANT_FAIL', () => { });
-      websocketService.onMessage('PLANT_MOISTURE_RESPONSE', () => { });
-      websocketService.onMessage('GET_MOISTURE_SUCCESS', () => { });
-      websocketService.onMessage('GET_MOISTURE_FAIL', () => { });
-    };
-  }, [navigation, plant.name]);
-
-  /**
-   * Handle plant watering action
-   * Sends irrigation command to server via WebSocket
-   */
-  const handleWaterPlant = () => {
-    if (!plant?.name) {
-      Alert.alert('Error', 'Plant name is missing.');
-      return;
-    }
-    websocketService.sendMessage({
-      type: 'IRRIGATE_PLANT',
-      plantName: plant.name,
-    });
-    Alert.alert('Irrigation', 'Irrigation command sent. Please wait for result.');
-  };
-
-  /**
-   * Handle get current sensor data action
-   * Requests current moisture and temperature for the specific plant
-   */
-  const handleGetCurrentHumidity = () => {
-    if (!plant?.name) {
-      Alert.alert('Error', 'Plant name is missing.');
-      return;
-    }
+  // Get duration from angle (matching the enhanced timer logic)
+  const getDurationFromAngle = (angle) => {
+    // Normalize angle to 0-360
+    let normalizedAngle = ((angle + 90) % 360 + 360) % 360;
     
+    // Find the closest time option
+    const segmentSize = 360 / irrigationTimes.length;
+    const segmentIndex = Math.round(normalizedAngle / segmentSize) % irrigationTimes.length;
+    return irrigationTimes[segmentIndex];
+  };
+
+  // Format duration for display
+  const formatDuration = (minutes) => {
+    if (minutes >= 60) {
+      return '1h';
+    }
+    return `${minutes}m`;
+  };
+
+  // Interactive circular dial state
+  const [dialCenter, setDialCenter] = useState({ x: 100, y: 100 });
+  const [dialRadius, setDialRadius] = useState(80);
+  const [draggablePoint, setDraggablePoint] = useState({ x: 100, y: 20 }); // Start at top (10 minutes)
+
+  // Handle time selection
+  const handleTimeSelection = (time) => {
+    setSelectedTime(time);
+  };
+
+  // PanResponder for draggable point
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: (evt, gestureState) => {
+      // Store initial position
+    },
+    onPanResponderMove: (evt, gestureState) => {
+      const { moveX, moveY } = gestureState;
+      
+      // Calculate angle from center
+      const deltaX = moveX - dialCenter.x;
+      const deltaY = moveY - dialCenter.y;
+      const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+      
+      // Calculate new point position on circle
+      const newX = dialCenter.x + dialRadius * Math.cos(angle * Math.PI / 180);
+      const newY = dialCenter.y + dialRadius * Math.sin(angle * Math.PI / 180);
+      
+      setDraggablePoint({ x: newX, y: newY });
+      
+      // Update selected time using the React code logic
+      const newTime = getDurationFromAngle(angle);
+      setSelectedTime(newTime);
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      // Snap to nearest time marker
+      const { moveX, moveY } = gestureState;
+      const deltaX = moveX - dialCenter.x;
+      const deltaY = moveY - dialCenter.y;
+      const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+      
+      const snappedTime = getDurationFromAngle(angle);
+      setSelectedTime(snappedTime);
+      
+      // Update point position to snapped position
+      const snappedAngle = getAngleFromDuration(snappedTime);
+      const snappedX = dialCenter.x + dialRadius * Math.cos(snappedAngle * Math.PI / 180);
+      const snappedY = dialCenter.y + dialRadius * Math.sin(snappedAngle * Math.PI / 180);
+      setDraggablePoint({ x: snappedX, y: snappedY });
+    }
+  });
+
+  // Countdown timer effect
+  useEffect(() => {
+    let interval;
+    if (isWateringActive && wateringTimeLeft > 0) {
+      interval = setInterval(() => {
+        setWateringTimeLeft(prev => {
+          if (prev <= 1) {
+            setIsWateringActive(false);
+            // Stop irrigation automatically
+            handleStopWatering();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      setTimerInterval(interval);
+    }
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isWateringActive, wateringTimeLeft]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Smart irrigation handler
+  const handleSmartIrrigation = () => {
+    if (!plant?.name) {
+      Alert.alert('Error', 'Plant name is missing.');
+      return;
+    }
+
     if (!websocketService.isConnected()) {
       Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
       return;
     }
 
-    // Request moisture for this specific plant using plant name
+    websocketService.sendMessage({
+      type: 'IRRIGATE_PLANT',
+      plantName: plant.name
+    });
+  };
+
+  // Manual irrigation handlers
+  const handleManualIrrigation = () => {
+    setShowTimePicker(true);
+  };
+
+  const handleStartManualIrrigation = () => {
+    setShowTimePicker(false);
+    setIsManualMode(true);
+    setIsWateringActive(true);
+    setWateringTimeLeft(selectedTime * 60); // Convert minutes to seconds
+    
+    // Send OPEN_VALVE command to server
+    websocketService.sendMessage({
+      type: 'OPEN_VALVE',
+      plantName: plant.name,
+      timeMinutes: selectedTime
+    });
+  };
+
+  const handleStopWatering = () => {
+    setIsWateringActive(false);
+    setIsManualMode(false);
+    setWateringTimeLeft(0);
+    
+    // Send stop irrigation command
+    websocketService.sendMessage({
+      type: 'STOP_IRRIGATION',
+      plantName: plant.name
+    });
+  };
+
+  // Timer control functions
+  const pauseTimer = () => {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      setTimerInterval(null);
+    }
+    setIsWateringActive(false);
+  };
+
+  const resumeTimer = () => {
+    setIsWateringActive(true);
+    const interval = setInterval(() => {
+      setWateringTimeLeft(prev => {
+        if (prev <= 1) {
+          setIsWateringActive(false);
+          clearInterval(interval);
+          setTimerInterval(null);
+          handleStopWatering();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    setTimerInterval(interval);
+  };
+
+  const resetTimer = () => {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      setTimerInterval(null);
+    }
+    setIsWateringActive(false);
+    setWateringTimeLeft(0);
+    handleStopWatering();
+  };
+
+  // Existing handlers
+  const handleWaterPlant = () => {
+    if (!plant?.name) {
+      Alert.alert('Error', 'Plant name is missing.');
+      return;
+    }
+
+    if (!websocketService.isConnected()) {
+      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
+      return;
+    }
+
+    websocketService.sendMessage({
+      type: 'IRRIGATE_PLANT',
+      plantName: plant.name
+    });
+  };
+
+  const handleGetCurrentHumidity = () => {
+    if (!plant?.name) {
+      Alert.alert('Error', 'Plant name is missing.');
+      return;
+    }
+
+    if (!websocketService.isConnected()) {
+      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
+      return;
+    }
+
     websocketService.sendMessage({
       type: 'GET_PLANT_MOISTURE',
       plantName: plant.name
     });
-    Alert.alert('Sensor Request', 'Requesting current moisture and temperature data. Please wait...');
   };
 
-  /**
-   * Handle plant deletion action
-   * Shows confirmation dialog and sends deletion command
-   */
   const handleDeletePlant = () => {
     if (!plant?.name) {
       Alert.alert('Error', 'Plant name is missing.');
@@ -260,15 +306,106 @@ const PlantDetail = () => {
     );
   };
 
-  /**
-   * Main render function for the PlantDetail component
-   * Includes header, plant image, information, and action buttons
-   */
+  const getPlantImage = (plantType) => {
+    const plantImages = {
+      'Basil': require('../../../data/plants/basil_plant.png'),
+      'Cyclamen': require('../../../data/plants/cyclamen_plant.png'),
+      'Marigold': require('../../../data/plants/marigold_plant.png'),
+      'Monstera': require('../../../data/plants/monstera_plant.png'),
+      'Petunia': require('../../../data/plants/Petunia_plant.png'),
+      'Rose': require('../../../data/plants/rose_plant.png'),
+      'Sansevieria': require('../../../data/plants/sansevieria_plant.png'),
+    };
+    return plantImages[plantType] || plantImages['Basil'];
+  };
+
+  if (!plant) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Plant not found</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  useEffect(() => {
+    const handleSuccess = (data) => {
+      Alert.alert('Irrigation', data?.message || 'Irrigation performed successfully!');
+    };
+
+    const handleFail = (data) => {
+      Alert.alert('Irrigation', data?.message || 'Failed to irrigate the plant.');
+    };
+
+    const handleSkipped = (data) => {
+      Alert.alert('Irrigation', data?.message || 'Irrigation was skipped.');
+    };
+
+    const handleDeleteSuccess = (data) => {
+      Alert.alert('Delete Plant', data?.message || 'Plant deleted successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    };
+
+    const handleDeleteFail = (data) => {
+      Alert.alert('Delete Plant', data?.message || 'Failed to delete plant.');
+    };
+
+    const handleMoistureSuccess = (data) => {
+      if (data.moisture !== undefined) {
+        setCurrentMoisture(data.moisture);
+        console.log(`📊 Updated moisture for ${plant.name}: ${data.moisture}%`);
+      }
+      
+      if (data.temperature !== undefined) {
+        setCurrentTemperature(data.temperature);
+        console.log(`🌡️ Updated temperature for ${plant.name}: ${data.temperature}°C`);
+      }
+    };
+
+    const handleMoistureFail = (data) => {
+      Alert.alert('Sensor Error', data?.message || 'Failed to get sensor data.');
+    };
+
+    const handleOpenValveSuccess = (data) => {
+      Alert.alert('Valve Control', data?.message || 'Valve opened successfully!');
+    };
+
+    const handleOpenValveFail = (data) => {
+      Alert.alert('Valve Control', data?.message || 'Failed to open valve.');
+    };
+
+    websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
+    websocketService.onMessage('IRRIGATE_FAIL', handleFail);
+    websocketService.onMessage('IRRIGATE_SKIPPED', handleSkipped);
+    websocketService.onMessage('OPEN_VALVE_SUCCESS', handleOpenValveSuccess);
+    websocketService.onMessage('OPEN_VALVE_FAIL', handleOpenValveFail);
+    websocketService.onMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
+    websocketService.onMessage('DELETE_PLANT_FAIL', handleDeleteFail);
+    websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
+    websocketService.onMessage('GET_MOISTURE_SUCCESS', handleMoistureSuccess);
+    websocketService.onMessage('GET_MOISTURE_FAIL', handleMoistureFail);
+
+    return () => {
+      websocketService.offMessage('IRRIGATE_SUCCESS', handleSuccess);
+      websocketService.offMessage('IRRIGATE_FAIL', handleFail);
+      websocketService.offMessage('IRRIGATE_SKIPPED', handleSkipped);
+      websocketService.offMessage('OPEN_VALVE_SUCCESS', handleOpenValveSuccess);
+      websocketService.offMessage('OPEN_VALVE_FAIL', handleOpenValveFail);
+      websocketService.offMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
+      websocketService.offMessage('DELETE_PLANT_FAIL', handleDeleteFail);
+      websocketService.offMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
+      websocketService.offMessage('GET_MOISTURE_SUCCESS', handleMoistureSuccess);
+      websocketService.offMessage('GET_MOISTURE_FAIL', handleMoistureFail);
+    };
+  }, [navigation, plant.name]);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header with back button and title */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Feather name="chevron-left" size={24} color="#2C3E50" />
@@ -278,14 +415,8 @@ const PlantDetail = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Plant Image and Name Overlay */}
+        {/* 1. Plant Information Section */}
         <View style={styles.imageContainer}>
-          {console.log('PlantDetail image debug:', {
-            plantName: plant.name,
-            image_url: plant.image_url,
-            type: plant.type,
-            hasImageUrl: !!plant.image_url
-          })}
           <Image
             source={
               plant.image_url
@@ -299,8 +430,6 @@ const PlantDetail = () => {
                 : getPlantImage(plant.type)
             }
             style={styles.plantImage}
-            onLoad={() => console.log('PlantDetail image loaded successfully for:', plant.name)}
-            onError={(error) => console.log('PlantDetail image load error for:', plant.name, error.nativeEvent)}
           />
           <View style={styles.infoOverlay}>
             <View style={styles.separator} />
@@ -309,22 +438,19 @@ const PlantDetail = () => {
           </View>
         </View>
 
-        {/* Plant Type Information */}
         <View style={styles.plantTypeContainer}>
           <Text style={styles.infoLabel}>Genus</Text>
           <Text style={styles.plantType}>{plant.type}</Text>
         </View>
 
-        {/* Current Conditions Section */}
+        {/* Current Conditions */}
         <View style={styles.statsContainer}>
           <Text style={styles.sectionTitle}>Current Conditions</Text>
-
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
               <MoistureCircle percent={currentMoisture} />
               <Text style={styles.statLabel}>Moisture</Text>
             </View>
-
             <View style={styles.statCard}>
               <TempCircle value={currentTemperature} />
               <Text style={styles.statLabel}>Temperature</Text>
@@ -332,31 +458,277 @@ const PlantDetail = () => {
           </View>
         </View>
 
-        {/* Plant Management Actions */}
-        <View style={styles.actionsContainer}>
-          <Text style={styles.sectionTitle}>Actions</Text>
+        {/* 2. Smart Irrigation Section */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Smart Irrigation</Text>
+          <Text style={styles.sectionDescription}>
+            Smart irrigation automatically waters your plant based on soil moisture levels and optimal conditions.
+          </Text>
+          <TouchableOpacity 
+            style={[styles.primaryButton, isWateringActive && styles.disabledButton]} 
+            onPress={handleSmartIrrigation}
+            disabled={isWateringActive}
+          >
+            <Feather name="zap" size={20} color="#FFFFFF" />
+            <Text style={styles.primaryButtonText}>Start Smart Irrigation</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 3. Manual Controls Section */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Manual Controls</Text>
           
-          <TouchableOpacity style={styles.waterButton} onPress={handleWaterPlant}>
-            <Feather name="droplet" size={20} color="#FFFFFF" />
-            <Text style={styles.waterButtonText}>Water Now</Text>
+          <TouchableOpacity 
+            style={styles.secondaryButton} 
+            onPress={handleGetCurrentHumidity}
+          >
+            <Feather name="thermometer" size={20} color="#4CAF50" />
+            <Text style={styles.secondaryButtonText}>Moisture Request</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.humidityButton} onPress={handleGetCurrentHumidity}>
-            <Feather name="thermometer" size={20} color="#FFFFFF" />
-            <Text style={styles.humidityButtonText}>Get Current Sensor Data</Text>
+          <View style={styles.valveButtonsContainer}>
+            <TouchableOpacity 
+              style={[styles.primaryButton, styles.halfButton, isWateringActive && styles.disabledButton]} 
+              onPress={handleManualIrrigation}
+              disabled={isWateringActive}
+            >
+              <Feather name="droplet" size={20} color="#FFFFFF" />
+              <Text style={styles.primaryButtonText}>
+                {wateringTimeLeft > 0 ? 'Change Timer' : 'Set Timer'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.stopButton, styles.halfButton, !isWateringActive && styles.disabledButton]} 
+              onPress={handleStopWatering}
+              disabled={!isWateringActive}
+            >
+              <Feather name="square" size={20} color="#FFFFFF" />
+              <Text style={styles.stopButtonText}>Close Valve</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 4. Active Watering Status */}
+        {isWateringActive && (
+          <View style={styles.wateringStatusContainer}>
+            <Text style={styles.sectionTitle}>Active Watering</Text>
+            <View style={styles.wateringIndicator}>
+              <View style={styles.wateringDot} />
+              <Text style={styles.wateringText}>Watering in progress</Text>
+            </View>
+            <Text style={styles.countdownText}>{formatTime(wateringTimeLeft)}</Text>
+          </View>
+        )}
+
+        {/* Timer Display with Progress Ring */}
+        {(isWateringActive || wateringTimeLeft > 0) && (
+          <View style={styles.timerDisplayContainer}>
+            <View style={styles.timerDisplay}>
+              <Text style={styles.timerTime}>{formatTime(wateringTimeLeft)}</Text>
+              <Text style={styles.timerStatus}>
+                {isWateringActive ? 'Time remaining' : 'Timer finished'}
+              </Text>
+            </View>
+            
+            {/* Progress Ring */}
+            <View style={styles.progressRingContainer}>
+              <View style={styles.progressRing}>
+                <View style={styles.progressRingBackground} />
+                <View style={[
+                  styles.progressRingFill,
+                  {
+                    transform: [{
+                      rotate: `${-90 + (360 * (wateringTimeLeft / (selectedTime * 60)))}deg`
+                    }]
+                  }
+                ]} />
+                <View style={styles.progressRingCenter}>
+                  <Text style={styles.progressRingText}>
+                    {Math.round(((selectedTime * 60 - wateringTimeLeft) / (selectedTime * 60)) * 100)}%
+                  </Text>
+                </View>
+              </View>
+            </View>
+            
+            {/* Timer Controls */}
+            <View style={styles.timerControls}>
+              {isWateringActive ? (
+                <TouchableOpacity
+                  style={styles.pauseButton}
+                  onPress={pauseTimer}
+                >
+                  <Feather name="pause" size={18} color="#FFFFFF" />
+                  <Text style={styles.pauseButtonText}>Pause</Text>
+                </TouchableOpacity>
+              ) : wateringTimeLeft > 0 ? (
+                <TouchableOpacity
+                  style={styles.resumeButton}
+                  onPress={resumeTimer}
+                >
+                  <Feather name="play" size={18} color="#FFFFFF" />
+                  <Text style={styles.resumeButtonText}>Resume</Text>
+                </TouchableOpacity>
+              ) : null}
+              
+              <TouchableOpacity
+                style={styles.resetButton}
+                onPress={resetTimer}
+              >
+                <Feather name="rotate-ccw" size={18} color="#FFFFFF" />
+                <Text style={styles.resetButtonText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* 5. Additional Actions */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Additional Actions</Text>
+          
+          <TouchableOpacity style={styles.secondaryButton}>
+            <Feather name="calendar" size={20} color="#4CAF50" />
+            <Text style={styles.secondaryButtonText}>View Schedule</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.scheduleButton}>
-            <Feather name="calendar" size={20} color="#FFFFFF" />
-            <Text style={styles.scheduleButtonText}>View Schedule</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDeletePlant}>
+          <TouchableOpacity 
+            style={styles.deleteButton} 
+            onPress={handleDeletePlant}
+          >
             <Feather name="trash-2" size={20} color="#FFFFFF" />
             <Text style={styles.deleteButtonText}>Delete Plant</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* 6. Manual Irrigation Time Picker Modal */}
+      <Modal
+        visible={showTimePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowTimePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Header with Clock Icon */}
+            <View style={styles.modalHeader}>
+              <View style={styles.clockIconContainer}>
+                <Feather name="clock" size={28} color="#FFFFFF" />
+              </View>
+              <Text style={styles.modalTitle}>Set Timer</Text>
+              <Text style={styles.modalSubtitle}>Drag the handle to select your desired duration</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowTimePicker(false)}
+              >
+                <Feather name="x" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Circular Time Picker */}
+            <View style={styles.circularPickerContainer}>
+              <View style={styles.circularDial}>
+                {/* Time Markers - Small grey dots around the circle */}
+                {irrigationTimes.map((time, index) => {
+                  const angle = (index * (360 / irrigationTimes.length)) - 90; // Evenly spaced around circle, starting from top
+                  const radian = (angle * Math.PI) / 180;
+                  const radius = 130; // Outer radius for dots
+                  const x = Math.cos(radian) * radius;
+                  const y = Math.sin(radian) * radius;
+                  
+                  return (
+                    <View
+                      key={time}
+                      style={[
+                        styles.timeMarkerDot,
+                        {
+                          transform: [
+                            { translateX: x },
+                            { translateY: y }
+                          ]
+                        }
+                      ]}
+                    />
+                  );
+                })}
+                
+                {/* Time Labels - Positioned outside the circle */}
+                {irrigationTimes.map((time, index) => {
+                  const angle = (index * (360 / irrigationTimes.length)) - 90;
+                  const radian = (angle * Math.PI) / 180;
+                  const radius = 110; // Inner radius for labels
+                  const x = Math.cos(radian) * radius;
+                  const y = Math.sin(radian) * radius;
+                  
+                  return (
+                    <View
+                      key={`label-${time}`}
+                      style={[
+                        styles.timeLabel,
+                        {
+                          transform: [
+                            { translateX: x },
+                            { translateY: y }
+                          ]
+                        }
+                      ]}
+                    >
+                      <Text style={styles.timeLabelText}>
+                        {formatDuration(time)}
+                      </Text>
+                    </View>
+                  );
+                })}
+                
+                {/* Progress Arc - Filled wedge from center to selected time */}
+                <View style={styles.progressWedgeContainer}>
+                  <View style={[
+                    styles.progressWedge,
+                    { 
+                      transform: [
+                        { rotate: `${getAngleFromDuration(selectedTime)}deg` }
+                      ] 
+                    }
+                  ]} />
+                </View>
+                
+                {/* Center Clock Icon */}
+                <View style={styles.centerIcon}>
+                  <Feather name="clock" size={24} color="#22C55E" />
+                </View>
+                
+                {/* Draggable Point */}
+                <View 
+                  {...panResponder.panHandlers}
+                  style={[
+                    styles.draggablePoint,
+                    {
+                      transform: [
+                        { translateX: draggablePoint.x - dialCenter.x },
+                        { translateY: draggablePoint.y - dialCenter.y }
+                      ]
+                    }
+                  ]}
+                />
+              </View>
+              
+              {/* Selected Duration Display */}
+              <View style={styles.selectedDurationContainer}>
+                <Text style={styles.selectedDurationValue}>{formatDuration(selectedTime)}</Text>
+                <Text style={styles.selectedDurationLabel}>Selected duration</Text>
+              </View>
+            </View>
+
+            {/* Action Button */}
+            <TouchableOpacity 
+              style={styles.startIrrigationButton}
+              onPress={handleStartManualIrrigation}
+            >
+              <Text style={styles.startIrrigationButtonText}>Start Timer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
