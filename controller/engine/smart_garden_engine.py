@@ -233,16 +233,16 @@ class SmartGardenEngine:
         try:
             print(f"Opening valve for plant {plant_id} for {time_minutes} minutes")
             
-            # Open the valve
-            plant.valve.open()
+            # Open the valve using the correct method name
+            plant.valve.request_open()
             print(f"Valve opened successfully for plant {plant_id}")
             
             # Schedule valve closure after the specified time
             import asyncio
             await asyncio.sleep(time_minutes * 60)  # Convert minutes to seconds
             
-            # Close the valve after the time has elapsed
-            plant.valve.close()
+            # Close the valve after the time has elapsed using the correct method name
+            plant.valve.request_close()
             print(f"Valve closed for plant {plant_id} after {time_minutes} minutes")
             
             return True
@@ -251,7 +251,7 @@ class SmartGardenEngine:
             print(f"Error opening valve for plant {plant_id}: {e}")
             # Ensure valve is closed in case of error
             try:
-                plant.valve.close()
+                plant.valve.request_close()
             except:
                 pass
             return False
