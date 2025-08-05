@@ -78,19 +78,55 @@ async function handleIrrigatePlant(data, ws, email) {
 
 // Open valve for a specific duration
 async function handleOpenValve(data, ws, email) {
+  console.log('🔍 DEBUG - handleOpenValve received:', JSON.stringify(data));
+  
   const { plantName, timeMinutes } = data;
-  if (!plantName) return sendError(ws, 'OPEN_VALVE_FAIL', 'Missing plantName');
-  if (!timeMinutes || timeMinutes <= 0) return sendError(ws, 'OPEN_VALVE_FAIL', 'Invalid timeMinutes');
+  console.log('🔍 DEBUG - Extracted data:');
+  console.log('   - plantName:', plantName, '(type:', typeof plantName, ')');
+  console.log('   - timeMinutes:', timeMinutes, '(type:', typeof timeMinutes, ')');
+  
+  if (!plantName) {
+    console.log('❌ ERROR - Missing plantName');
+    return sendError(ws, 'OPEN_VALVE_FAIL', 'Missing plantName');
+  }
+  if (!timeMinutes || timeMinutes <= 0) {
+    console.log('❌ ERROR - Invalid timeMinutes:', timeMinutes);
+    return sendError(ws, 'OPEN_VALVE_FAIL', 'Invalid timeMinutes');
+  }
+  
+  console.log('🔍 DEBUG - Data validation passed');
+  console.log('🔍 DEBUG - Looking up user by email:', email);
   
   const user = await getUser(email);
-  if (!user) return sendError(ws, 'OPEN_VALVE_FAIL', 'User not found');
+  if (!user) {
+    console.log('❌ ERROR - User not found for email:', email);
+    return sendError(ws, 'OPEN_VALVE_FAIL', 'User not found');
+  }
+  console.log('✅ DEBUG - User found:', user.id, user.email);
+  
+  console.log('🔍 DEBUG - Looking up plant by name:', plantName, 'for user:', user.id);
   const plant = await getPlantByName(user.id, plantName);
-  if (!plant) return sendError(ws, 'OPEN_VALVE_FAIL', 'Plant not found');
+  if (!plant) {
+    console.log('❌ ERROR - Plant not found:', plantName, 'for user:', user.id);
+    return sendError(ws, 'OPEN_VALVE_FAIL', 'Plant not found');
+  }
 
+  console.log('✅ DEBUG - Plant found:');
+  console.log('   - plant_id:', plant.plant_id, '(type:', typeof plant.plant_id, ')');
+  console.log('   - name:', plant.name);
+  console.log('   - user_id:', plant.user_id);
+
+  console.log('🔍 DEBUG - Calling piCommunication.openValve with:');
+  console.log('   - plant_id:', plant.plant_id);
+  console.log('   - timeMinutes:', timeMinutes);
+  
   // Send open valve request to Pi controller
   const piResult = piCommunication.openValve(plant.plant_id, timeMinutes);
+  
+  console.log('🔍 DEBUG - piCommunication.openValve result:', piResult);
 
   if (piResult.success) {
+    console.log('✅ DEBUG - Pi communication successful');
     // Pi is connected - add to pending list and wait for open valve result
     addPendingIrrigation(plant.plant_id, ws, email, {
       plant_id: plant.plant_id,
@@ -99,8 +135,10 @@ async function handleOpenValve(data, ws, email) {
     });
 
     console.log(`⏳ Open valve request for plant ${plant.plant_id} (${plant.name}) for ${timeMinutes} minutes sent to Pi controller...`);
+    console.log('✅ DEBUG - Added to pending irrigation list');
     // No immediate response - client will get success/failure when Pi responds with open valve result
   } else {
+    console.log('❌ ERROR - Pi communication failed:', piResult.error);
     // Pi not connected - return error 
     return sendError(ws, 'OPEN_VALVE_FAIL',
       'Pi controller not connected. Cannot open valve. Please try again when Pi is online.');

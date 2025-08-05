@@ -144,12 +144,21 @@ class PiCommunication {
      * Send OPEN_VALVE request to Pi (no waiting)
      */
     openValve(plantId, timeMinutes) {
+        console.log('🔍 DEBUG - piCommunication.openValve called:');
+        console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
+        console.log('   - timeMinutes:', timeMinutes, '(type:', typeof timeMinutes, ')');
+        
+        console.log('🔍 DEBUG - Getting Pi socket...');
         const piSocket = getPiSocket();
+        console.log('🔍 DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
+        
         if (!piSocket) {
-            console.log('Pi not connected - cannot open valve');
+            console.log('❌ Pi not connected - cannot open valve');
             return { success: false, error: 'Pi not connected' };
         }
 
+        console.log('✅ DEBUG - Pi socket found, creating request...');
+        
         try {
             const request = {
                 type: 'OPEN_VALVE',
@@ -159,16 +168,27 @@ class PiCommunication {
                 }
             };
 
-            console.log('Sending OPEN_VALVE to Pi:');
-            console.log(`   - Plant ID: ${plantId} (type: ${typeof plantId})`);
-            console.log(`   - Time Minutes: ${timeMinutes} (type: ${typeof timeMinutes})`);
-            console.log(`   - Full JSON: ${JSON.stringify(request)}`);
+            console.log('📤 DEBUG - Created request object:');
+            console.log('   - type:', request.type);
+            console.log('   - data.plant_id:', request.data.plant_id, '(type:', typeof request.data.plant_id, ')');
+            console.log('   - data.time_minutes:', request.data.time_minutes, '(type:', typeof request.data.time_minutes, ')');
+            console.log('   - Full JSON:', JSON.stringify(request));
 
-            piSocket.send(JSON.stringify(request));
+            console.log('🔍 DEBUG - Converting to JSON string...');
+            const jsonString = JSON.stringify(request);
+            console.log('✅ DEBUG - JSON string created, length:', jsonString.length);
+
+            console.log('🔍 DEBUG - Sending to Pi socket...');
+            piSocket.send(jsonString);
+            console.log('✅ DEBUG - OPEN_VALVE message sent to Pi successfully');
+            
+            console.log('🔍 DEBUG - Returning success result');
             return { success: true };
 
         } catch (error) {
-            console.error('Error sending OPEN_VALVE to Pi:', error);
+            console.error('❌ ERROR - Error sending OPEN_VALVE to Pi:');
+            console.error('   - Error message:', error.message);
+            console.error('   - Error stack:', error.stack);
             return { success: false, error: error.message };
         }
     }

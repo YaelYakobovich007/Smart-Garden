@@ -190,12 +190,21 @@ const PlantDetail = () => {
     setIsWateringActive(true);
     setWateringTimeLeft(selectedTime * 60); // Convert minutes to seconds
     
+    // Debug: Check connection and plant data
+    console.log('🔍 DEBUG - Starting manual irrigation:');
+    console.log('   - Plant name:', plant.name);
+    console.log('   - Selected time:', selectedTime);
+    console.log('   - WebSocket connected:', websocketService.isConnected());
+    
     // Send OPEN_VALVE command to server
-    websocketService.sendMessage({
+    const message = {
       type: 'OPEN_VALVE',
       plantName: plant.name,
       timeMinutes: selectedTime
-    });
+    };
+    
+    console.log('📤 Sending OPEN_VALVE message:', JSON.stringify(message));
+    websocketService.sendMessage(message);
   };
 
   const handleStopWatering = () => {

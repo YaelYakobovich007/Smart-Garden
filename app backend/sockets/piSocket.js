@@ -221,15 +221,25 @@ function handlePiSocket(ws) {
 
     // Handle OPEN_VALVE_RESPONSE from Pi
     if (data.type === 'OPEN_VALVE_RESPONSE') {
+      console.log('🔍 DEBUG - Received OPEN_VALVE_RESPONSE from Pi:');
+      console.log('   - Full data:', JSON.stringify(data));
+      
       const responseData = data.data || {};
       const plantId = responseData.plant_id;
       const timeMinutes = responseData.time_minutes;
 
+      console.log('🔍 DEBUG - Extracted response data:');
+      console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
+      console.log('   - timeMinutes:', timeMinutes, '(type:', typeof timeMinutes, ')');
+      console.log('   - status:', responseData.status);
+
       // Get pending irrigation info (websocket + plant data)
+      console.log('🔍 DEBUG - Getting pending irrigation info for plantId:', plantId);
       const pendingInfo = completePendingIrrigation(plantId);
+      console.log('🔍 DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
 
       if (responseData.status === 'success') {
-        console.log(`  Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
+        console.log(`✅ DEBUG - Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
         console.log(`   - Duration: ${timeMinutes} minutes`);
         console.log(`   - Message: ${responseData.message}`);
 
