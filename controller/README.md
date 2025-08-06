@@ -128,7 +128,7 @@ WorkingDirectory=/home/pi/Smart-Garden/controller
 ExecStart=/usr/bin/python3 /home/pi/Smart-Garden/controller/run_pi_client.py
 Restart=always
 RestartSec=10
-Environment=SMART_GARDEN_SERVER_URL=ws://192.168.68.54:8080
+Environment=SMART_GARDEN_SERVER_URL=ws://192.168.68.61:8080
 
 [Install]
 WantedBy=multi-user.target
