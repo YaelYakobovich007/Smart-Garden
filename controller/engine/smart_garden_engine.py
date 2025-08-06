@@ -7,6 +7,8 @@ from controller.models.plant import Plant
 from controller.hardware.valves.valves_manager import ValvesManager
 from controller.hardware.sensors.sensor_manager import SensorManager
 from controller.irrigation.irrigation_algorithm import IrrigationAlgorithm
+from controller.hardware.valves.valve import Valve
+from controller.hardware.sensors.sensor import Sensor
 
 class SmartGardenEngine:
     """
@@ -56,16 +58,31 @@ class SmartGardenEngine:
             flow_rate (float): Water flow rate in L/s
             water_limit (float): Maximum water limit in L
         """
-        # Get available valve and sensor
-        valve = self.valves_manager.get_available_valve()
-        sensor = self.sensor_manager.get_available_sensor()
+        # Check if we have available valves and sensors
+        if not self.valves_manager.available_valves:
+            raise RuntimeError("No available valves")
         
-        if not valve or not sensor:
-            raise RuntimeError("No available valves or sensors")
+        if not self.sensor_manager.available_sensors:
+            raise RuntimeError("No available sensors")
         
-        # Remove the valve and sensor from available pools
-        self.valves_manager.available_valves.popleft()  # Remove the valve we just got
-        self.sensor_manager.available_sensors.pop(0)    # Remove the sensor we just got
+        # Assign valve and sensor using proper assignment methods
+        valve_id = self.valves_manager.assign_valve(plant_id)
+        sensor_port = self.sensor_manager.assign_sensor(str(plant_id))
+        
+        # Create valve and sensor objects
+        valve = Valve(
+            valve_id=valve_id,
+            pipe_diameter=pipe_diameter,
+            water_limit=water_limit,
+            flow_rate=flow_rate,
+            relay_controller=self.valves_manager.relay_controller,
+            simulation_mode=False
+        )
+        
+        sensor = Sensor(
+            simulation_mode=False,
+            port=sensor_port
+        )
         
         # Create plant with valve and sensor
         plant = Plant(
@@ -106,9 +123,13 @@ class SmartGardenEngine:
         """
         if plant_id in self.plants:
             plant = self.plants[plant_id]
-            # Release valve and sensor back to managers
-            self.valves_manager.release_valve_object(plant.valve)
-            self.sensor_manager.release_sensor_object(plant.sensor)
+            # Release valve and sensor back to managers using proper methods
+            try:
+                self.valves_manager.release_valve(plant_id)
+                self.sensor_manager.release_sensor(str(plant_id))
+            except ValueError as e:
+                print(f"Warning: {e}")
+            
             del self.plants[plant_id]
             print(f"Plant {plant_id} removed")
 

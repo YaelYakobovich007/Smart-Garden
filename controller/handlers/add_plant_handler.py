@@ -4,7 +4,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
+async def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
     """
     Handle add plant request from server and add plant to Smart Garden Engine.
     
@@ -68,7 +68,7 @@ def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, AddPlantRequest]:
                         })
         
         # Add plant to engine with provided parameters
-        smart_engine.add_plant(
+        await smart_engine.add_plant(
             plant_id=plant_id,
             desired_moisture=desired_moisture,
             schedule_data=engine_schedule_data,

@@ -91,37 +91,53 @@ class SmartGardenPiClient:
 
     
     async def handle_add_plant_command(self, data: Dict[Any, Any]):
-        """Handle add plant command from server using Smart Garden Engine."""
-        from controller.handlers.add_plant_handler import handle
-        
-        self.logger.info(f"Received ADD_PLANT command from server")
-        
-        # Call the handler to do all the business logic
-        success, response = handle(
-            data=data,
-            smart_engine=self.engine
-        )
-        
-        # Send response back to server using DTO
-        response_data = response.to_websocket_data()
-        
-        # Use server's plant_id as the main plant_id in response
-        response_data["plant_id"] = data.get("plantId")  # Use server's plant ID
-        
-        # Log the response message details
-        self.logger.info("=== ADD_PLANT RESPONSE DEBUG ===")
-        self.logger.info(f"Response success: {success}")
-        self.logger.info(f"Response DTO: {response}")
-        self.logger.info(f"Response data keys: {list(response_data.keys())}")
-        self.logger.info(f"Response data values: {response_data}")
-        self.logger.info("================================")
-        
-        await self.send_message("ADD_PLANT_RESPONSE", response_data)
-        
-        if success:
-            self.logger.info(f"Successfully processed ADD_PLANT command")
-        else:
-            self.logger.error(f"Failed to process ADD_PLANT command: {response.error_message}")
+        """Handle add plant request from server."""
+        try:
+            from controller.handlers.add_plant_handler import handle
+            
+            self.logger.info(f"Received ADD_PLANT command from server")
+            self.logger.info(f"Full message: {data}")
+            self.logger.info(f"Parsed data: {data}")
+            self.logger.info(f"Plant ID: {data.get('plantId')}")
+            self.logger.info(f"Desired Moisture: {data.get('desiredMoisture')}")
+            self.logger.info(f"Water Limit: {data.get('waterLimit')}")
+            
+            # Call the add plant handler
+            success, response = await handle(
+                data=data,
+                smart_engine=self.engine
+            )
+            
+            # Send response back to server using DTO
+            response_data = response.to_websocket_data()
+            
+            # Use server's plant_id as the main plant_id in response
+            response_data["plant_id"] = data.get("plantId")  # Use server's plant ID
+            
+            # Log the response message details
+            self.logger.info("=== ADD_PLANT RESPONSE DEBUG ===")
+            self.logger.info(f"Response success: {success}")
+            self.logger.info(f"Response DTO: {response}")
+            self.logger.info(f"Response data keys: {list(response_data.keys())}")
+            self.logger.info(f"Response data values: {response_data}")
+            self.logger.info("================================")
+            
+            await self.send_message("ADD_PLANT_RESPONSE", response_data)
+            
+            if success:
+                self.logger.info(f"Successfully processed ADD_PLANT command")
+            else:
+                self.logger.error(f"Failed to process ADD_PLANT command: {response.error_message}")
+                
+        except Exception as e:
+            self.logger.error(f"Error during add plant: {e}")
+            # Create error DTO for unexpected exceptions
+            from controller.dto.add_plant_request import AddPlantRequest
+            error_result = AddPlantRequest.error(
+                plant_id=data.get("plantId", 0),
+                error_message=str(e)
+            )
+            await self.send_message("ADD_PLANT_RESPONSE", error_result.to_websocket_data())
 
     async def handle_plant_moisture_request(self, data):
         """Handle single plant moisture request from server."""
