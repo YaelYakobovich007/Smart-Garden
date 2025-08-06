@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+from controller.hardware.sensors.sensor import Sensor
 
 class SensorManager:
     """
@@ -13,14 +14,17 @@ class SensorManager:
         plant_sensor_map (Dict[str, str]): Mapping of plant_id to assigned sensor_port.
         sensor_configs (Dict[str, Dict]): Configuration for each sensor port.
     """
-    def __init__(self) -> None:
+    def __init__(self, total_sensors: int = 2) -> None:
         """
-        Initializes the SensorManager with the two available sensors.
-        """
-        # Define the two sensor ports
-        self.sensor_ports = ["/dev/ttyUSB0", "/dev/ttyUSB1"]
+        Initializes the SensorManager with the available sensors.
         
-        # Initialize available sensors (both ports)
+        Args:
+            total_sensors (int): Number of sensors to manage
+        """
+        # Define the sensor ports based on total_sensors
+        self.sensor_ports = [f"/dev/ttyUSB{i}" for i in range(total_sensors)]
+        
+        # Initialize available sensors
         self.available_sensors: List[str] = self.sensor_ports.copy()
         self.plant_sensor_map: Dict[str, str] = {}  # Mapping: plant_id → sensor_port
 
@@ -88,6 +92,39 @@ class SensorManager:
             List[str]: A copy of the list of available sensor ports.
         """
         return self.available_sensors.copy()
+
+    def get_available_sensor(self) -> Optional[Sensor]:
+        """
+        Get an available sensor object.
+        
+        Returns:
+            Optional[Sensor]: Available sensor object, or None if no sensors available
+        """
+        if not self.available_sensors:
+            return None
+        
+        sensor_port = self.available_sensors[0]  # Peek at the first available sensor
+        return Sensor(simulation_mode=False, port=sensor_port)
+
+    def get_available_ports(self) -> List[int]:
+        """
+        Get list of available sensor port numbers.
+        
+        Returns:
+            List[int]: List of available sensor port numbers
+        """
+        return [i for i, port in enumerate(self.sensor_ports) if port in self.available_sensors]
+
+    def release_sensor_object(self, sensor: Sensor) -> None:
+        """
+        Release a sensor object back to the available pool.
+        
+        Args:
+            sensor (Sensor): The sensor object to release
+        """
+        sensor_port = sensor.port
+        if sensor_port not in self.available_sensors:
+            self.available_sensors.append(sensor_port)
 
     def get_sensor_config(self, sensor_port: str) -> Dict:
         """

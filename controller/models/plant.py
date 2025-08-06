@@ -20,15 +20,21 @@ class Plant:
         schedule (Optional[IrrigationSchedule]): Custom irrigation schedule for this plant (optional).
         lat (float): Latitude coordinate of the plant's location.
         lon (float): Longitude coordinate of the plant's location.
+        pipe_diameter (float): Diameter of the irrigation pipe in cm.
+        flow_rate (float): Water flow rate in L/s.
+        water_limit (float): Maximum water limit in L.
     """
     def __init__(
         self,
         plant_id: int,
         desired_moisture: float,
-        sensor: Sensor,
         valve: Valve,
-        plant_lat : float,
-        plant_lon : float
+        sensor: Sensor,
+        lat: float,
+        lon: float,
+        pipe_diameter: float = 1.0,
+        flow_rate: float = 0.05,
+        water_limit: float = 1.0
     ) -> None:
         self.plant_id: int = plant_id
         self.desired_moisture: float = desired_moisture
@@ -38,8 +44,11 @@ class Plant:
         self.temperature_level: Optional[float] = None
         self.last_irrigation_time: Optional[datetime] = None
         self.schedule: Optional[IrrigationSchedule] = None
-        self.lat : float = plant_lat
-        self.lon : float = plant_lon  
+        self.lat: float = lat
+        self.lon: float = lon
+        self.pipe_diameter: float = pipe_diameter
+        self.flow_rate: float = flow_rate
+        self.water_limit: float = water_limit
             
 
     async def get_moisture(self) -> Optional[float]:

@@ -13,7 +13,7 @@ class CloseValveHandler:
     
     async def handle_close_valve_request(self, data: dict) -> CloseValveResponse:
         """
-        Handle CLOSE_VALVE request.
+        Handle CLOSE_VALVE request using non-blocking approach.
         
         Args:
             data (dict): Request data containing plant_id
@@ -42,25 +42,25 @@ class CloseValveHandler:
             
             print(f"Found plant {plant_id}, closing valve {plant.valve.valve_id}")
             
-            # Close the valve
-            plant.valve.request_close()
+            # Use the new non-blocking close_valve method
+            success = await self.smart_engine.close_valve(plant_id)
             
-            print(f"Valve {plant.valve.valve_id} closed successfully for plant {plant_id}")
+            if success:
+                print(f"Valve {plant.valve.valve_id} closed successfully for plant {plant_id}")
+                return CloseValveResponse.success(
+                    plant_id=plant_id,
+                    message=f"Valve {plant.valve.valve_id} closed successfully"
+                )
+            else:
+                print(f"Failed to close valve {plant.valve.valve_id} for plant {plant_id}")
+                return CloseValveResponse.error(
+                    plant_id=plant_id,
+                    error_message=f"Failed to close valve {plant.valve.valve_id}"
+                )
             
-            return CloseValveResponse.success(
-                plant_id=plant_id,
-                message=f"Valve {plant.valve.valve_id} closed successfully"
-            )
-            
-        except ValueError as e:
-            print(f"ValueError in CLOSE_VALVE handler: {e}")
-            return CloseValveResponse.error(
-                plant_id=plant_id if 'plant_id' in locals() else 0,
-                error_message=str(e)
-            )
         except Exception as e:
-            print(f"Unexpected error in CLOSE_VALVE handler: {e}")
+            print(f"Error in close valve handler: {e}")
             return CloseValveResponse.error(
                 plant_id=plant_id if 'plant_id' in locals() else 0,
-                error_message=f"Unexpected error: {str(e)}"
+                error_message=f"Internal error: {str(e)}"
             ) 

@@ -516,7 +516,7 @@ const PlantDetail = () => {
             >
               <Feather name="droplet" size={20} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>
-                {wateringTimeLeft > 0 ? 'Change Timer' : 'Set Timer'}
+                {wateringTimeLeft > 0 ? 'Change Timer' : 'Open Valve'}
               </Text>
             </TouchableOpacity>
 
