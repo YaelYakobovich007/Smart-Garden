@@ -29,8 +29,13 @@ async function testConnection() {
     if (client) {
       client.release();
     }
-    // Exit the process if we can't connect to the database
-    process.exit(1);
+    // Don't exit in Cloud Run - let the container start and retry later
+    if (process.env.K_SERVICE) {
+      console.log('⚠️ Running in Cloud Run - container will start without DB connection');
+    } else {
+      // Exit the process if we can't connect to the database (local development)
+      process.exit(1);
+    }
   }
 }
 
