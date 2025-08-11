@@ -17,7 +17,15 @@ const WS_CONFIG = {
   // Change this to your server's IP address or hostname
   // For local development, use 'localhost'
   // For production, use your server's actual IP address
-  SERVER_URL: '',
+
+  // CURRENT: Using local IP (works only on same network)
+  SERVER_URL: 'ws://10.0.0.22:8080',
+
+  // FOR NGROK TESTING (uncomment and use ngrok URL):
+  // SERVER_URL: 'wss://your-ngrok-url.ngrok.io',
+
+  // FOR SAME WIFI NETWORK (uncomment and use your phone's WiFi IP):
+  // SERVER_URL: 'wss://192.168.1.XXX:8080', // Replace XXX with your phone's IP
 
   // Alternative configurations for different environments:
   // LOCAL: 'ws://localhost:8080'
