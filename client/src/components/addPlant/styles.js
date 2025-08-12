@@ -35,6 +35,7 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 32,
   },
+
   scrollView: {
     flex: 1,
     paddingHorizontal: 16,

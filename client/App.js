@@ -27,6 +27,7 @@ import RegisterScreen from './src/components/register/RegisterScreen';
 import MainScreen from './src/components/main/MainScreen';
 import PlantDetail from './src/components/main/PlantDetail/PlantDetail';
 import AddPlantScreen from './src/components/addPlant/AddPlantScreen';
+import SensorPlacementScreen from './src/components/addPlant/SensorPlacement/SensorPlacementScreen';
 import SettingsScreen from './src/components/main/SettingsScreen/SettingsScreen';
 import NotificationScreen from './src/components/notification/NotificationScreen';
 import ArticleDetails from './src/components/main/Articles/ArticleDetails/ArticleDetails';
@@ -255,6 +256,7 @@ export default function App() {
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="Main" component={MainScreen} />
           <Stack.Screen name="PlantDetail" component={PlantDetail} />
+          <Stack.Screen name="SensorPlacement" component={SensorPlacementScreen} />
           <Stack.Screen name="AddPlant" component={AddPlantScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="Notification" component={NotificationScreen} />

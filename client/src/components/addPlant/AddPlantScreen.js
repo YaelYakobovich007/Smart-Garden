@@ -70,7 +70,7 @@ export default function AddPlantScreen() {
   useEffect(() => {
     /**
      * Handle successful plant creation
-     * Shows success alert and navigates back to main screen
+     * Shows success alert and navigates to sensor placement screen
      * @param {Object} data - Server response data
      */
     const handleSuccess = (data) => {
@@ -81,7 +81,11 @@ export default function AddPlantScreen() {
         [
           {
             text: 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              // Navigate to sensor placement screen with sensor ID from response
+              const sensorId = data?.sensorId || route.params?.sensorId || 3;
+              navigation.navigate('SensorPlacement', { sensorId });
+            },
           },
         ]
       );
@@ -360,6 +364,8 @@ export default function AddPlantScreen() {
         </View>
         <View style={styles.headerSpacer} />
       </View>
+
+
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Plant Basic Information Section */}

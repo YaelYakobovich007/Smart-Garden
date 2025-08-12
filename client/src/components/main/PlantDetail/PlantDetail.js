@@ -21,8 +21,7 @@ import {
   SafeAreaView,
   StatusBar,
   Alert,
-  Modal,
-  PanResponder
+  Modal
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -30,6 +29,7 @@ import { styles } from './styles';
 import MoistureCircle from '../PlantList/MoistureCircle';
 import TempCircle from '../PlantList/TempCircle';
 import websocketService from '../../../services/websocketService';
+import CircularTimePicker from './CircularTimePicker';
 
 const PlantDetail = () => {
   const navigation = useNavigation();
@@ -46,94 +46,17 @@ const PlantDetail = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedTime, setSelectedTime] = useState(10); // default 10 minutes
   const [isManualMode, setIsManualMode] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const [timerInterval, setTimerInterval] = useState(null);
+  const [pendingValveRequest, setPendingValveRequest] = useState(false);
 
-  // Available irrigation times (in minutes) - using the enhanced timer options
-  const irrigationTimes = [5, 10, 15, 20, 30, 45, 60];
-
-  // Get angle from duration (matching the enhanced timer logic)
-  const getAngleFromDuration = (duration) => {
-    const index = irrigationTimes.indexOf(duration);
-    return (index * (360 / irrigationTimes.length)) - 90; // Evenly spaced around circle, starting from top
-  };
-
-  // Get duration from angle (matching the enhanced timer logic)
-  const getDurationFromAngle = (angle) => {
-    // Normalize angle to 0-360
-    let normalizedAngle = ((angle + 90) % 360 + 360) % 360;
-    
-    // Find the closest time option
-    const segmentSize = 360 / irrigationTimes.length;
-    const segmentIndex = Math.round(normalizedAngle / segmentSize) % irrigationTimes.length;
-    return irrigationTimes[segmentIndex];
-  };
-
-  // Format duration for display
-  const formatDuration = (minutes) => {
-    if (minutes >= 60) {
-      return '1h';
-    }
-    return `${minutes}m`;
-  };
-
-  // Interactive circular dial state
-  const [dialCenter, setDialCenter] = useState({ x: 100, y: 100 });
-  const [dialRadius, setDialRadius] = useState(80);
-  const [draggablePoint, setDraggablePoint] = useState({ x: 100, y: 20 }); // Start at top (10 minutes)
-
-  // Handle time selection
-  const handleTimeSelection = (time) => {
-    setSelectedTime(time);
-  };
-
-  // PanResponder for draggable point
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: (evt, gestureState) => {
-      // Store initial position
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      const { moveX, moveY } = gestureState;
-      
-      // Calculate angle from center
-      const deltaX = moveX - dialCenter.x;
-      const deltaY = moveY - dialCenter.y;
-      const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-      
-      // Calculate new point position on circle
-      const newX = dialCenter.x + dialRadius * Math.cos(angle * Math.PI / 180);
-      const newY = dialCenter.y + dialRadius * Math.sin(angle * Math.PI / 180);
-      
-      setDraggablePoint({ x: newX, y: newY });
-      
-      // Update selected time using the React code logic
-      const newTime = getDurationFromAngle(angle);
-      setSelectedTime(newTime);
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      // Snap to nearest time marker
-      const { moveX, moveY } = gestureState;
-      const deltaX = moveX - dialCenter.x;
-      const deltaY = moveY - dialCenter.y;
-      const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-      
-      const snappedTime = getDurationFromAngle(angle);
-      setSelectedTime(snappedTime);
-      
-      // Update point position to snapped position
-      const snappedAngle = getAngleFromDuration(snappedTime);
-      const snappedX = dialCenter.x + dialRadius * Math.cos(snappedAngle * Math.PI / 180);
-      const snappedY = dialCenter.y + dialRadius * Math.sin(snappedAngle * Math.PI / 180);
-      setDraggablePoint({ x: snappedX, y: snappedY });
-    }
-  });
+  // Available irrigation times (in minutes)
+  const irrigationTimes = [0, 5, 10, 15, 20, 30, 45, 60];
 
   // Countdown timer effect
   useEffect(() => {
     let interval;
-    if (isWateringActive && wateringTimeLeft > 0) {
+    // Only start timer if watering is active, has time left, and there's no pending valve request
+    if (isWateringActive && wateringTimeLeft > 0 && !pendingValveRequest) {
       interval = setInterval(() => {
         setWateringTimeLeft(prev => {
           if (prev <= 1) {
@@ -152,7 +75,7 @@ const PlantDetail = () => {
         clearInterval(interval);
       }
     };
-  }, [isWateringActive, wateringTimeLeft]);
+  }, [isWateringActive, wateringTimeLeft, pendingValveRequest]);
 
   // Format time as MM:SS
   const formatTime = (seconds) => {
@@ -184,23 +107,22 @@ const PlantDetail = () => {
     setShowTimePicker(true);
   };
 
-  const handleStartManualIrrigation = () => {
-    setShowTimePicker(false);
-    setIsManualMode(true);
-    setIsWateringActive(true);
-    setWateringTimeLeft(selectedTime * 60); // Convert minutes to seconds
+  const handleTimeSelected = (timeMinutes) => {
+    // Store the selected time but don't start timer yet
+    setSelectedTime(timeMinutes);
+    setPendingValveRequest(true);
     
     // Debug: Check connection and plant data
-    console.log('🔍 DEBUG - Starting manual irrigation:');
+    console.log('🔍 DEBUG - Requesting valve opening:');
     console.log('   - Plant name:', plant.name);
-    console.log('   - Selected time:', selectedTime);
+    console.log('   - Selected time:', timeMinutes);
     console.log('   - WebSocket connected:', websocketService.isConnected());
     
     // Send OPEN_VALVE command to server
     const message = {
       type: 'OPEN_VALVE',
       plantName: plant.name,
-      timeMinutes: selectedTime
+      timeMinutes: timeMinutes
     };
     
     console.log('📤 Sending OPEN_VALVE message:', JSON.stringify(message));
@@ -378,11 +300,31 @@ const PlantDetail = () => {
     };
 
     const handleOpenValveSuccess = (data) => {
-      Alert.alert('Valve Control', data?.message || 'Valve opened successfully!');
+      console.log('✅ OPEN_VALVE success:', data);
+      
+      // Only start timer if we have a pending request
+      if (pendingValveRequest) {
+        // Now start the timer since valve opened successfully
+        setIsManualMode(true);
+        setIsWateringActive(true);
+        setWateringTimeLeft(selectedTime * 60); // Convert minutes to seconds
+        setPendingValveRequest(false);
+        
+        Alert.alert('Valve Control', data?.message || 'Valve opened successfully! Timer started.');
+      }
     };
 
     const handleOpenValveFail = (data) => {
-      Alert.alert('Valve Control', data?.message || 'Failed to open valve.');
+      console.log('❌ OPEN_VALVE failed:', data);
+      
+      // Reset state since valve opening failed
+      setIsManualMode(false);
+      setIsWateringActive(false);
+      setWateringTimeLeft(0);
+      setSelectedTime(10); // Reset to default
+      setPendingValveRequest(false);
+      
+      Alert.alert('Valve Control', data?.message || 'Failed to open valve. Timer not started.');
     };
 
     const handleCloseValveSuccess = (data) => {
@@ -623,134 +565,14 @@ const PlantDetail = () => {
         </View>
       </ScrollView>
 
-      {/* 6. Manual Irrigation Time Picker Modal */}
-      <Modal
+      {/* 6. Circular Time Picker */}
+      <CircularTimePicker
         visible={showTimePicker}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowTimePicker(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {/* Header with Clock Icon */}
-            <View style={styles.modalHeader}>
-              <View style={styles.clockIconContainer}>
-                <Feather name="clock" size={28} color="#FFFFFF" />
-              </View>
-              <Text style={styles.modalTitle}>Set Timer</Text>
-              <Text style={styles.modalSubtitle}>Drag the handle to select your desired duration</Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={() => setShowTimePicker(false)}
-              >
-                <Feather name="x" size={20} color="#666" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Circular Time Picker */}
-            <View style={styles.circularPickerContainer}>
-              <View style={styles.circularDial}>
-                {/* Time Markers - Small grey dots around the circle */}
-                {irrigationTimes.map((time, index) => {
-                  const angle = (index * (360 / irrigationTimes.length)) - 90; // Evenly spaced around circle, starting from top
-                  const radian = (angle * Math.PI) / 180;
-                  const radius = 130; // Outer radius for dots
-                  const x = Math.cos(radian) * radius;
-                  const y = Math.sin(radian) * radius;
-                  
-                  return (
-                    <View
-                      key={time}
-                      style={[
-                        styles.timeMarkerDot,
-                        {
-                          transform: [
-                            { translateX: x },
-                            { translateY: y }
-                          ]
-                        }
-                      ]}
-                    />
-                  );
-                })}
-                
-                {/* Time Labels - Positioned outside the circle */}
-                {irrigationTimes.map((time, index) => {
-                  const angle = (index * (360 / irrigationTimes.length)) - 90;
-                  const radian = (angle * Math.PI) / 180;
-                  const radius = 110; // Inner radius for labels
-                  const x = Math.cos(radian) * radius;
-                  const y = Math.sin(radian) * radius;
-                  
-                  return (
-                    <View
-                      key={`label-${time}`}
-                      style={[
-                        styles.timeLabel,
-                        {
-                          transform: [
-                            { translateX: x },
-                            { translateY: y }
-                          ]
-                        }
-                      ]}
-                    >
-                      <Text style={styles.timeLabelText}>
-                        {formatDuration(time)}
-                      </Text>
-                    </View>
-                  );
-                })}
-                
-                {/* Progress Arc - Filled wedge from center to selected time */}
-                <View style={styles.progressWedgeContainer}>
-                  <View style={[
-                    styles.progressWedge,
-                    { 
-                      transform: [
-                        { rotate: `${getAngleFromDuration(selectedTime)}deg` }
-                      ] 
-                    }
-                  ]} />
-                </View>
-                
-                {/* Center Clock Icon */}
-                <View style={styles.centerIcon}>
-                  <Feather name="clock" size={24} color="#22C55E" />
-                </View>
-                
-                {/* Draggable Point */}
-                <View 
-                  {...panResponder.panHandlers}
-                  style={[
-                    styles.draggablePoint,
-                    {
-                      transform: [
-                        { translateX: draggablePoint.x - dialCenter.x },
-                        { translateY: draggablePoint.y - dialCenter.y }
-                      ]
-                    }
-                  ]}
-                />
-              </View>
-              
-              {/* Selected Duration Display */}
-              <View style={styles.selectedDurationContainer}>
-                <Text style={styles.selectedDurationValue}>{formatDuration(selectedTime)}</Text>
-                <Text style={styles.selectedDurationLabel}>Selected duration</Text>
-              </View>
-            </View>
-
-            {/* Action Button */}
-            <TouchableOpacity 
-              style={styles.startIrrigationButton}
-              onPress={handleStartManualIrrigation}
-            >
-              <Text style={styles.startIrrigationButtonText}>Start Timer</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowTimePicker(false)}
+        onTimeSelected={handleTimeSelected}
+        initialTime={0}
+        timeOptions={irrigationTimes}
+      />
     </SafeAreaView>
   );
 };

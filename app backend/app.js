@@ -30,4 +30,4 @@ wss.on('connection', (ws) => {
   });
 });
 
-console.log('WebSocket server running on ws://192.168.68.61:8080');
+console.log('WebSocket server running on ws://192.168.68.71:8080');
