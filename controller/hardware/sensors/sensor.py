@@ -23,7 +23,7 @@ class Sensor:
 
     def __init__(
         self,
-        simulation_mode=True,
+        simulation_mode=False,
         initial_moisture=30.0,
         port=DEFAULT_PORT,
         baudrate=DEFAULT_BAUDRATE

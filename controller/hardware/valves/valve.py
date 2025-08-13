@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict
 from datetime import datetime
 from controller.hardware.relay_controller import RelayController
 
@@ -33,6 +33,11 @@ class Valve:
         self.is_blocked: bool = False
         self.relay_controller: Optional[RelayController] = relay_controller
         self.simulation_mode: bool = simulation_mode
+        
+        # Add state tracking for debugging
+        self.is_open: bool = False
+        self.open_time: Optional[datetime] = None
+        self.close_time: Optional[datetime] = None
 
     def calculate_open_time(self, water_amount: float) -> float:
         """
@@ -53,6 +58,7 @@ class Valve:
         print(f"   - is_blocked: {self.is_blocked}")
         print(f"   - simulation_mode: {self.simulation_mode}")
         print(f"   - relay_controller: {self.relay_controller}")
+        print(f"   - current state: {'OPEN' if self.is_open else 'CLOSED'}")
         
         if self.is_blocked:
             print(f"❌ ERROR - Valve {self.valve_id} is blocked")
@@ -68,8 +74,11 @@ class Valve:
             print(f"❌ ERROR - No RelayController connected to Valve {self.valve_id}")
             raise RuntimeError(f"Error: No RelayController connected to Valve {self.valve_id}!")
 
+        # Update state tracking
+        self.is_open = True
+        self.open_time = datetime.now()
         self.last_irrigation_time = datetime.now()
-        print(f"✅ DEBUG - Valve {self.valve_id} opened successfully")
+        print(f"✅ DEBUG - Valve {self.valve_id} opened successfully at {self.open_time}")
 
     def request_close(self) -> None:
         """
@@ -80,6 +89,7 @@ class Valve:
         print(f"   - is_blocked: {self.is_blocked}")
         print(f"   - simulation_mode: {self.simulation_mode}")
         print(f"   - relay_controller: {self.relay_controller}")
+        print(f"   - current state: {'OPEN' if self.is_open else 'CLOSED'}")
         
         if self.is_blocked:
             print(f"❌ ERROR - Valve {self.valve_id} is blocked")
@@ -94,7 +104,15 @@ class Valve:
             print(f"❌ ERROR - No RelayController connected to Valve {self.valve_id}")
             raise RuntimeError(f"Error: No RelayController connected to Valve {self.valve_id}")
         
-        print(f"✅ DEBUG - Valve {self.valve_id} closed successfully")
+        # Update state tracking
+        self.is_open = False
+        self.close_time = datetime.now()
+        print(f"✅ DEBUG - Valve {self.valve_id} closed successfully at {self.close_time}")
+        
+        # Log duration if valve was open
+        if self.open_time:
+            duration = self.close_time - self.open_time
+            print(f"📊 DEBUG - Valve {self.valve_id} was open for {duration.total_seconds():.2f} seconds")
 
     def block(self) -> None:
         """
@@ -107,5 +125,22 @@ class Valve:
         Unblocks the valve, allowing it to be operated again.
         """
         self.is_blocked = False
+
+    def get_status(self) -> Dict:
+        """
+        Get the current status of the valve.
+        
+        Returns:
+            Dict: Current valve status information
+        """
+        return {
+            'valve_id': self.valve_id,
+            'is_open': self.is_open,
+            'is_blocked': self.is_blocked,
+            'simulation_mode': self.simulation_mode,
+            'open_time': self.open_time.isoformat() if self.open_time else None,
+            'close_time': self.close_time.isoformat() if self.close_time else None,
+            'last_irrigation_time': self.last_irrigation_time.isoformat() if self.last_irrigation_time else None
+        }
 
 

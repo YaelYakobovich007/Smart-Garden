@@ -67,38 +67,81 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_400Regular',
   },
 
-  // Animation stage
-  animationStage: {
-    width: "100%",
-    aspectRatio: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: 0,
-    position: "relative",
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: '#ECF0F1',
+  // Animation container
+  animationContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    minHeight: 300,
   },
 
-  // Sensor badge
-  sensorBadge: {
-    position: "absolute",
-    top: -8,
-    right: -30,
-    backgroundColor: "#4CAF50",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 2,
-    borderColor: "#E8F5E8",
+  // Valve section
+  valveSection: {
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  sensorBadgeText: { 
-    color: "#FFFFFF", 
-    fontWeight: "800", 
+  valveContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  valveLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3B82F6',
+    marginTop: 8,
+    fontFamily: 'Nunito_600SemiBold',
+  },
+
+  // Connection line
+  connectionLine: {
+    width: 3,
+    height: 60,
+    backgroundColor: '#3B82F6',
+    borderRadius: 2,
+    marginVertical: 10,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  // Planter section
+  planterSection: {
+    alignItems: 'center',
+    position: 'relative',
+  },
+  planterContainer: {
+    alignItems: 'center',
+    position: 'relative',
+  },
+  placementIndicator: {
+    position: 'absolute',
+    bottom: -30,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  placementText: {
+    color: '#FFFFFF',
     fontSize: 12,
-    fontFamily: 'Nunito_700Bold',
+    fontWeight: '600',
+    fontFamily: 'Nunito_600SemiBold',
   },
 
   // Instructions
@@ -156,8 +199,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-
-
 });
 
 export default styles;

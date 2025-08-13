@@ -242,6 +242,56 @@ class PiCommunication {
             return { success: false, error: error.message };
         }
     }
+
+    /**
+     * Send GET_VALVE_STATUS request to Pi (no waiting)
+     */
+    getValveStatus(plantId) {
+        console.log('🔍 DEBUG - piCommunication.getValveStatus called:');
+        console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
+        
+        console.log('🔍 DEBUG - Getting Pi socket...');
+        const piSocket = getPiSocket();
+        console.log('🔍 DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
+        
+        if (!piSocket) {
+            console.log('❌ Pi not connected - cannot get valve status');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        console.log('✅ DEBUG - Pi socket found, creating request...');
+        
+        try {
+            const request = {
+                type: 'GET_VALVE_STATUS',
+                data: {
+                    plant_id: plantId
+                }
+            };
+
+            console.log('📤 DEBUG - Created request object:');
+            console.log('   - type:', request.type);
+            console.log('   - data.plant_id:', request.data.plant_id, '(type:', typeof request.data.plant_id, ')');
+            console.log('   - Full JSON:', JSON.stringify(request));
+
+            console.log('🔍 DEBUG - Converting to JSON string...');
+            const jsonString = JSON.stringify(request);
+            console.log('✅ DEBUG - JSON string created, length:', jsonString.length);
+
+            console.log('🔍 DEBUG - Sending to Pi socket...');
+            piSocket.send(jsonString);
+            console.log('✅ DEBUG - GET_VALVE_STATUS message sent to Pi successfully');
+            
+            console.log('🔍 DEBUG - Returning success result');
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ ERROR - Error sending GET_VALVE_STATUS to Pi:');
+            console.error('   - Error message:', error.message);
+            console.error('   - Error stack:', error.stack);
+            return { success: false, error: error.message };
+        }
+    }
 }
 
 // Create single instance

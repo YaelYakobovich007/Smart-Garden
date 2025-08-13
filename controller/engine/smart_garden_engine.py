@@ -1,7 +1,7 @@
 import asyncio
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from controller.models.plant import Plant
 from controller.hardware.valves.valves_manager import ValvesManager
@@ -324,27 +324,32 @@ class SmartGardenEngine:
             try:
                 print(f"🔍 DEBUG - Opening valve for plant {plant_id} for {time_minutes} minutes")
                 
-                # Open the valve
-                plant.valve.request_open()
-                print(f"✅ DEBUG - Valve opened successfully for plant {plant_id}")
-                
-                # Initialize valve state
+                # Initialize valve state BEFORE opening valve
                 self.valve_states[plant_id] = {
                     'is_open': True,
                     'start_time': time.time(),
                     'duration_minutes': time_minutes,
-                    'plant_id': plant_id
+                    'plant_id': plant_id,
+                    'auto_close_time': time.time() + (time_minutes * 60)  # Calculate exact close time
                 }
+                
+                # Open the valve
+                plant.valve.request_open()
+                print(f"✅ DEBUG - Valve opened successfully for plant {plant_id}")
                 
                 # Create background task to close valve after duration
                 close_task = asyncio.create_task(self._close_valve_after_duration(plant_id, time_minutes))
                 self.valve_tasks[plant_id] = close_task
                 
                 print(f"✅ DEBUG - Background task created for plant {plant_id}")
+                print(f"✅ DEBUG - Valve will auto-close at: {datetime.fromtimestamp(self.valve_states[plant_id]['auto_close_time'])}")
                 return True
                 
             except Exception as e:
                 print(f"❌ ERROR - Error opening valve for plant {plant_id}: {e}")
+                # Clean up state in case of error
+                if plant_id in self.valve_states:
+                    del self.valve_states[plant_id]
                 # Ensure valve is closed in case of error
                 try:
                     plant.valve.request_close()
@@ -390,6 +395,7 @@ class SmartGardenEngine:
                 # Update valve state
                 if plant_id in self.valve_states:
                     self.valve_states[plant_id]['is_open'] = False
+                    self.valve_states[plant_id]['manual_close_time'] = time.time()
                 
                 return True
                 
@@ -408,9 +414,14 @@ class SmartGardenEngine:
         try:
             print(f"🔍 DEBUG - Background task started for plant {plant_id}")
             print(f"   - Waiting {time_minutes} minutes before closing valve")
+            print(f"   - Start time: {datetime.now()}")
+            print(f"   - Expected end time: {datetime.now().replace(second=0, microsecond=0) + timedelta(minutes=time_minutes)}")
             
             # Wait for the specified duration
             await asyncio.sleep(time_minutes * 60)  # Convert minutes to seconds
+            
+            print(f"🔍 DEBUG - Background task timer completed for plant {plant_id}")
+            print(f"   - Current time: {datetime.now()}")
             
             # Check if valve is still open (not manually closed)
             if plant_id in self.valve_states and self.valve_states[plant_id]['is_open']:
@@ -422,6 +433,7 @@ class SmartGardenEngine:
                 
                 # Update valve state
                 self.valve_states[plant_id]['is_open'] = False
+                self.valve_states[plant_id]['auto_close_time'] = time.time()
             else:
                 print(f"🔍 DEBUG - Valve for plant {plant_id} was already closed manually")
                 
@@ -430,6 +442,14 @@ class SmartGardenEngine:
             raise
         except Exception as e:
             print(f"❌ ERROR - Error in background task for plant {plant_id}: {e}")
+            # Try to close valve even if there's an error
+            try:
+                if plant_id in self.plants:
+                    plant = self.plants[plant_id]
+                    plant.valve.request_close()
+                    print(f"✅ DEBUG - Valve closed due to background task error")
+            except Exception as close_error:
+                print(f"❌ ERROR - Failed to close valve after background task error: {close_error}")
         finally:
             # Clean up task reference
             if plant_id in self.valve_tasks:
@@ -459,3 +479,48 @@ class SmartGardenEngine:
         """
         valve_state = self.valve_states.get(plant_id)
         return valve_state is not None and valve_state.get('is_open', False)
+
+    def get_detailed_valve_status(self, plant_id: int) -> Optional[Dict]:
+        """
+        Get detailed valve status for debugging purposes.
+        
+        Args:
+            plant_id (int): The ID of the plant
+            
+        Returns:
+            Optional[Dict]: Detailed valve status information, or None if not found
+        """
+        if plant_id not in self.plants:
+            return None
+            
+        plant = self.plants[plant_id]
+        valve_state = self.valve_states.get(plant_id, {})
+        
+        # Get valve hardware status
+        valve_status = plant.valve.get_status()
+        
+        # Combine with engine state
+        detailed_status = {
+            'plant_id': plant_id,
+            'plant_name': getattr(plant, 'name', 'Unknown'),
+            'engine_state': valve_state,
+            'valve_hardware': valve_status,
+            'has_background_task': plant_id in self.valve_tasks,
+            'task_status': 'running' if (plant_id in self.valve_tasks and not self.valve_tasks[plant_id].done()) else 'completed/cancelled'
+        }
+        
+        return detailed_status
+
+    def get_all_valve_statuses(self) -> Dict[int, Dict]:
+        """
+        Get detailed status for all valves in the system.
+        
+        Returns:
+            Dict[int, Dict]: Dictionary mapping plant_id to detailed valve status
+        """
+        statuses = {}
+        for plant_id in self.plants.keys():
+            status = self.get_detailed_valve_status(plant_id)
+            if status:
+                statuses[plant_id] = status
+        return statuses

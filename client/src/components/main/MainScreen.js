@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import GlobalIrrigationControl from './GlobalIrrigationControl';
 import {
   View,
   Text,
@@ -542,6 +543,9 @@ const MainScreen = () => {
         onSettings={handleSettings}
         onHelp={handleHelp}
       />
+
+      {/* Global Irrigation Control */}
+      <GlobalIrrigationControl />
     </View>
   );
 };

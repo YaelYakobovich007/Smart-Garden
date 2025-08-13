@@ -12,6 +12,8 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import IrrigationOverlay from './IrrigationOverlay';
+import { useIrrigation } from '../../../contexts/IrrigationContext';
 import {
   View,
   Text,
@@ -40,49 +42,26 @@ const PlantDetail = () => {
   const [currentMoisture, setCurrentMoisture] = useState(plant?.moisture || 0);
   const [currentTemperature, setCurrentTemperature] = useState(plant?.temperature || 0);
   
-  // New state for enhanced features
-  const [isWateringActive, setIsWateringActive] = useState(false);
-  const [wateringTimeLeft, setWateringTimeLeft] = useState(0); // in seconds
+  // Local state for UI
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [selectedTime, setSelectedTime] = useState(10); // default 10 minutes
-  const [isManualMode, setIsManualMode] = useState(false);
-  const [timerInterval, setTimerInterval] = useState(null);
-  const [pendingValveRequest, setPendingValveRequest] = useState(false);
+  
+  // Global irrigation state
+  const {
+    isWateringActive,
+    wateringTimeLeft,
+    isManualMode,
+    selectedTime,
+    currentPlant,
+    formatTime,
+    startManualIrrigation,
+    handleStopWatering,
+    pauseTimer,
+    resumeTimer,
+    resetTimer,
+  } = useIrrigation();
 
   // Available irrigation times (in minutes)
   const irrigationTimes = [0, 5, 10, 15, 20, 30, 45, 60];
-
-  // Countdown timer effect
-  useEffect(() => {
-    let interval;
-    // Only start timer if watering is active, has time left, and there's no pending valve request
-    if (isWateringActive && wateringTimeLeft > 0 && !pendingValveRequest) {
-      interval = setInterval(() => {
-        setWateringTimeLeft(prev => {
-          if (prev <= 1) {
-            setIsWateringActive(false);
-            // Stop irrigation automatically
-            handleStopWatering();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      setTimerInterval(interval);
-    }
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [isWateringActive, wateringTimeLeft, pendingValveRequest]);
-
-  // Format time as MM:SS
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
 
   // Smart irrigation handler
   const handleSmartIrrigation = () => {
@@ -108,73 +87,8 @@ const PlantDetail = () => {
   };
 
   const handleTimeSelected = (timeMinutes) => {
-    // Store the selected time but don't start timer yet
-    setSelectedTime(timeMinutes);
-    setPendingValveRequest(true);
-    
-    // Debug: Check connection and plant data
-    console.log('🔍 DEBUG - Requesting valve opening:');
-    console.log('   - Plant name:', plant.name);
-    console.log('   - Selected time:', timeMinutes);
-    console.log('   - WebSocket connected:', websocketService.isConnected());
-    
-    // Send OPEN_VALVE command to server
-    const message = {
-      type: 'OPEN_VALVE',
-      plantName: plant.name,
-      timeMinutes: timeMinutes
-    };
-    
-    console.log('📤 Sending OPEN_VALVE message:', JSON.stringify(message));
-    websocketService.sendMessage(message);
-  };
-
-  const handleStopWatering = () => {
-    setIsWateringActive(false);
-    setIsManualMode(false);
-    setWateringTimeLeft(0);
-    
-    // Send close valve command
-    websocketService.sendMessage({
-      type: 'CLOSE_VALVE',
-      plantName: plant.name
-    });
-  };
-
-  // Timer control functions
-  const pauseTimer = () => {
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
-    }
-    setIsWateringActive(false);
-  };
-
-  const resumeTimer = () => {
-    setIsWateringActive(true);
-    const interval = setInterval(() => {
-      setWateringTimeLeft(prev => {
-        if (prev <= 1) {
-          setIsWateringActive(false);
-          clearInterval(interval);
-          setTimerInterval(null);
-          handleStopWatering();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    setTimerInterval(interval);
-  };
-
-  const resetTimer = () => {
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
-    }
-    setIsWateringActive(false);
-    setWateringTimeLeft(0);
-    handleStopWatering();
+    startManualIrrigation(plant, timeMinutes);
+    setShowTimePicker(false);
   };
 
   // Existing handlers
@@ -299,50 +213,9 @@ const PlantDetail = () => {
       Alert.alert('Sensor Error', data?.message || 'Failed to get sensor data.');
     };
 
-    const handleOpenValveSuccess = (data) => {
-      console.log('✅ OPEN_VALVE success:', data);
-      
-      // Only start timer if we have a pending request
-      if (pendingValveRequest) {
-        // Now start the timer since valve opened successfully
-        setIsManualMode(true);
-        setIsWateringActive(true);
-        setWateringTimeLeft(selectedTime * 60); // Convert minutes to seconds
-        setPendingValveRequest(false);
-        
-        Alert.alert('Valve Control', data?.message || 'Valve opened successfully! Timer started.');
-      }
-    };
-
-    const handleOpenValveFail = (data) => {
-      console.log('❌ OPEN_VALVE failed:', data);
-      
-      // Reset state since valve opening failed
-      setIsManualMode(false);
-      setIsWateringActive(false);
-      setWateringTimeLeft(0);
-      setSelectedTime(10); // Reset to default
-      setPendingValveRequest(false);
-      
-      Alert.alert('Valve Control', data?.message || 'Failed to open valve. Timer not started.');
-    };
-
-    const handleCloseValveSuccess = (data) => {
-      console.log('✅ CLOSE_VALVE success:', data);
-      // No alert needed - just update the UI state
-    };
-
-    const handleCloseValveFail = (data) => {
-      Alert.alert('Valve Control', data?.message || 'Failed to close valve.');
-    };
-
     websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleFail);
     websocketService.onMessage('IRRIGATE_SKIPPED', handleSkipped);
-    websocketService.onMessage('OPEN_VALVE_SUCCESS', handleOpenValveSuccess);
-    websocketService.onMessage('OPEN_VALVE_FAIL', handleOpenValveFail);
-    websocketService.onMessage('CLOSE_VALVE_SUCCESS', handleCloseValveSuccess);
-    websocketService.onMessage('CLOSE_VALVE_FAIL', handleCloseValveFail);
     websocketService.onMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
     websocketService.onMessage('DELETE_PLANT_FAIL', handleDeleteFail);
     websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
@@ -353,10 +226,6 @@ const PlantDetail = () => {
       websocketService.offMessage('IRRIGATE_SUCCESS', handleSuccess);
       websocketService.offMessage('IRRIGATE_FAIL', handleFail);
       websocketService.offMessage('IRRIGATE_SKIPPED', handleSkipped);
-      websocketService.offMessage('OPEN_VALVE_SUCCESS', handleOpenValveSuccess);
-      websocketService.offMessage('OPEN_VALVE_FAIL', handleOpenValveFail);
-      websocketService.offMessage('CLOSE_VALVE_SUCCESS', handleCloseValveSuccess);
-      websocketService.offMessage('CLOSE_VALVE_FAIL', handleCloseValveFail);
       websocketService.offMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
       websocketService.offMessage('DELETE_PLANT_FAIL', handleDeleteFail);
       websocketService.offMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
@@ -453,7 +322,13 @@ const PlantDetail = () => {
           <View style={styles.valveButtonsContainer}>
             <TouchableOpacity 
               style={[styles.primaryButton, styles.halfButton, isWateringActive && styles.disabledButton]} 
-              onPress={handleManualIrrigation}
+              onPress={() => {
+                console.log('🔵 Open Valve button pressed');
+                console.log('   - isManualMode:', isManualMode);
+                console.log('   - isWateringActive:', isWateringActive);
+                console.log('   - wateringTimeLeft:', wateringTimeLeft);
+                handleManualIrrigation();
+              }}
               disabled={isWateringActive}
             >
               <Feather name="droplet" size={20} color="#FFFFFF" />
@@ -463,9 +338,15 @@ const PlantDetail = () => {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.stopButton, styles.halfButton, !isWateringActive && styles.disabledButton]} 
-              onPress={handleStopWatering}
-              disabled={!isWateringActive}
+              style={[styles.stopButton, styles.halfButton, !isManualMode && styles.disabledButton]} 
+              onPress={() => {
+                console.log('🔴 Close Valve button pressed');
+                console.log('   - isManualMode:', isManualMode);
+                console.log('   - isWateringActive:', isWateringActive);
+                console.log('   - wateringTimeLeft:', wateringTimeLeft);
+                handleStopWatering();
+              }}
+              disabled={!isManualMode}
             >
               <Feather name="square" size={20} color="#FFFFFF" />
               <Text style={styles.stopButtonText}>Close Valve</Text>
@@ -572,6 +453,15 @@ const PlantDetail = () => {
         onTimeSelected={handleTimeSelected}
         initialTime={0}
         timeOptions={irrigationTimes}
+      />
+
+      {/* 7. Irrigation Overlay */}
+      <IrrigationOverlay 
+        isActive={isWateringActive || isManualMode}
+        timeLeft={wateringTimeLeft}
+        onPause={pauseTimer}
+        onResume={resumeTimer}
+        onStop={handleStopWatering}
       />
     </SafeAreaView>
   );

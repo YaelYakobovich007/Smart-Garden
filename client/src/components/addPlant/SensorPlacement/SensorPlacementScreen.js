@@ -20,34 +20,43 @@ import {
   Animated,
   Easing,
   SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
+import { Leaf, Sprout } from 'lucide-react-native';
 import Svg, { Defs, LinearGradient, Stop, Rect, Path, G } from 'react-native-svg';
 import styles from './styles';
 
-/** ===== Theme ===== */
-const APP_BG = "#EAF7EF";
-const CARD_BG = "#FFFFFF";
-const TEXT_DARK = "#243B41";
-const SUBTEXT = "#6C7A80";
-const ACCENT = "#42D39B";
-
-/** ===== Stepper Component ===== */
-function Stepper({ total = 2, current = 1 }) {
-  const items = Array.from({ length: total }, (_, i) => i + 1);
-  return (
-    <View style={styles.stepperRow}>
-      {items.map((n, idx) => (
-        <React.Fragment key={n}>
-          <View style={[styles.stepDot, n <= current ? styles.stepDotActive : styles.stepDotInactive]} />
-          {idx < items.length - 1 && (
-            <View style={[styles.stepLine, n < current ? styles.stepLineActive : styles.stepLineInactive]} />
-          )}
-        </React.Fragment>
-      ))}
-    </View>
-  );
-}
+/**
+ * Convert sensor port to sensor number
+ * @param {string|number} sensorPort - The sensor port (e.g., "/dev/ttyUSB0") or sensor ID
+ * @returns {number} The sensor number (1 for ttyUSB0, 2 for ttyUSB1, etc.)
+ */
+const getSensorNumber = (sensorPort) => {
+  if (typeof sensorPort === 'number') {
+    return sensorPort;
+  }
+  
+  if (typeof sensorPort === 'string') {
+    // Extract number from port string (e.g., "/dev/ttyUSB0" -> 1, "/dev/ttyUSB1" -> 2)
+    const match = sensorPort.match(/ttyUSB(\d+)/);
+    if (match) {
+      return parseInt(match[1]) + 1; // Convert 0-based to 1-based
+    }
+    
+    // Try to extract any number from the string
+    const numberMatch = sensorPort.match(/(\d+)/);
+    if (numberMatch) {
+      return parseInt(numberMatch[1]);
+    }
+  }
+  
+  // Default fallback
+  return 1;
+};
 
 /** ===== Sensor SVG Component ===== */
 function SensorSVG({ width = 170 }) {
@@ -98,6 +107,7 @@ function SensorSVG({ width = 170 }) {
 
       {/* body */}
       <Rect x={bodyX} y={bodyY} rx={r} ry={r} width={bodyW} height={bodyH} fill="url(#bodyGrad)" stroke="#090b0d" strokeWidth={2} />
+
       {/* neck */}
       <Rect x={bodyX + bodyW * 0.42} y={bodyY - 10} width={bodyW * 0.16} height={14} rx={6} ry={6} fill="#141518" stroke="#0d0f12" strokeWidth={1} />
 
@@ -162,11 +172,14 @@ function PlanterSVG({ width = 320, height = 180, soilHeight = 36, edgeToEdge = f
 }
 
 /** ===== Sensor Placement Flow Component ===== */
-function PlaceSensorFlow({ sensorId, onConfirm }) {
+function PlaceSensorFlow({ sensorPort, onConfirm }) {
   const translateY = useRef(new Animated.Value(-30)).current;
   const rotate = useRef(new Animated.Value(0)).current;
   const [confirmed, setConfirmed] = useState(false);
   const [stage, setStage] = useState({ w: 0, h: 0 });
+
+  // Get sensor number from port
+  const sensorNumber = getSensorNumber(sensorPort);
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -207,26 +220,26 @@ function PlaceSensorFlow({ sensorId, onConfirm }) {
 
   return (
     <View style={{ width: "100%" }}>
-      {/* כרטיס האנימציה */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Step 1: Place Your Sensor</Text>
-        <Text style={styles.cardSubtitle}>Insert sensor #{String(sensorId).padStart(3, "0")} into the flowerpot as shown below</Text>
+      {/* Animation Card */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { textAlign: 'center' }]}>Step 1: Place Your Sensor</Text>
+        <Text style={styles.subtitle}>Insert sensor #{sensorNumber} into the flowerpot as shown below</Text>
 
         <View
-          style={styles.stage}
+          style={styles.animationStage}
           onLayout={(e) => {
             const { width, height } = e.nativeEvent.layout;
             setStage({ w: width, h: height });
           }}
         >
-          {/* אדנית בקצה התחתון של האנימציה */}
+          {/* Planter at the bottom of the animation */}
           {stage.w > 0 && (
             <View style={{ position: "absolute", bottom: BOTTOM_OFFSET, left: 0, right: 0, zIndex: 2 }}>
               <PlanterSVG width={PLANTER_W} height={PLANTER_H} soilHeight={SOIL_H} edgeToEdge />
             </View>
           )}
 
-          {/* מסכה ברוחב מלא – החיישן "נכנס" לאדמה */}
+          {/* Mask for sensor insertion animation */}
           {stage.w > 0 && (
             <View
               style={{
@@ -249,8 +262,8 @@ function PlaceSensorFlow({ sensorId, onConfirm }) {
               >
                 <View style={{ alignItems: "center" }}>
                   <SensorSVG width={170} />
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>#{String(sensorId)}</Text>
+                  <View style={styles.sensorBadge}>
+                    <Text style={styles.sensorBadgeText}>#{sensorNumber}</Text>
                   </View>
                 </View>
               </Animated.View>
@@ -259,22 +272,25 @@ function PlaceSensorFlow({ sensorId, onConfirm }) {
         </View>
       </View>
 
-      {/* כרטיס הוראות */}
-      <View style={[styles.card, { marginTop: 28 }]}>
-        <Text style={styles.cardTitle}>Instructions</Text>
-        <Text style={styles.instructions}>1. Remove the sensor from its packaging.</Text>
-        <Text style={styles.instructions}>2. Gently insert it into the soil.</Text>
-        <Text style={styles.instructions}>3. Ensure the sensor is 2–3 cm deep.</Text>
-        <Text style={styles.instructions}>4. The sensor should be stable and upright.</Text>
+      {/* Instructions Card */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Instructions</Text>
+        <View style={styles.instructionsContainer}>
+          <Text style={styles.instructionText}>1. Gently insert it into the soil.</Text>
+          <Text style={styles.instructionText}>2. Ensure the sensor is 4-5 cm deep.</Text>
+          <Text style={styles.instructionText}>3. The sensor should be stable and upright.</Text>
+        </View>
 
-        <Pressable 
+        <TouchableOpacity 
           onPress={handleConfirm} 
-          style={({ pressed }) => [styles.cta, pressed && { opacity: 0.9 }]}
+          style={[styles.confirmButton, confirmed && styles.confirmButtonPressed]}
+          disabled={confirmed}
         >
-          <Text style={styles.ctaText}>
-            {confirmed ? "✓ Inserted, continue..." : "I placed the sensor"}
+          <Feather name={confirmed ? "check" : "check-circle"} size={20} color="#FFFFFF" />
+          <Text style={styles.confirmButtonText}>
+            {confirmed ? "Sensor placed successfully!" : "I placed the sensor"}
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -286,34 +302,46 @@ export default function SensorPlacementScreen() {
   const route = useRoute();
   const [done, setDone] = useState(false);
   
-  // Get sensor ID from route params or use default
-  const sensorId = route.params?.sensorId || 3;
+  // Get sensor port from route params or use default
+  const sensorPort = route.params?.sensorId || route.params?.sensorPort || "/dev/ttyUSB0";
 
   const handleConfirm = () => {
-    setDone(true);
-    // Navigate back to main screen after successful sensor placement
+    // Navigate to tap placement screen after successful sensor placement
     setTimeout(() => {
-      navigation.navigate('Main');
+      navigation.navigate('TapPlacement', { sensorPort });
     }, 1000);
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.screen}>
-        <Text style={styles.screenTitle}>Sensor Placement Guide</Text>
-        <Stepper total={1} current={1} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#EAF5E4' }}>
+      <StatusBar barStyle="dark-content" backgroundColor="#EAF5E4" />
+            {/* Header with title only */}
+      <View style={styles.header}>
+        <View style={styles.headerSpacer} />
+        <View style={styles.headerTitleContainer}>
+          <Sprout size={20} color="#4CAF50" />
+          <Text style={styles.headerTitle}>Adding a New Plant</Text>
+        </View>
+        <View style={styles.headerSpacer} />
+      </View>
 
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {!done ? (
-          <PlaceSensorFlow sensorId={sensorId} onConfirm={handleConfirm} />
+          <PlaceSensorFlow sensorPort={sensorPort} onConfirm={handleConfirm} />
         ) : (
-          <View style={[styles.card, { alignItems: "center" }]}>
-            <Text style={[styles.cardTitle, { marginBottom: 8 }]}>🎉 Sensor placed successfully!</Text>
-            <Text style={[styles.instructions, { textAlign: "center" }]}>
+          <View style={[styles.section, { alignItems: "center" }]}>
+            <View style={styles.successIcon}>
+              <Feather name="check" size={32} color="#FFFFFF" />
+            </View>
+            <Text style={[styles.sectionTitle, { marginBottom: 8, textAlign: "center" }]}>
+              🎉 Sensor placed successfully!
+            </Text>
+            <Text style={[styles.subtitle, { textAlign: "center" }]}>
               Your plant is now ready for monitoring.
             </Text>
           </View>
-        )}
-      </View>
-    </SafeAreaView>
-  );
-}
+                 )}
+       </ScrollView>
+     </SafeAreaView>
+   );
+ }

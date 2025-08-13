@@ -13,7 +13,8 @@ const irrigationHandlers = {
   IRRIGATE_PLANT: handleIrrigatePlant,
   OPEN_VALVE: handleOpenValve,
   CLOSE_VALVE: handleCloseValve,
-  GET_IRRIGATION_RESULT: handleGetIrrigationResult
+  GET_IRRIGATION_RESULT: handleGetIrrigationResult,
+  GET_VALVE_STATUS: handleGetValveStatus
 };
 
 async function handleIrrigationMessage(data, ws) {
@@ -209,17 +210,67 @@ async function handleCloseValve(data, ws, email) {
   }
 }
 
-// Get all irrigation results for a plant by name
+// Get irrigation result for a specific plant
 async function handleGetIrrigationResult(data, ws, email) {
   const { plantName } = data;
-  if (!plantName) return sendError(ws, 'GET_IRRIGATION_RESULT_FAIL', 'Missing plantName');
+  
+  if (!plantName) {
+    return sendError(ws, 'GET_IRRIGATION_RESULT_FAIL', 'Missing plantName');
+  }
+  
   const user = await getUser(email);
-  if (!user) return sendError(ws, 'GET_IRRIGATION_RESULT_FAIL', 'User not found');
+  if (!user) {
+    return sendError(ws, 'GET_IRRIGATION_RESULT_FAIL', 'User not found');
+  }
+  
   const plant = await getPlantByName(user.id, plantName);
-  if (!plant) return sendError(ws, 'GET_IRRIGATION_RESULT_FAIL', 'Plant not found');
-  const results = await irrigationModel.getIrrigationResultsByPlantId(plant.plant_id);
-  // Return both the plant name and the results array
-  sendSuccess(ws, 'GET_IRRIGATION_RESULT_SUCCESS', { plantName: plant.name, results });
+  if (!plant) {
+    return sendError(ws, 'GET_IRRIGATION_RESULT_FAIL', 'Plant not found');
+  }
+  
+  const result = await irrigationModel.getIrrigationResult(plant.plant_id);
+  sendSuccess(ws, 'IRRIGATION_RESULT', result);
+}
+
+// Get valve status for debugging
+async function handleGetValveStatus(data, ws, email) {
+  console.log('🔍 DEBUG - handleGetValveStatus received:', JSON.stringify(data));
+  
+  const { plantName } = data;
+  
+  if (!plantName) {
+    return sendError(ws, 'GET_VALVE_STATUS_FAIL', 'Missing plantName');
+  }
+  
+  const user = await getUser(email);
+  if (!user) {
+    return sendError(ws, 'GET_VALVE_STATUS_FAIL', 'User not found');
+  }
+  
+  const plant = await getPlantByName(user.id, plantName);
+  if (!plant) {
+    return sendError(ws, 'GET_VALVE_STATUS_FAIL', 'Plant not found');
+  }
+  
+  // Get valve status from Pi controller
+  const piResult = piCommunication.getValveStatus(plant.plant_id);
+  
+  if (piResult.success) {
+    console.log('✅ DEBUG - Pi communication successful for valve status');
+    // Pi is connected - add to pending list and wait for valve status result
+    addPendingIrrigation(plant.plant_id, ws, email, {
+      plant_id: plant.plant_id,
+      plant_name: plant.name,
+      request_type: 'GET_VALVE_STATUS'
+    });
+    
+    console.log(`⏳ Valve status request for plant ${plant.plant_id} (${plant.name}) sent to Pi controller...`);
+    // No immediate response - client will get status when Pi responds
+  } else {
+    console.log('❌ ERROR - Pi communication failed for valve status:', piResult.error);
+    return sendError(ws, 'GET_VALVE_STATUS_FAIL',
+      'Pi controller not connected. Cannot get valve status. Please try again when Pi is online.');
+  }
 }
 
 module.exports = {
