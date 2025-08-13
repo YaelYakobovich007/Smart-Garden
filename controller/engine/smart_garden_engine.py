@@ -324,25 +324,33 @@ class SmartGardenEngine:
             try:
                 print(f"🔍 DEBUG - Opening valve for plant {plant_id} for {time_minutes} minutes")
                 
+                # Calculate duration in seconds
+                duration_seconds = time_minutes * 60
+                
                 # Initialize valve state BEFORE opening valve
+                start_time = time.time()
                 self.valve_states[plant_id] = {
                     'is_open': True,
-                    'start_time': time.time(),
+                    'start_time': start_time,
                     'duration_minutes': time_minutes,
+                    'duration_seconds': duration_seconds,
                     'plant_id': plant_id,
-                    'auto_close_time': time.time() + (time_minutes * 60)  # Calculate exact close time
+                    'auto_close_time': start_time + duration_seconds,  # Calculate exact close time
+                    'task_start_time': start_time  # Track when background task started
                 }
                 
                 # Open the valve
                 plant.valve.request_open()
                 print(f"✅ DEBUG - Valve opened successfully for plant {plant_id}")
+                print(f"✅ DEBUG - Start time: {datetime.fromtimestamp(start_time)}")
+                print(f"✅ DEBUG - Duration: {time_minutes} minutes ({duration_seconds} seconds)")
+                print(f"✅ DEBUG - Expected close time: {datetime.fromtimestamp(start_time + duration_seconds)}")
                 
                 # Create background task to close valve after duration
-                close_task = asyncio.create_task(self._close_valve_after_duration(plant_id, time_minutes))
+                close_task = asyncio.create_task(self._close_valve_after_duration(plant_id, duration_seconds))
                 self.valve_tasks[plant_id] = close_task
                 
                 print(f"✅ DEBUG - Background task created for plant {plant_id}")
-                print(f"✅ DEBUG - Valve will auto-close at: {datetime.fromtimestamp(self.valve_states[plant_id]['auto_close_time'])}")
                 return True
                 
             except Exception as e:
@@ -403,37 +411,57 @@ class SmartGardenEngine:
                 print(f"❌ ERROR - Error closing valve for plant {plant_id}: {e}")
                 return False
 
-    async def _close_valve_after_duration(self, plant_id: int, time_minutes: int) -> None:
+    async def _close_valve_after_duration(self, plant_id: int, duration_seconds: int) -> None:
         """
         Background task to close valve after specified duration.
         
         Args:
             plant_id (int): The ID of the plant
-            time_minutes (int): Duration in minutes to wait before closing
+            duration_seconds (int): Duration in seconds to wait before closing
         """
         try:
             print(f"🔍 DEBUG - Background task started for plant {plant_id}")
-            print(f"   - Waiting {time_minutes} minutes before closing valve")
+            print(f"   - Waiting {duration_seconds} seconds before closing valve")
             print(f"   - Start time: {datetime.now()}")
-            print(f"   - Expected end time: {datetime.now().replace(second=0, microsecond=0) + timedelta(minutes=time_minutes)}")
+            print(f"   - Expected end time: {datetime.now().replace(second=0, microsecond=0) + timedelta(seconds=duration_seconds)}")
             
-            # Wait for the specified duration
-            await asyncio.sleep(time_minutes * 60)  # Convert minutes to seconds
+            # Record the actual start time for validation
+            task_start_time = time.time()
+            
+            # Wait for the specified duration using asyncio.sleep
+            await asyncio.sleep(duration_seconds)
+            
+            # Record the actual end time for validation
+            task_end_time = time.time()
+            actual_duration = task_end_time - task_start_time
             
             print(f"🔍 DEBUG - Background task timer completed for plant {plant_id}")
             print(f"   - Current time: {datetime.now()}")
+            print(f"   - Expected duration: {duration_seconds} seconds")
+            print(f"   - Actual duration: {actual_duration:.2f} seconds")
+            print(f"   - Timing difference: {abs(actual_duration - duration_seconds):.2f} seconds")
+            
+            # Validate timing accuracy (allow 2 second tolerance for system load)
+            if abs(actual_duration - duration_seconds) > 2.0:
+                print(f"⚠️  WARNING - Timing discrepancy detected!")
+                print(f"   - Expected: {duration_seconds} seconds")
+                print(f"   - Actual: {actual_duration:.2f} seconds")
+                print(f"   - Difference: {abs(actual_duration - duration_seconds):.2f} seconds")
+                print(f"   - This might indicate system clock issues or high system load")
             
             # Check if valve is still open (not manually closed)
             if plant_id in self.valve_states and self.valve_states[plant_id]['is_open']:
-                print(f"🔍 DEBUG - Auto-closing valve for plant {plant_id} after {time_minutes} minutes")
+                print(f"🔍 DEBUG - Auto-closing valve for plant {plant_id} after {duration_seconds} seconds")
                 
                 plant = self.plants[plant_id]
                 plant.valve.request_close()
                 print(f"✅ DEBUG - Valve auto-closed for plant {plant_id}")
                 
-                # Update valve state
+                # Update valve state with actual timing information
                 self.valve_states[plant_id]['is_open'] = False
                 self.valve_states[plant_id]['auto_close_time'] = time.time()
+                self.valve_states[plant_id]['actual_duration'] = actual_duration
+                self.valve_states[plant_id]['timing_accuracy'] = abs(actual_duration - duration_seconds)
             else:
                 print(f"🔍 DEBUG - Valve for plant {plant_id} was already closed manually")
                 

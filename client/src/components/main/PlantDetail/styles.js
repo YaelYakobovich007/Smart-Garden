@@ -29,14 +29,14 @@ export const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
   },
   imageContainer: {
     width: '100%',
     height: 300,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    marginLeft: 16,
-    marginRight: 16,
     marginTop: 16,
     marginBottom: 16,
     overflow: 'hidden',
@@ -74,7 +74,6 @@ export const styles = StyleSheet.create({
   plantTypeContainer: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    marginHorizontal: 16,
     marginBottom: 8,
     borderRadius: 16,
   },
@@ -95,7 +94,6 @@ export const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 20,
     marginBottom: 8,
-    marginHorizontal: 16,
     borderRadius: 16,
   },
   sectionTitle: {
@@ -130,7 +128,6 @@ export const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 20,
     marginBottom: 8,
-    marginHorizontal: 16,
     borderRadius: 16,
   },
   sectionDescription: {
@@ -206,7 +203,6 @@ export const styles = StyleSheet.create({
     backgroundColor: '#E8F5E8',
     padding: 20,
     marginBottom: 8,
-    marginHorizontal: 16,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#4CAF50',
@@ -376,7 +372,6 @@ export const styles = StyleSheet.create({
     backgroundColor: '#F0FDF4',
     padding: 24,
     marginBottom: 8,
-    marginHorizontal: 16,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#BBF7D0',
