@@ -93,7 +93,7 @@ class SmartGardenPiClient:
     async def handle_add_plant_command(self, data: Dict[Any, Any]):
         """Handle add plant request from server."""
         try:
-            from controller.handlers.add_plant_handler import handle
+            from controller.handlers.add_plant_handler import AddPlantHandler
             
             self.logger.info(f"Received ADD_PLANT command from server")
             self.logger.info(f"Full message: {data}")
@@ -102,11 +102,9 @@ class SmartGardenPiClient:
             self.logger.info(f"Desired Moisture: {data.get('desiredMoisture')}")
             self.logger.info(f"Water Limit: {data.get('waterLimit')}")
             
-            # Call the add plant handler
-            success, response = await handle(
-                data=data,
-                smart_engine=self.engine
-            )
+            # Create handler instance and call it
+            handler = AddPlantHandler(self.engine)
+            success, response = await handler.handle(data=data)
             
             # Send response back to server using DTO
             response_data = response.to_websocket_data()
@@ -141,15 +139,13 @@ class SmartGardenPiClient:
 
     async def handle_plant_moisture_request(self, data):
         """Handle single plant moisture request from server."""
-        from controller.handlers.get_plant_moisture_handler import handle
+        from controller.handlers.get_plant_moisture_handler import GetPlantMoistureHandler
         
         self.logger.info(f"Received GET_PLANT_MOISTURE command from server")
         
-        # Call the handler to get single plant moisture
-        success, moisture_data = await handle(
-            data=data,
-            smart_engine=self.engine
-        )
+        # Create handler instance and call it
+        handler = GetPlantMoistureHandler(self.engine)
+        success, moisture_data = await handler.handle(data=data)
         
         # Handler always returns a DTO (success or error), so just use it
         response_data = moisture_data.to_websocket_data()
@@ -162,15 +158,13 @@ class SmartGardenPiClient:
 
     async def handle_all_plants_moisture_request(self, data: Dict[Any, Any]):
         """Handle all plants moisture request from server."""
-        from controller.handlers.get_all_plants_moisture_handler import handle
+        from controller.handlers.get_all_plants_moisture_handler import GetAllPlantsMoistureHandler
         
         self.logger.info(f"Received GET_ALL_MOISTURE command from server")
         
-        # Call the handler to get all plants moisture
-        success, response_dto = await handle(
-            data=data,
-            smart_engine=self.engine
-        )
+        # Create handler instance and call it
+        handler = GetAllPlantsMoistureHandler(self.engine)
+        success, response_dto = await handler.handle(data=data)
         
         # Handler always returns a single AllPlantsMoistureResponse DTO, so just use it
         response_data = response_dto.to_websocket_data()
