@@ -342,9 +342,9 @@ class SmartGardenEngine:
                 # Open the valve
                 plant.valve.request_open()
                 print(f"✅ DEBUG - Valve opened successfully for plant {plant_id}")
-                print(f"✅ DEBUG - Start time: {datetime.fromtimestamp(start_time)}")
+                print(f"✅ DEBUG - Start time: {datetime.fromtimestamp(start_time).strftime('%H:%M:%S')}")
                 print(f"✅ DEBUG - Duration: {time_minutes} minutes ({duration_seconds} seconds)")
-                print(f"✅ DEBUG - Expected close time: {datetime.fromtimestamp(start_time + duration_seconds)}")
+                print(f"✅ DEBUG - Expected close time: {datetime.fromtimestamp(start_time + duration_seconds).strftime('%H:%M:%S')}")
                 
                 # Create background task to close valve after duration
                 close_task = asyncio.create_task(self._close_valve_after_duration(plant_id, duration_seconds))
@@ -422,11 +422,12 @@ class SmartGardenEngine:
         try:
             print(f"🔍 DEBUG - Background task started for plant {plant_id}")
             print(f"   - Waiting {duration_seconds} seconds before closing valve")
-            print(f"   - Start time: {datetime.now()}")
-            print(f"   - Expected end time: {datetime.now().replace(second=0, microsecond=0) + timedelta(seconds=duration_seconds)}")
+            print(f"   - Start time: {datetime.now().strftime('%H:%M:%S')}")
             
             # Record the actual start time for validation
             task_start_time = time.time()
+            expected_end_time = task_start_time + duration_seconds
+            print(f"   - Expected end time: {datetime.fromtimestamp(expected_end_time).strftime('%H:%M:%S')}")
             
             # Wait for the specified duration using asyncio.sleep
             await asyncio.sleep(duration_seconds)
@@ -436,7 +437,7 @@ class SmartGardenEngine:
             actual_duration = task_end_time - task_start_time
             
             print(f"🔍 DEBUG - Background task timer completed for plant {plant_id}")
-            print(f"   - Current time: {datetime.now()}")
+            print(f"   - Current time: {datetime.now().strftime('%H:%M:%S')}")
             print(f"   - Expected duration: {duration_seconds} seconds")
             print(f"   - Actual duration: {actual_duration:.2f} seconds")
             print(f"   - Timing difference: {abs(actual_duration - duration_seconds):.2f} seconds")
