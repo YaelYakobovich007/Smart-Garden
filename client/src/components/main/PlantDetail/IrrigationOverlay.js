@@ -226,22 +226,23 @@ const styles = StyleSheet.create({
   controlButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E3F2FD', // Light blue background like Watering Now box
+    backgroundColor: '#3B82F6', // Darker blue background for better visibility
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
     minWidth: 80,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#BBDEFB',
+    borderColor: '#1E40AF',
   },
   stopButton: {
-    backgroundColor: '#E3F2FD', // Light blue background like Watering Now box
+    backgroundColor: '#EF4444', // Red background for stop button
+    borderColor: '#DC2626',
   },
   controlButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E40AF', // Blue text
+    color: '#FFFFFF', // White text for better contrast
     marginLeft: 6,
     fontFamily: 'Nunito_600SemiBold',
   },

@@ -86,16 +86,24 @@ export const IrrigationProvider = ({ children }) => {
 
   // Stop irrigation
   const handleStopWatering = () => {
+    console.log('🔴 handleStopWatering called');
+    console.log('   - currentPlant:', currentPlant);
+    console.log('   - isManualMode:', isManualMode);
+    console.log('   - isWateringActive:', isWateringActive);
+    
     setIsWateringActive(false);
     setIsManualMode(false);
     setWateringTimeLeft(0);
     setCurrentPlant(null);
     
     if (currentPlant?.name) {
+      console.log('📤 Sending CLOSE_VALVE message for plant:', currentPlant.name);
       websocketService.sendMessage({
         type: 'CLOSE_VALVE',
         plantName: currentPlant.name
       });
+    } else {
+      console.log('⚠️ No current plant found, cannot send CLOSE_VALVE message');
     }
   };
 
@@ -164,9 +172,24 @@ export const IrrigationProvider = ({ children }) => {
 
     const handleCloseValveSuccess = (data) => {
       console.log('✅ CLOSE_VALVE success:', data);
+      
+      // Reset the irrigation state
+      setIsManualMode(false);
+      setIsWateringActive(false);
+      setWateringTimeLeft(0);
+      setCurrentPlant(null);
+      
+      // Clear any running timer
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        setTimerInterval(null);
+      }
+      
+      Alert.alert('Valve Control', data?.message || 'Valve closed successfully!');
     };
 
     const handleCloseValveFail = (data) => {
+      console.log('❌ CLOSE_VALVE failed:', data);
       Alert.alert('Valve Control', data?.message || 'Failed to close valve.');
     };
 
