@@ -5,6 +5,7 @@ const { getEmailBySocket } = require('../models/userSessions');
 const googleCloudStorage = require('../services/googleCloudStorage');
 const piCommunication = require('../services/piCommunication');
 const { addPendingPlant } = require('../services/pendingPlantsTracker');
+const { addPendingMoistureRequest } = require('../services/pendingMoistureTracker');
 
 const plantHandlers = {
   ADD_PLANT: handleAddPlant,
@@ -283,6 +284,9 @@ async function handleGetPlantMoisture(data, ws, email) {
     if (!plant) {
       return sendError(ws, 'GET_MOISTURE_FAIL', 'Plant not found');
     }
+
+    // Add pending moisture request
+    addPendingMoistureRequest(plant.plant_id, ws, data);
 
     // Request moisture from Pi
     const piResult = piCommunication.getMoisture(plant.plant_id);

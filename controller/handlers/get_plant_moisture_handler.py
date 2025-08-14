@@ -1,67 +1,82 @@
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from controller.dto.moisture_update import MoistureUpdate
+from controller.engine.smart_garden_engine import SmartGardenEngine
 from typing import Dict, Any, Tuple, Optional
 import logging
 import time
 
 logger = logging.getLogger(__name__)
 
-async def handle(data: Dict[Any, Any], smart_engine) -> Tuple[bool, Optional[MoistureUpdate]]:
+class GetPlantMoistureHandler:
     """
-    Handle request for moisture of a single plant.
+    Handles the GET_PLANT_MOISTURE command received from the server.
+    """
     
-    Args:
-        data: Raw data from server WebSocket message containing plant_id
-        smart_engine: SmartGardenEngine instance
+    def __init__(self, smart_engine: SmartGardenEngine):
+        self.smart_engine = smart_engine
+    
+    async def handle(self, data: Dict[Any, Any]) -> Tuple[bool, Optional[MoistureUpdate]]:
+        """
+        Handle request for moisture of a single plant.
         
-    Returns:
-        Tuple of (success: bool, moisture_data: MoistureUpdate or None)
-    """
-    
-    plant_id = data.get("plant_id")
-    
-    logger.info(f"Getting moisture data for single plant: {plant_id}")
-    
-    try:
-        # Use plant_id directly (no conversion needed)
-        if plant_id is not None:
-            logger.info(f"Using plant_id {plant_id} directly from server")
+        Args:
+            data: Raw data from server WebSocket message containing plant_id
             
-            # Use engine function to get plant moisture
-            moisture_value = await smart_engine.get_plant_moisture(plant_id)
-            
-            if moisture_value is not None:
-                # Create MoistureUpdate DTO using convenience method
-                moisture_update = MoistureUpdate.plant_moisture(
-                    plant_id=plant_id,
-                    moisture=moisture_value
-                )
+        Returns:
+            Tuple of (success: bool, moisture_data: MoistureUpdate or None)
+        """
+        
+        plant_id = data.get("plant_id")
+        
+        logger.info(f"Getting moisture data for single plant: {plant_id}")
+        
+        try:
+            # Use plant_id directly (no conversion needed)
+            if plant_id is not None:
+                logger.info(f"Using plant_id {plant_id} directly from server")
                 
-                logger.info(f"Successfully retrieved moisture for plant {plant_id}: {moisture_value:.1f}%")
-                return True, moisture_update
-            else:
-                logger.warning(f"Failed to read moisture for plant {plant_id}")
-                # Create error DTO
-                error_update = MoistureUpdate.error(
-                    event="plant_moisture_update",
-                    plant_id=plant_id,
-                    error_message="Failed to read sensor data"
-                )
-                return False, error_update
-        
-        # Plant not found
-        logger.warning(f"Plant {plant_id} not found")
-        error_update = MoistureUpdate.error(
-            event="plant_moisture_update",
-            plant_id=plant_id or 0,  # Use 0 if plant_id is None
-            error_message=f"Plant {plant_id} not found"
-        )
-        return False, error_update
-        
-    except Exception as e:
-        logger.error(f"Failed to get moisture for plant {plant_id}: {e}")
-        error_update = MoistureUpdate.error(
-            event="plant_moisture_update",
-            plant_id=plant_id or 0,  # Use 0 if plant_id is None
-            error_message=str(e)
-        )
-        return False, error_update
+                # Use engine function to get complete sensor data
+                sensor_data = await self.smart_engine.get_plant_sensor_data(plant_id)
+                
+                if sensor_data is not None:
+                    moisture, temperature = sensor_data
+                    
+                    # Create MoistureUpdate DTO using convenience method with temperature
+                    moisture_update = MoistureUpdate.plant_moisture(
+                        plant_id=plant_id,
+                        moisture=moisture,
+                        temperature=temperature
+                    )
+                    
+                    logger.info(f"Successfully retrieved sensor data for plant {plant_id}: moisture={moisture:.1f}%, temperature={temperature}")
+                    return True, moisture_update
+                else:
+                    logger.warning(f"Failed to read sensor data for plant {plant_id}")
+                    # Create error DTO
+                    error_update = MoistureUpdate.error(
+                        event="plant_moisture_update",
+                        plant_id=plant_id,
+                        error_message="Failed to read sensor data"
+                    )
+                    return False, error_update
+            
+            # Plant not found
+            logger.warning(f"Plant {plant_id} not found")
+            error_update = MoistureUpdate.error(
+                event="plant_moisture_update",
+                plant_id=plant_id,
+                error_message="Plant not found"
+            )
+            return False, error_update
+            
+        except Exception as e:
+            logger.error(f"Error getting moisture for plant {plant_id}: {e}")
+            error_update = MoistureUpdate.error(
+                event="plant_moisture_update",
+                plant_id=plant_id,
+                error_message=f"Internal error: {str(e)}"
+            )
+            return False, error_update

@@ -1,5 +1,7 @@
 from collections import deque
-from typing import Dict
+from typing import Dict, List, Optional
+from controller.hardware.valves.valve import Valve
+from controller.hardware.relay_controller import RelayController
 
 class ValvesManager:
     """
@@ -9,11 +11,14 @@ class ValvesManager:
         total_valves (int): Total number of valves managed.
         available_valves (deque[int]): Queue of currently available (unassigned) valve IDs.
         plant_valve_map (Dict[int, int]): Mapping from plant_id to assigned valve_id.
+        relay_controller (RelayController): Controller for hardware relays.
     """
     def __init__(self, total_valves):
         self.total_valves: int = total_valves
-        self.available_valves: deque[int] = deque(range(total_valves))
+        # Relay channels are 1-4, so valves should be 1-4, not 0-3
+        self.available_valves: deque[int] = deque(range(1, total_valves + 1))
         self.plant_valve_map: Dict[int, int] = {}  # plant_id -> valve_id
+        self.relay_controller = RelayController(simulation_mode=False)
 
     def get_valve_id(self, plant_id):
         """
@@ -58,5 +63,45 @@ class ValvesManager:
             self.available_valves.append(valve_id)
         else:
             raise ValueError(f"Plant {plant_id} has no assigned valve")
+
+    def get_available_valve(self) -> Optional[Valve]:
+        """
+        Get an available valve object.
+        
+        Returns:
+            Optional[Valve]: Available valve object, or None if no valves available
+        """
+        if not self.available_valves:
+            return None
+        
+        valve_id = self.available_valves[0]  # Peek at the first available valve
+        return Valve(
+            valve_id=valve_id,
+            pipe_diameter=1.0,
+            water_limit=1.0,
+            flow_rate=0.05,
+            relay_controller=self.relay_controller,
+            simulation_mode=False
+        )
+
+    def get_available_valve_ids(self) -> List[int]:
+        """
+        Get list of available valve IDs.
+        
+        Returns:
+            List[int]: List of available valve IDs
+        """
+        return list(self.available_valves)
+
+    def release_valve_object(self, valve: Valve) -> None:
+        """
+        Release a valve object back to the available pool.
+        
+        Args:
+            valve (Valve): The valve object to release
+        """
+        valve_id = valve.valve_id
+        if valve_id not in self.available_valves:
+            self.available_valves.append(valve_id)
 
  

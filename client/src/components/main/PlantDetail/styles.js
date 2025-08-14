@@ -27,16 +27,69 @@ export const styles = StyleSheet.create({
   headerSpacer: {
     width: 32,
   },
+  irrigationControlBar: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2563EB',
+  },
+  irrigationStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  wateringIndicator: {
+    marginRight: 8,
+  },
+  wateringDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+  },
+  irrigationStatusText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Nunito_700Bold',
+  },
+  irrigationActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  irrigationActionButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  irrigationActionText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Nunito_700Bold',
+  },
+  stopButton: {
+    backgroundColor: '#EF4444',
+  },
   content: {
     flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
   },
   imageContainer: {
     width: '100%',
     height: 300,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    marginLeft: 16,
-    marginRight: 16,
     marginTop: 16,
     marginBottom: 16,
     overflow: 'hidden',
@@ -45,8 +98,8 @@ export const styles = StyleSheet.create({
   plantImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover', // Back to cover for better visual appearance
-    borderRadius: 16, // Match container border radius
+    resizeMode: 'cover',
+    borderRadius: 16,
   },
   infoOverlay: {
     position: 'absolute',
@@ -56,7 +109,7 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.85)',
     padding: 16,
     paddingTop: 20,
-    paddingBottom: 16, // Reduced padding since we only have plant name now
+    paddingBottom: 16,
   },
   separator: {
     height: 1,
@@ -74,15 +127,7 @@ export const styles = StyleSheet.create({
   plantTypeContainer: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    marginHorizontal: 16,
     marginBottom: 8,
-    borderRadius: 16,
-  },
-  infoContainer: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    marginBottom: 8,
-    marginHorizontal: 16,
     borderRadius: 16,
   },
   plantName: {
@@ -98,37 +143,22 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
     fontFamily: 'Nunito_700Bold',
   },
-  plantLocation: {
-    fontSize: 14,
-    color: '#95A5A6',
-    marginBottom: 12,
-    fontFamily: 'Nunito_700Bold',
-  },
-  statusContainer: {
-    alignItems: 'flex-start',
-  },
-  statusIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#2C3E50',
-    fontFamily: 'Nunito_700Bold',
-  },
   statsContainer: {
     backgroundColor: '#FFFFFF',
     padding: 20,
     marginBottom: 8,
-    marginHorizontal: 16,
     borderRadius: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
   },
   sectionTitle: {
     fontSize: 18,
@@ -156,25 +186,179 @@ export const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: 'Nunito_700Bold',
   },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 2,
-    fontFamily: 'Nunito_700Bold',
-  },
-  statStatus: {
-    fontSize: 10,
-    color: '#95A5A6',
-    fontFamily: 'Nunito_700Bold',
-  },
-  actionsContainer: {
+  
+  // New section styles
+  sectionContainer: {
     backgroundColor: '#FFFFFF',
     padding: 20,
     marginBottom: 8,
-    marginHorizontal: 16,
     borderRadius: 16,
   },
+  sectionDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#7F8C8D',
+    marginBottom: 16,
+    fontFamily: 'Nunito_400Regular',
+  },
+  
+  // Button styles
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontFamily: 'Nunito_700Bold',
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  secondaryButtonText: {
+    color: '#4CAF50',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontFamily: 'Nunito_700Bold',
+  },
+  stopButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#059669',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  stopButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontFamily: 'Nunito_700Bold',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  valveButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  halfButton: {
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  
+  // Watering status styles
+  wateringStatusContainer: {
+    backgroundColor: '#E8F5E8',
+    padding: 20,
+    marginBottom: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  wateringIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  wateringDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#4CAF50',
+    marginRight: 8,
+  },
+  wateringText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C3E50',
+    fontFamily: 'Nunito_700Bold',
+  },
+  countdownText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#4CAF50',
+    textAlign: 'center',
+    fontFamily: 'Nunito_700Bold',
+  },
+  
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+    position: 'relative',
+    width: '100%',
+  },
+  clockIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#22C55E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    fontFamily: 'Nunito_700Bold',
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Nunito_400Regular',
+    textAlign: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  
+  // Existing button styles (kept for compatibility)
   waterButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -235,17 +419,8 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
     fontFamily: 'Nunito_700Bold',
   },
-  descriptionContainer: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    marginBottom: 20,
-  },
-  descriptionText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#7F8C8D',
-    fontFamily: 'Nunito_700Bold',
-  },
+  
+  // Error styles
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -254,6 +429,124 @@ export const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: '#7F8C8D',
+    fontFamily: 'Nunito_700Bold',
+  },
+  // Timer Display Styles
+  timerDisplayContainer: {
+    backgroundColor: '#F0FDF4',
+    padding: 24,
+    marginBottom: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  timerDisplay: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  timerTime: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#22C55E',
+    fontFamily: 'Nunito_700Bold',
+    marginBottom: 8,
+  },
+  timerStatus: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Nunito_400Regular',
+  },
+  progressRingContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  progressRing: {
+    width: 96,
+    height: 96,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressRingBackground: {
+    position: 'absolute',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 6,
+    borderColor: '#E5E7EB',
+  },
+  progressRingFill: {
+    position: 'absolute',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 6,
+    borderColor: '#22C55E',
+    borderTopColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
+  },
+  progressRingCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressRingText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#22C55E',
+    fontFamily: 'Nunito_700Bold',
+  },
+  timerControls: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  pauseButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F97316',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+  },
+  pauseButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginLeft: 8,
+    fontFamily: 'Nunito_700Bold',
+  },
+  resumeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#22C55E',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+  },
+  resumeButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginLeft: 8,
+    fontFamily: 'Nunito_700Bold',
+  },
+  resetButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6B7280',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+  },
+  resetButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginLeft: 8,
     fontFamily: 'Nunito_700Bold',
   },
 }); 

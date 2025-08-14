@@ -9,8 +9,9 @@ const RADIUS = (SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const MoistureCircle = ({ percent }) => {
-  // Clamp percent between 0 and 100
+  // Clamp percent between 0 and 100 and round to 1 decimal place
   const progress = Math.max(0, Math.min(Number(percent), 100));
+  const roundedProgress = Math.round(progress * 10) / 10; // Round to 1 decimal place
   const strokeDashoffset = (CIRCUMFERENCE * (1 - progress / 100)).toString();
 
   return (
@@ -41,7 +42,7 @@ const MoistureCircle = ({ percent }) => {
       <View style={{ position: 'absolute', top: 0, left: 0, width: SIZE, height: SIZE, alignItems: 'center', justifyContent: 'center' }}>
         <Feather name="droplet" size={20} color="#7CB518" />
       </View>
-      <Text style={{ fontSize: 12, color: '#222', marginTop: 2, fontWeight: '500' }}>{progress}%</Text>
+      <Text style={{ fontSize: 12, color: '#222', marginTop: 2, fontWeight: '500' }}>{roundedProgress}%</Text>
     </View>
   );
 };

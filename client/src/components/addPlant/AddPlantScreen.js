@@ -28,7 +28,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -41,6 +41,7 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function AddPlantScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
 
   // Form data state management
   const [formData, setFormData] = useState({
@@ -70,21 +71,15 @@ export default function AddPlantScreen() {
   useEffect(() => {
     /**
      * Handle successful plant creation
-     * Shows success alert and navigates back to main screen
+     * Navigates directly to sensor placement screen
      * @param {Object} data - Server response data
      */
     const handleSuccess = (data) => {
       setIsSaving(false);
-      Alert.alert(
-        'Success!',
-        data?.message || 'Plant added successfully to your garden',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      // Navigate directly to sensor placement screen with sensor port from response
+      // The server sends sensor_port in the hardware object
+      const sensorPort = data?.hardware?.sensor_port || data?.sensor_port || route.params?.sensorId || "/dev/ttyUSB0";
+      navigation.navigate('SensorPlacement', { sensorId: sensorPort });
     };
 
     /**
@@ -96,7 +91,7 @@ export default function AddPlantScreen() {
       setIsSaving(false);
       Alert.alert(
         'Failed to Add Plant',
-        data?.message || 'An error occurred while adding the plant',
+        data?.reason || data?.message || 'An error occurred while adding the plant',
         [
           { text: 'OK' }
         ]
@@ -360,6 +355,8 @@ export default function AddPlantScreen() {
         </View>
         <View style={styles.headerSpacer} />
       </View>
+
+
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Plant Basic Information Section */}

@@ -1,5 +1,5 @@
 from datetime import datetime
-import time
+import asyncio
 from controller.dto.irrigation_result import IrrigationResult
 from controller.models.plant import Plant
 from controller.services.weather_service import WeatherService
@@ -82,7 +82,7 @@ class IrrigationAlgorithm:
         Determines if the plant is overwatered.
         """
         if plant.last_irrigation_time:
-            time_since = time.time() - plant.last_irrigation_time.timestamp()
+            time_since = asyncio.get_event_loop().time() - plant.last_irrigation_time.timestamp()
             if time_since > 86400 and moisture > plant.desired_moisture + 10:  # 86400 = 1 day
                 return True
         return False
@@ -95,7 +95,7 @@ class IrrigationAlgorithm:
 
     async def perform_irrigation(self, plant: "Plant", initial_moisture: float) -> IrrigationResult:
         """
-        Executes the irrigation cycle using water pulses.
+        Executes the irrigation cycle using water pulses with non-blocking operations.
         """
         print(f"\n💧 === IRRIGATION CYCLE DETAILS ===")
         print(f"🚰 Valve Configuration:")
@@ -139,10 +139,10 @@ class IrrigationAlgorithm:
             else:
                 print("💧 WATERING...")
             
-            # Perform water pulse
+            # Perform water pulse using non-blocking async sleep
             print(f"      🔓 Opening valve for {pulse_time:.2f}s...")
             plant.valve.request_open()
-            time.sleep(pulse_time)
+            await asyncio.sleep(pulse_time)  # Use asyncio.sleep instead of time.sleep
             plant.valve.request_close()
             print(f"      🔒 Valve closed")
             
@@ -155,10 +155,10 @@ class IrrigationAlgorithm:
                 plant.sensor.update_simulated_value(5)  # 5% increase after each pulse
                 print(f"      📈 Simulation: {old_moisture:.1f}% → {plant.sensor.simulated_value:.1f}% (+5%)")
             
-            # Pause between pulses
+            # Pause between pulses using non-blocking async sleep
             if total_water < water_limit and current_moisture < plant.desired_moisture:
                 print(f"      ⏸️  Pausing {self.pause_between_pulses}s before next pulse...")
-                time.sleep(self.pause_between_pulses)
+                await asyncio.sleep(self.pause_between_pulses)  # Use asyncio.sleep instead of time.sleep
 
         final_moisture: float = await plant.get_moisture()
         

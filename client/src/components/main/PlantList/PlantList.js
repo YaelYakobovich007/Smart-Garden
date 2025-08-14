@@ -12,7 +12,7 @@
  * with an "Add your first plant" button.
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import {
   Image,
   FlatList,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -31,8 +32,52 @@ import websocketService from '../../../services/websocketService';
 // Calculate card width based on screen dimensions for responsive design
 const CARD_WIDTH = Math.floor(Dimensions.get('window').width * 0.65);
 
-const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
+const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) => {
   const navigation = useNavigation();
+  
+  // Animation for watering indicator
+  const [wateringAnimations, setWateringAnimations] = useState({});
+
+  // Initialize animations for each plant
+  useEffect(() => {
+    const newAnimations = {};
+    plants.forEach(plant => {
+      newAnimations[plant.id] = new Animated.Value(0);
+    });
+    setWateringAnimations(newAnimations);
+  }, [plants]);
+
+  // Ripple animation effect - multiple expanding circles
+  useEffect(() => {
+    plants.forEach(plant => {
+      const plantWateringState = getPlantWateringState(plant.id);
+      const animation = wateringAnimations[plant.id];
+      
+      if (plantWateringState.isWateringActive && animation) {
+        // Start ripple animation - multiple expanding circles
+        const rippleAnimation = Animated.loop(
+          Animated.sequence([
+            // First ripple
+            Animated.timing(animation, {
+              toValue: 1,
+              duration: 1500,
+              useNativeDriver: true,
+            }),
+            // Reset for next ripple
+            Animated.timing(animation, {
+              toValue: 0,
+              duration: 0,
+              useNativeDriver: true,
+            }),
+          ])
+        );
+        rippleAnimation.start();
+      } else if (animation) {
+        // Stop animation if plant is not watering
+        animation.setValue(0);
+      }
+    });
+  }, [plants, wateringAnimations]); // Removed getPlantWateringState dependency
 
   /**
    * Get color for moisture level visualization
@@ -117,6 +162,16 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
   };
 
   /**
+   * Check if a plant is currently being watered
+   * @param {Object} plant - Plant object to check
+   * @returns {boolean} True if plant is being watered
+   */
+  const isPlantBeingWatered = (plant) => {
+    const plantWateringState = getPlantWateringState(plant.id);
+    return plantWateringState.isWateringActive;
+  };
+
+  /**
    * Get plant image based on plant type
    * Maps plant types to local image assets
    * @param {string} plantType - Type of plant
@@ -147,7 +202,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
 
   /**
    * Handle plant watering action
-   * Triggers watering command and logs the action
+   * Triggers watering command
    * @param {string} plantId - ID of the plant to water
    */
   const handleWaterPlant = (plantId) => {
@@ -155,7 +210,6 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
       onWaterPlant(plantId);
     }
     // TODO: Send watering command to server
-    console.log('Watering plant:', plantId);
   };
 
   /**
@@ -176,9 +230,6 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
   const handleMoistureRequest = (plantId) => {
     if (websocketService.isConnected()) {
       websocketService.requestPlantMoisture(plantId);
-      console.log('Requested moisture for plant:', plantId);
-    } else {
-      console.log('WebSocket not connected, cannot request moisture');
     }
   };
 
@@ -230,12 +281,6 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
           >
             {/* Plant Image Container */}
             <View style={styles.plantImageContainer}>
-              {console.log('Plant image debug:', {
-                plantName: plant.name,
-                image_url: plant.image_url,
-                type: plant.type,
-                hasImageUrl: !!plant.image_url
-              })}
               <Image
                 source={
                   plant.image_url
@@ -249,9 +294,70 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant }) => {
                     : getPlantImage(plant.type)
                 }
                 style={styles.plantImage}
-                onLoad={() => console.log('Image loaded successfully for:', plant.name)}
-                onError={(error) => console.log('Image load error for:', plant.name, error.nativeEvent)}
               />
+              
+              {/* Watering Indicator */}
+              {isPlantBeingWatered(plant) && (
+                <View style={styles.wateringIndicator}>
+                  {/* Solid blue circle that stays visible */}
+                  <View style={styles.wateringDot}>
+                    <Feather name="droplet" size={12} color="#FFFFFF" />
+                  </View>
+                  
+                  {/* Multiple expanding ripple circles - only these animate */}
+                  <Animated.View 
+                    style={[
+                      styles.rippleCircle,
+                      {
+                        transform: [{
+                          scale: wateringAnimations[plant.id]?.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [1, 3],
+                          }) || 1,
+                        }],
+                        opacity: wateringAnimations[plant.id]?.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.6, 0],
+                        }) || 0,
+                      }
+                    ]}
+                  />
+                  <Animated.View 
+                    style={[
+                      styles.rippleCircle,
+                      {
+                        transform: [{
+                          scale: wateringAnimations[plant.id]?.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [1, 2.5],
+                          }) || 1,
+                        }],
+                        opacity: wateringAnimations[plant.id]?.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.4, 0],
+                        }) || 0,
+                      }
+                    ]}
+                  />
+                  <Animated.View 
+                    style={[
+                      styles.rippleCircle,
+                      {
+                        transform: [{
+                          scale: wateringAnimations[plant.id]?.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [1, 2],
+                          }) || 1,
+                        }],
+                        opacity: wateringAnimations[plant.id]?.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.2, 0],
+                        }) || 0,
+                      }
+                    ]}
+                  />
+                </View>
+              )}
             </View>
 
             {/* Plant Information */}

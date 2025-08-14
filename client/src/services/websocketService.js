@@ -1,16 +1,10 @@
 /**
- * WebSocket Service - Real-time Communication Handler
- * 
- * This service manages the WebSocket connection between the client and server.
- * It handles:
- * - Connection establishment and reconnection logic
- * - Message sending and receiving
- * - Connection status monitoring
- * - Automatic reconnection with exponential backoff
- * 
- * The service provides a robust communication layer for real-time features
- * like plant monitoring, weather updates, and irrigation commands.
+ * WebSocket Service for Smart Garden Client
+ * Handles real-time communication with the Smart Garden server
  */
+
+
+import { Alert } from 'react-native';
 
 // WebSocket server configuration
 const WS_CONFIG = {
@@ -27,10 +21,16 @@ const WS_CONFIG = {
   // FOR SAME WIFI NETWORK (uncomment and use your phone's WiFi IP):
   // SERVER_URL: 'wss://192.168.1.XXX:8080', // Replace XXX with your phone's IP
 
-  // Alternative configurations for different environments:
+
+// Configuration for WebSocket connection
+const CONFIG = {
+  // For local development, use 'localhost'
+  // For network access, use your computer's IP address
+  SERVER_URL: 'ws://192.168.68.71:8080',
+  
+  // Alternative configurations
   // LOCAL: 'ws://localhost:8080'
-  // PRODUCTION: 'ws://your-server-ip:8080'
-  // DOCKER: 'ws://host.docker.internal:8080'
+  // NETWORK: 'ws://192.168.68.71:8080'
 };
 
 class WebSocketService {
@@ -39,15 +39,18 @@ class WebSocketService {
    * Sets up connection state, message handlers, and reconnection settings
    */
   constructor() {
-    this.ws = null; // WebSocket instance
-    this.connected = false; // Connection status flag
-    this.messageHandlers = new Map(); // Registered message handlers
-    this.connectionHandlers = []; // Connection status change handlers
-    this.reconnectAttempts = 0; // Current reconnection attempt count
-    this.maxReconnectAttempts = 5; // Maximum reconnection attempts
-    this.reconnectDelay = 1000; // Initial reconnection delay (1 second)
-    this.reconnectTimer = null; // Timer for reconnection attempts
-    this.isReconnecting = false; // Flag to prevent multiple reconnection attempts
+    this.ws = null;
+    this.isConnecting = false;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectDelay = 1000;
+    this.messageHandlers = new Map();
+    this.connectionHandlers = []; // Initialize the array
+    this.connectionState = 'disconnected';
+    
+    // Auto-reconnect settings
+    this.autoReconnect = true;
+    this.reconnectInterval = null;
   }
 
   /**
@@ -61,13 +64,13 @@ class WebSocketService {
       return;
     }
 
-    if (this.isReconnecting) {
+    if (this.isConnecting) {
       console.log('Already attempting to reconnect...');
       return;
     }
 
     console.log('Connecting to WebSocket server...');
-    this.ws = new WebSocket(WS_CONFIG.SERVER_URL);
+    this.ws = new WebSocket(CONFIG.SERVER_URL);
 
     /**
      * Handle successful WebSocket connection
@@ -265,7 +268,6 @@ class WebSocketService {
       }
     };
     this.send(message);
-    console.log('Requested moisture for plant:', plantId);
   }
 
   /**
@@ -277,7 +279,6 @@ class WebSocketService {
       data: {}
     };
     this.send(message);
-    console.log('Requested moisture for all plants');
   }
 }
 

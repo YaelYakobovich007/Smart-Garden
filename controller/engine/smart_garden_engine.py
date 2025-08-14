@@ -1,31 +1,40 @@
-from typing import Dict, List, Optional
-from controller.hardware.relay_controller import RelayController
-from controller.hardware.sensors.sensor import Sensor
-from controller.hardware.sensors.sensor_manager import SensorManager
-from controller.hardware.valves.valve import Valve
-from controller.hardware.valves.valves_manager import ValvesManager
-from controller.irrigation.irrigation_algorithm import IrrigationAlgorithm
-from controller.irrigation.irrigation_schedule import IrrigationSchedule
+import asyncio
+import threading
+import time
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
 from controller.models.plant import Plant
-
+from controller.hardware.valves.valves_manager import ValvesManager
+from controller.hardware.sensors.sensor_manager import SensorManager
+from controller.irrigation.irrigation_algorithm import IrrigationAlgorithm
+from controller.hardware.valves.valve import Valve
+from controller.hardware.sensors.sensor import Sensor
 
 class SmartGardenEngine:
     """
-    Central engine managing the smart garden logic, including plant registration,
-    valve and sensor management, and execution of irrigation.
+    Main engine for the Smart Garden system.
+    Manages plants, sensors, valves, and irrigation operations.
     """
 
     def __init__(self, total_valves: int = 2, total_sensors: int = 2):
         """
-        Initializes the SmartGardenEngine with a given number of valves and sensors.
+        Initialize the Smart Garden Engine.
+        
+        Args:
+            total_valves (int): Number of valves available in the system
+            total_sensors (int): Number of sensors available in the system
         """
-        self.valves_manager: ValvesManager = ValvesManager(total_valves)
-        self.sensor_manager = SensorManager()
-        self.irrigation_algorithm = IrrigationAlgorithm()
         self.plants: Dict[int, Plant] = {}
-        self.relay_controller: RelayController = RelayController(simulation_mode=True)
+        self.valves_manager = ValvesManager(total_valves)
+        self.sensor_manager = SensorManager(total_sensors)
+        self.irrigation_algorithm = IrrigationAlgorithm()
+        
+        # Valve state tracking for non-blocking operations
+        self.valve_tasks: Dict[int, asyncio.Task] = {}  # Track running valve tasks
+        self.valve_states: Dict[int, Dict] = {}  # Track valve states
+        self._lock = asyncio.Lock()  # Thread-safe operations
 
-    def add_plant(
+    async def add_plant(
             self,
             plant_id: int,
             desired_moisture: float,
@@ -36,96 +45,185 @@ class SmartGardenEngine:
             flow_rate: float = 0.05,
             water_limit: float = 1.0
     ) -> None:
-        if plant_id in self.plants:
-            raise ValueError(f"Plant ID {plant_id} already exists")
-
+        """
+        Add a new plant to the system.
+        
+        Args:
+            plant_id (int): Unique identifier for the plant
+            desired_moisture (float): Target moisture level for the plant
+            schedule_data (Optional[List[Dict[str, str]]]): Irrigation schedule data
+            plant_lat (float): Plant's latitude coordinate
+            plant_lon (float): Plant's longitude coordinate
+            pipe_diameter (float): Diameter of the irrigation pipe in cm
+            flow_rate (float): Water flow rate in L/s
+            water_limit (float): Maximum water limit in L
+        """
+        # Check if we have available valves and sensors
+        if not self.valves_manager.available_valves:
+            raise RuntimeError("No available valves")
+        
+        if not self.sensor_manager.available_sensors:
+            raise RuntimeError("No available sensors")
+        
+        # Assign valve and sensor using proper assignment methods
         valve_id = self.valves_manager.assign_valve(plant_id)
-        sensor_port = self.sensor_manager.assign_sensor(plant_id)
-
-        valve = Valve(valve_id, pipe_diameter, water_limit, flow_rate, relay_controller=self.relay_controller,
-                      simulation_mode=True)
-        sensor = Sensor(simulation_mode=False, port=sensor_port)
-
-        plant = Plant(plant_id, desired_moisture, sensor, valve, plant_lat, plant_lon)
+        sensor_port = self.sensor_manager.assign_sensor(str(plant_id))
+        
+        # Create valve and sensor objects
+        valve = Valve(
+            valve_id=valve_id,
+            pipe_diameter=pipe_diameter,
+            water_limit=water_limit,
+            flow_rate=flow_rate,
+            relay_controller=self.valves_manager.relay_controller,
+            simulation_mode=False
+        )
+        
+        sensor = Sensor(
+            simulation_mode=False,
+            port=sensor_port
+        )
+        
+        # Create plant with valve and sensor
+        plant = Plant(
+            plant_id=plant_id,
+            desired_moisture=desired_moisture,
+            valve=valve,
+            sensor=sensor,
+            lat=plant_lat,
+            lon=plant_lon,
+            pipe_diameter=pipe_diameter,
+            flow_rate=flow_rate,
+            water_limit=water_limit
+        )
+        
         self.plants[plant_id] = plant
-
-        if schedule_data:
-            plant.schedule = IrrigationSchedule(plant, schedule_data, self.irrigation_algorithm)
+        print(f"Plant {plant_id} added with valve {valve.valve_id} and sensor {sensor.port}")
 
     async def water_plant(self, plant_id: int) -> None:
         """
-        Initiates watering for a specific plant by ID.
+        Water a specific plant using the irrigation algorithm.
+        
+        Args:
+            plant_id (int): ID of the plant to water
         """
         if plant_id not in self.plants:
-            raise ValueError(f"Plant {plant_id} not found.")
+            raise ValueError(f"Plant {plant_id} not found")
+        
         plant = self.plants[plant_id]
-        await self.irrigation_algorithm.irrigate(plant)
+        result = await self.irrigation_algorithm.irrigate(plant)
+        print(f"Irrigation result for plant {plant_id}: {result}")
 
     def remove_plant(self, plant_id: int) -> None:
         """
-        Removes a plant and releases its associated resources.
+        Remove a plant from the system.
+        
+        Args:
+            plant_id (int): ID of the plant to remove
         """
-        if plant_id not in self.plants:
-            raise ValueError(f"Plant {plant_id} not found")
-        self.valves_manager.release_valve(plant_id)
-        self.sensor_manager.release_sensor(plant_id)
-        del self.plants[plant_id]
+        if plant_id in self.plants:
+            plant = self.plants[plant_id]
+            # Release valve and sensor back to managers using proper methods
+            try:
+                self.valves_manager.release_valve(plant_id)
+                self.sensor_manager.release_sensor(str(plant_id))
+            except ValueError as e:
+                print(f"Warning: {e}")
+            
+            del self.plants[plant_id]
+            print(f"Plant {plant_id} removed")
 
     async def update_all_moisture(self) -> None:
         """
-        Updates moisture levels for all plants (used in simulation mode).
+        Update moisture levels for all plants.
         """
         for plant in self.plants.values():
-            await plant.update_moisture()
+            await plant.update_sensor_data()
 
     def disable_plant_watering(self, plant_id: int) -> None:
         """
-        Disables irrigation for a specific plant.
+        Disable watering for a specific plant.
+        
+        Args:
+            plant_id (int): ID of the plant to disable watering for
         """
-        if plant_id not in self.plants:
-            raise ValueError(f"Plant {plant_id} not found")
-        self.plants[plant_id].valve.disable()
+        if plant_id in self.plants:
+            self.plants[plant_id].valve.block()
+            print(f"Watering disabled for plant {plant_id}")
 
     def enable_plant_watering(self, plant_id: int) -> None:
         """
-        Re-enables irrigation for a specific plant.
+        Enable watering for a specific plant.
+        
+        Args:
+            plant_id (int): ID of the plant to enable watering for
         """
-        if plant_id not in self.plants:
-            raise ValueError(f"Plant {plant_id} not found")
-        self.plants[plant_id].valve.enable()
+        if plant_id in self.plants:
+            self.plants[plant_id].valve.unblock()
+            print(f"Watering enabled for plant {plant_id}")
 
     def get_available_sensors(self) -> List[int]:
         """
-        Returns a list of currently unassigned sensor IDs.
+        Get list of available sensor ports.
+        
+        Returns:
+            List[int]: List of available sensor port numbers
         """
-        return self.sensor_manager.get_available_sensors()
+        return self.sensor_manager.get_available_ports()
 
     def get_available_valves(self) -> List[int]:
         """
-        Returns a list of currently unassigned valve IDs.
+        Get list of available valve IDs.
+        
+        Returns:
+            List[int]: List of available valve IDs
         """
-        return self.valves_manager.get_available_valves()
+        return self.valves_manager.get_available_valve_ids()
 
     async def get_plant_moisture(self, plant_id: int) -> Optional[float]:
         """
-        Get moisture level for a specific plant.
+        Get the current moisture level for a specific plant.
         
         Args:
             plant_id (int): ID of the plant to get moisture for
             
         Returns:
-            Optional[float]: Current moisture level percentage, or None if plant not found or sensor unavailable
+            Optional[float]: Current moisture level, or None if plant not found
         """
         if plant_id not in self.plants:
-            raise ValueError(f"Plant {plant_id} not found")
+            print(f"Plant {plant_id} not found")
+            return None
         
-        plant = self.plants[plant_id]
         try:
-            moisture_level = await plant.get_moisture()
-            return moisture_level
+            plant = self.plants[plant_id]
+            moisture = await plant.get_moisture()
+            print(f"Moisture for plant {plant_id}: {moisture}%")
+            return moisture
         except Exception as e:
-            # Log error but don't crash - return None to indicate unavailable
-            print(f"Error reading moisture for plant {plant_id}: {e}")
+            print(f"Error getting moisture for plant {plant_id}: {e}")
+            return None
+
+    async def get_plant_sensor_data(self, plant_id: int) -> Optional[tuple]:
+        """
+        Get complete sensor data (moisture, temperature) for a specific plant.
+        
+        Args:
+            plant_id (int): ID of the plant to get sensor data for
+            
+        Returns:
+            Optional[tuple]: Tuple of (moisture, temperature), or None if plant not found
+        """
+        if plant_id not in self.plants:
+            print(f"Plant {plant_id} not found")
+            return None
+        
+        try:
+            plant = self.plants[plant_id]
+            sensor_data = await plant.get_sensor_data()
+            print(f"Sensor data for plant {plant_id}: {sensor_data}")
+            return sensor_data
+        except Exception as e:
+            print(f"Error getting sensor data for plant {plant_id}: {e}")
             return None
 
     async def get_all_plants_moisture(self) -> Dict[int, Optional[float]]:
@@ -140,14 +238,42 @@ class SmartGardenEngine:
         
         for plant_id, plant in self.plants.items():
             try:
-                moisture_level = await plant.get_moisture()
-                moisture_data[plant_id] = moisture_level
+                moisture = await plant.get_moisture()
+                moisture_data[plant_id] = moisture
             except Exception as e:
                 # Log error but continue with other plants
                 print(f"Error reading moisture for plant {plant_id}: {e}")
                 moisture_data[plant_id] = None
         
         return moisture_data
+
+    async def get_all_plants_sensor_data(self) -> Dict[int, Optional[tuple]]:
+        """
+        Get complete sensor data (moisture, temperature) for all plants in the system.
+        
+        Returns:
+            Dict[int, Optional[tuple]]: Dictionary mapping plant_id to (moisture, temperature).
+                                       None values indicate sensor read failures.
+        """
+        sensor_data = {}
+        
+        for plant_id, plant in self.plants.items():
+            try:
+                plant_sensor_data = await plant.get_sensor_data()
+                sensor_data[plant_id] = plant_sensor_data
+            except Exception as e:
+                # Log error but continue with other plants
+                print(f"Error reading sensor data for plant {plant_id}: {e}")
+                sensor_data[plant_id] = None
+        
+        return sensor_data
+
+    async def update_all_sensor_data(self) -> None:
+        """
+        Updates sensor data (moisture, temperature) for all plants.
+        """
+        for plant in self.plants.values():
+            await plant.update_sensor_data()
 
     def get_plant_by_id(self, plant_id: int) -> Optional[Plant]:
         """
@@ -160,3 +286,270 @@ class SmartGardenEngine:
             Optional[Plant]: The plant object if found, None otherwise
         """
         return self.plants.get(plant_id)
+
+    async def open_valve(self, plant_id: int, time_minutes: int) -> bool:
+        """
+        Opens the valve for a specific plant for a given duration using non-blocking approach.
+        
+        Args:
+            plant_id (int): The ID of the plant whose valve should be opened
+            time_minutes (int): Duration in minutes to keep the valve open
+            
+        Returns:
+            bool: True if valve was successfully opened, False otherwise
+            
+        Raises:
+            ValueError: If plant_id is not found
+        """
+        print(f"🔍 DEBUG - SmartGardenEngine.open_valve() called:")
+        print(f"   - plant_id: {plant_id}")
+        print(f"   - time_minutes: {time_minutes}")
+        
+        if plant_id not in self.plants:
+            print(f"❌ ERROR - Plant {plant_id} not found")
+            raise ValueError(f"Plant {plant_id} not found")
+        
+        plant = self.plants[plant_id]
+        print(f"✅ DEBUG - Found plant: {plant_id}")
+        print(f"   - plant.valve.valve_id: {plant.valve.valve_id}")
+        print(f"   - plant.valve.simulation_mode: {plant.valve.simulation_mode}")
+        print(f"   - plant.valve.relay_controller: {plant.valve.relay_controller}")
+        
+        async with self._lock:
+            # Check if valve is already in use
+            if plant_id in self.valve_tasks and not self.valve_tasks[plant_id].done():
+                print(f"❌ ERROR - Valve for plant {plant_id} is already in use")
+                return False
+            
+            try:
+                print(f"🔍 DEBUG - Opening valve for plant {plant_id} for {time_minutes} minutes")
+                
+                # Calculate duration in seconds
+                duration_seconds = time_minutes * 60
+                
+                # Initialize valve state BEFORE opening valve
+                start_time = time.time()
+                self.valve_states[plant_id] = {
+                    'is_open': True,
+                    'start_time': start_time,
+                    'duration_minutes': time_minutes,
+                    'duration_seconds': duration_seconds,
+                    'plant_id': plant_id,
+                    'auto_close_time': start_time + duration_seconds,  # Calculate exact close time
+                    'task_start_time': start_time  # Track when background task started
+                }
+                
+                # Open the valve
+                plant.valve.request_open()
+                print(f"✅ DEBUG - Valve opened successfully for plant {plant_id}")
+                print(f"✅ DEBUG - Start time: {datetime.fromtimestamp(start_time).strftime('%H:%M:%S')}")
+                print(f"✅ DEBUG - Duration: {time_minutes} minutes ({duration_seconds} seconds)")
+                print(f"✅ DEBUG - Expected close time: {datetime.fromtimestamp(start_time + duration_seconds).strftime('%H:%M:%S')}")
+                
+                # Create background task to close valve after duration
+                close_task = asyncio.create_task(self._close_valve_after_duration(plant_id, duration_seconds))
+                self.valve_tasks[plant_id] = close_task
+                
+                print(f"✅ DEBUG - Background task created for plant {plant_id}")
+                return True
+                
+            except Exception as e:
+                print(f"❌ ERROR - Error opening valve for plant {plant_id}: {e}")
+                # Clean up state in case of error
+                if plant_id in self.valve_states:
+                    del self.valve_states[plant_id]
+                # Ensure valve is closed in case of error
+                try:
+                    plant.valve.request_close()
+                    print(f"✅ DEBUG - Valve closed due to error")
+                except Exception as close_error:
+                    print(f"❌ ERROR - Failed to close valve after error: {close_error}")
+                return False
+
+    async def close_valve(self, plant_id: int) -> bool:
+        """
+        Immediately closes the valve for a specific plant.
+        
+        Args:
+            plant_id (int): The ID of the plant whose valve should be closed
+            
+        Returns:
+            bool: True if valve was successfully closed, False otherwise
+        """
+        print(f"🔍 DEBUG - SmartGardenEngine.close_valve() called:")
+        print(f"   - plant_id: {plant_id}")
+        
+        if plant_id not in self.plants:
+            print(f"❌ ERROR - Plant {plant_id} not found")
+            return False
+        
+        plant = self.plants[plant_id]
+        
+        async with self._lock:
+            try:
+                # Cancel any running background task
+                if plant_id in self.valve_tasks and not self.valve_tasks[plant_id].done():
+                    print(f"🔍 DEBUG - Cancelling background task for plant {plant_id}")
+                    self.valve_tasks[plant_id].cancel()
+                    try:
+                        await self.valve_tasks[plant_id]
+                    except asyncio.CancelledError:
+                        print(f"✅ DEBUG - Background task cancelled for plant {plant_id}")
+                
+                # Close the valve
+                plant.valve.request_close()
+                print(f"✅ DEBUG - Valve closed successfully for plant {plant_id}")
+                
+                # Update valve state
+                if plant_id in self.valve_states:
+                    self.valve_states[plant_id]['is_open'] = False
+                    self.valve_states[plant_id]['manual_close_time'] = time.time()
+                
+                return True
+                
+            except Exception as e:
+                print(f"❌ ERROR - Error closing valve for plant {plant_id}: {e}")
+                return False
+
+    async def _close_valve_after_duration(self, plant_id: int, duration_seconds: int) -> None:
+        """
+        Background task to close valve after specified duration.
+        
+        Args:
+            plant_id (int): The ID of the plant
+            duration_seconds (int): Duration in seconds to wait before closing
+        """
+        try:
+            print(f"🔍 DEBUG - Background task started for plant {plant_id}")
+            print(f"   - Waiting {duration_seconds} seconds before closing valve")
+            print(f"   - Start time: {datetime.now().strftime('%H:%M:%S')}")
+            
+            # Record the actual start time for validation
+            task_start_time = time.time()
+            expected_end_time = task_start_time + duration_seconds
+            print(f"   - Expected end time: {datetime.fromtimestamp(expected_end_time).strftime('%H:%M:%S')}")
+            
+            # Wait for the specified duration using asyncio.sleep
+            await asyncio.sleep(duration_seconds)
+            
+            # Record the actual end time for validation
+            task_end_time = time.time()
+            actual_duration = task_end_time - task_start_time
+            
+            print(f"🔍 DEBUG - Background task timer completed for plant {plant_id}")
+            print(f"   - Current time: {datetime.now().strftime('%H:%M:%S')}")
+            print(f"   - Expected duration: {duration_seconds} seconds")
+            print(f"   - Actual duration: {actual_duration:.2f} seconds")
+            print(f"   - Timing difference: {abs(actual_duration - duration_seconds):.2f} seconds")
+            
+            # Validate timing accuracy (allow 2 second tolerance for system load)
+            if abs(actual_duration - duration_seconds) > 2.0:
+                print(f"⚠️  WARNING - Timing discrepancy detected!")
+                print(f"   - Expected: {duration_seconds} seconds")
+                print(f"   - Actual: {actual_duration:.2f} seconds")
+                print(f"   - Difference: {abs(actual_duration - duration_seconds):.2f} seconds")
+                print(f"   - This might indicate system clock issues or high system load")
+            
+            # Check if valve is still open (not manually closed)
+            if plant_id in self.valve_states and self.valve_states[plant_id]['is_open']:
+                print(f"🔍 DEBUG - Auto-closing valve for plant {plant_id} after {duration_seconds} seconds")
+                
+                plant = self.plants[plant_id]
+                plant.valve.request_close()
+                print(f"✅ DEBUG - Valve auto-closed for plant {plant_id}")
+                
+                # Update valve state with actual timing information
+                self.valve_states[plant_id]['is_open'] = False
+                self.valve_states[plant_id]['auto_close_time'] = time.time()
+                self.valve_states[plant_id]['actual_duration'] = actual_duration
+                self.valve_states[plant_id]['timing_accuracy'] = abs(actual_duration - duration_seconds)
+            else:
+                print(f"🔍 DEBUG - Valve for plant {plant_id} was already closed manually")
+                
+        except asyncio.CancelledError:
+            print(f"🔍 DEBUG - Background task cancelled for plant {plant_id}")
+            raise
+        except Exception as e:
+            print(f"❌ ERROR - Error in background task for plant {plant_id}: {e}")
+            # Try to close valve even if there's an error
+            try:
+                if plant_id in self.plants:
+                    plant = self.plants[plant_id]
+                    plant.valve.request_close()
+                    print(f"✅ DEBUG - Valve closed due to background task error")
+            except Exception as close_error:
+                print(f"❌ ERROR - Failed to close valve after background task error: {close_error}")
+        finally:
+            # Clean up task reference
+            if plant_id in self.valve_tasks:
+                del self.valve_tasks[plant_id]
+
+    def get_valve_state(self, plant_id: int) -> Optional[Dict]:
+        """
+        Get the current state of a valve for a specific plant.
+        
+        Args:
+            plant_id (int): The ID of the plant
+            
+        Returns:
+            Optional[Dict]: Valve state information, or None if not found
+        """
+        return self.valve_states.get(plant_id)
+
+    def is_valve_open(self, plant_id: int) -> bool:
+        """
+        Check if a valve is currently open for a specific plant.
+        
+        Args:
+            plant_id (int): The ID of the plant
+            
+        Returns:
+            bool: True if valve is open, False otherwise
+        """
+        valve_state = self.valve_states.get(plant_id)
+        return valve_state is not None and valve_state.get('is_open', False)
+
+    def get_detailed_valve_status(self, plant_id: int) -> Optional[Dict]:
+        """
+        Get detailed valve status for debugging purposes.
+        
+        Args:
+            plant_id (int): The ID of the plant
+            
+        Returns:
+            Optional[Dict]: Detailed valve status information, or None if not found
+        """
+        if plant_id not in self.plants:
+            return None
+            
+        plant = self.plants[plant_id]
+        valve_state = self.valve_states.get(plant_id, {})
+        
+        # Get valve hardware status
+        valve_status = plant.valve.get_status()
+        
+        # Combine with engine state
+        detailed_status = {
+            'plant_id': plant_id,
+            'plant_name': getattr(plant, 'name', 'Unknown'),
+            'engine_state': valve_state,
+            'valve_hardware': valve_status,
+            'has_background_task': plant_id in self.valve_tasks,
+            'task_status': 'running' if (plant_id in self.valve_tasks and not self.valve_tasks[plant_id].done()) else 'completed/cancelled'
+        }
+        
+        return detailed_status
+
+    def get_all_valve_statuses(self) -> Dict[int, Dict]:
+        """
+        Get detailed status for all valves in the system.
+        
+        Returns:
+            Dict[int, Dict]: Dictionary mapping plant_id to detailed valve status
+        """
+        statuses = {}
+        for plant_id in self.plants.keys():
+            status = self.get_detailed_valve_status(plant_id)
+            if status:
+                statuses[plant_id] = status
+        return statuses

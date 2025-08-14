@@ -18,6 +18,9 @@ import { View, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts as useNunito, Nunito_400Regular, Nunito_500Medium, Nunito_700Bold } from '@expo-google-fonts/nunito';
 
+// Import context providers
+import { IrrigationProvider } from './src/contexts/IrrigationContext';
+
 // Import all screen components
 import LoginScreen from './src/components/login/LoginScreen';
 import ForgotPasswordScreen from './src/components/forgotPassword/ForgotPasswordScreen';
@@ -27,6 +30,8 @@ import RegisterScreen from './src/components/register/RegisterScreen';
 import MainScreen from './src/components/main/MainScreen';
 import PlantDetail from './src/components/main/PlantDetail/PlantDetail';
 import AddPlantScreen from './src/components/addPlant/AddPlantScreen';
+import SensorPlacementScreen from './src/components/addPlant/SensorPlacement/SensorPlacementScreen';
+import TapPlacementScreen from './src/components/addPlant/TapPlacement/TapPlacementScreen';
 import SettingsScreen from './src/components/main/SettingsScreen/SettingsScreen';
 import NotificationScreen from './src/components/notification/NotificationScreen';
 import ArticleDetails from './src/components/main/Articles/ArticleDetails/ArticleDetails';
@@ -240,9 +245,9 @@ export default function App() {
    * Uses React Navigation for screen management with all app screens
    */
   return (
-
     <SafeAreaProvider>
-      <NavigationContainer ref={navigationRef}>
+      <IrrigationProvider>
+        <NavigationContainer ref={navigationRef}>
         <Stack.Navigator
           screenOptions={{ headerShown: false }}
           initialRouteName={initialRoute}
@@ -255,6 +260,8 @@ export default function App() {
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="Main" component={MainScreen} />
           <Stack.Screen name="PlantDetail" component={PlantDetail} />
+          <Stack.Screen name="SensorPlacement" component={SensorPlacementScreen} />
+          <Stack.Screen name="TapPlacement" component={TapPlacementScreen} />
           <Stack.Screen name="AddPlant" component={AddPlantScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="Notification" component={NotificationScreen} />
@@ -262,7 +269,8 @@ export default function App() {
           <Stack.Screen name="ArticlesList" component={ArticlesList} />
           <Stack.Screen name="ForecastScreen" component={ForecastScreen} />
         </Stack.Navigator>
-      </NavigationContainer>
+        </NavigationContainer>
+      </IrrigationProvider>
     </SafeAreaProvider>
 
   );

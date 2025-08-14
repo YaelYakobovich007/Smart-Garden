@@ -30,9 +30,8 @@ function handleUserSocket(ws) {
       handleGetWeather(ws);
     } else if (data.type === 'PLANT_IDENTIFY') {
       console.log('🌱 Received PLANT_IDENTIFY message in userSocket');
-      console.log('Message data:', JSON.stringify(data, null, 2));
       handlePlantIdentify(data, ws);
-    } else if (['UPDATE_PLANT_SCHEDULE', 'GET_IRRIGATION_RESULT', 'IRRIGATE_PLANT'].includes(data.type)) {
+    } else if (['UPDATE_PLANT_SCHEDULE', 'GET_IRRIGATION_RESULT', 'IRRIGATE_PLANT', 'OPEN_VALVE', 'CLOSE_VALVE'].includes(data.type)) {
       handleIrrigationMessage(data, ws);
     } else if (['GET_USER_NAME', 'UPDATE_FULL_NAME', 'UPDATE_LOCATION', 'UPDATE_PASSWORD', 'FORGOT_PASSWORD', 'RESET_PASSWORD', 'VALIDATE_RESET_TOKEN'].includes(data.type)) {
       handleUserMessage(data, ws);
