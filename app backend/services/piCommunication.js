@@ -26,8 +26,8 @@ class PiCommunication {
                 type: 'ADD_PLANT',
                 data: {
                     plant_id: plantData.plant_id,
-                    desiredMoisture: plantData.ideal_moisture,
-                    waterLimit: plantData.water_limit,
+                    desiredMoisture: parseFloat(plantData.ideal_moisture),
+                    waterLimit: parseFloat(plantData.water_limit),
                     scheduleData: {
                         irrigation_days: plantData.irrigation_days || null,
                         irrigation_time: plantData.irrigation_time || null

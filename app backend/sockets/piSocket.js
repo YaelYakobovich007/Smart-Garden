@@ -102,6 +102,11 @@ function handlePiSocket(ws) {
 
     // Handle PI_LOG messages from Pi
     if (data.type === 'PI_LOG') {
+      console.log('🔍 DEBUG - Received PI_LOG message:');
+      console.log('   - Full data:', JSON.stringify(data));
+      console.log('   - data.data:', data.data);
+      console.log('   - data.data.message:', data.data?.message);
+      
       const logData = data.data || {};
       const timestamp = logData.timestamp || new Date().toISOString();
       const message = logData.message || 'No message';
