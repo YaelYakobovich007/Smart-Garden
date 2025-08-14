@@ -185,9 +185,8 @@ class SmartGardenPiClient:
             
             self.logger.info(f"Received IRRIGATE_PLANT request for plant {plant_id}")
             
-            # Call the irrigation algorithm
-            from controller.handlers.irrigate_plant_handler import handle
-            result = await handle(self.engine, plant_id)
+            # Call the irrigation algorithm using the smart garden engine
+            result = await self.engine.irrigate_plant(plant_id)
             
             # Send response back to server
             response_data = result.to_websocket_data()
@@ -203,8 +202,17 @@ class SmartGardenPiClient:
             
             self.logger.info(f"Irrigation request completed for plant {plant_id}: {result.status}")
             
+        except ValueError as e:
+            self.logger.error(f"ValueError during irrigation: {e}")
+            # Handle plant not found or other validation errors
+            from controller.dto.irrigation_result import IrrigationResult
+            error_result = IrrigationResult.error(
+                plant_id=plant_id,
+                error_message=str(e)
+            )
+            await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
         except Exception as e:
-            self.logger.error(f"Error during irrigation: {e}")
+            self.logger.error(f"Unexpected error during irrigation: {e}")
             # Create error DTO for unexpected exceptions
             from controller.dto.irrigation_result import IrrigationResult
             error_result = IrrigationResult.error(

@@ -7,6 +7,7 @@ from controller.models.plant import Plant
 from controller.hardware.valves.valves_manager import ValvesManager
 from controller.hardware.sensors.sensor_manager import SensorManager
 from controller.irrigation.irrigation_algorithm import IrrigationAlgorithm
+from controller.dto.irrigation_result import IrrigationResult
 from controller.hardware.valves.valve import Valve
 from controller.hardware.sensors.sensor import Sensor
 
@@ -100,12 +101,15 @@ class SmartGardenEngine:
         self.plants[plant_id] = plant
         print(f"Plant {plant_id} added with valve {valve.valve_id} and sensor {sensor.port}")
 
-    async def water_plant(self, plant_id: int) -> None:
+    async def water_plant(self, plant_id: int) -> IrrigationResult:
         """
         Water a specific plant using the irrigation algorithm.
         
         Args:
             plant_id (int): ID of the plant to water
+            
+        Returns:
+            IrrigationResult: Result of the irrigation operation
         """
         if plant_id not in self.plants:
             raise ValueError(f"Plant {plant_id} not found")
@@ -113,6 +117,19 @@ class SmartGardenEngine:
         plant = self.plants[plant_id]
         result = await self.irrigation_algorithm.irrigate(plant)
         print(f"Irrigation result for plant {plant_id}: {result}")
+        return result
+
+    async def irrigate_plant(self, plant_id: int) -> IrrigationResult:
+        """
+        Alias for water_plant method for consistency with WebSocket API.
+        
+        Args:
+            plant_id (int): ID of the plant to irrigate
+            
+        Returns:
+            IrrigationResult: Result of the irrigation operation
+        """
+        return await self.water_plant(plant_id)
 
     def remove_plant(self, plant_id: int) -> None:
         """
