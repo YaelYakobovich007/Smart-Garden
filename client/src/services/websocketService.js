@@ -13,14 +13,14 @@ const WS_CONFIG = {
   // For production, use your server's actual IP address
 
   // CURRENT: Using local IP (works only on same network)
-  SERVER_URL: 'ws://10.0.0.22:8080',
+  SERVER_URL: 'ws://192.168.68.71:8080',
 
   // FOR NGROK TESTING (uncomment and use ngrok URL):
   // SERVER_URL: 'wss://your-ngrok-url.ngrok.io',
 
   // FOR SAME WIFI NETWORK (uncomment and use your phone's WiFi IP):
   // SERVER_URL: 'wss://192.168.1.XXX:8080', // Replace XXX with your phone's IP
-
+};
 
 // Configuration for WebSocket connection
 const CONFIG = {
