@@ -118,6 +118,27 @@ function handlePiSocket(ws) {
       return;
     }
 
+    // Handle IRRIGATION_PROGRESS messages from Pi
+    if (data.type === 'IRRIGATION_PROGRESS') {
+      const progressData = data.data || {};
+      const plantId = progressData.plant_id;
+      const stage = progressData.stage;
+      const message = progressData.message;
+      const timestamp = progressData.timestamp || new Date().toISOString();
+      
+      console.log(`🚰 [IRRIGATION PROGRESS - ${timestamp}] Plant ${plantId} - ${stage.toUpperCase()}`);
+      console.log(`   📊 Current Moisture: ${progressData.current_moisture}%`);
+      console.log(`   🎯 Target Moisture: ${progressData.target_moisture}%`);
+      console.log(`   💧 Moisture Gap: ${progressData.moisture_gap}%`);
+      console.log(`   💦 Total Water Used: ${progressData.total_water_used}L`);
+      console.log(`   📈 Pulse Number: ${progressData.pulse_number || 'N/A'}`);
+      console.log(`   📝 Message: ${message}`);
+      
+      // You could also broadcast this to connected clients if needed
+      // For now, just log to server console
+      return;
+    }
+
     // Handle IRRIGATE_PLANT_RESPONSE from Pi
     if (data.type === 'IRRIGATE_PLANT_RESPONSE') {
       const responseData = data.data || {};

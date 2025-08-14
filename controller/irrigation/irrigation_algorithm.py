@@ -1,6 +1,7 @@
 from datetime import datetime
 import asyncio
 from controller.dto.irrigation_result import IrrigationResult
+from controller.dto.irrigation_progress import IrrigationProgress
 from controller.models.plant import Plant
 from controller.services.weather_service import WeatherService
 
@@ -30,6 +31,17 @@ class IrrigationAlgorithm:
                 })
             except Exception as e:
                 print(f"Failed to send log to server: {e}")
+    
+    async def send_progress_update(self, progress: IrrigationProgress):
+        """
+        Send structured irrigation progress update to server via WebSocket.
+        """
+        print(f"🚰 IRRIGATION PROGRESS: {progress.message}")
+        if self.websocket_client and hasattr(self.websocket_client, 'send_message'):
+            try:
+                await self.websocket_client.send_message("IRRIGATION_PROGRESS", progress.to_websocket_data())
+            except Exception as e:
+                print(f"Failed to send progress update to server: {e}")
 
     async def irrigate(self, plant: "Plant") -> IrrigationResult:
         """
@@ -50,8 +62,9 @@ class IrrigationAlgorithm:
         if current_moisture is not None:
             current_moisture = float(current_moisture)
         
-        await self.log_to_server(f"🌡️ CURRENT MOISTURE READING: {current_moisture}%")
-        await self.log_to_server(f"Initial moisture for plant {plant.plant_id}: {current_moisture}%")
+        # Send initial moisture check progress update
+        progress = IrrigationProgress.initial_check(plant.plant_id, current_moisture, plant.desired_moisture)
+        await self.send_progress_update(progress)
 
         # Case 1: Skip irrigation if rain is expected
         if self.weather_service.will_rain_today(plant.lat, plant.lon):
@@ -63,15 +76,13 @@ class IrrigationAlgorithm:
             )
 
         # Case 2: Overwatered — block and stop
-        await self.log_to_server(f"\n🚨 Checking for overwatering...")
         is_overwatered = await self.is_overwatered(plant, current_moisture)
-        await self.log_to_server(f"   Overwatered Check: {'❌ OVERWATERED' if is_overwatered else '✅ Not overwatered'}")
+        
+        # Send overwatering check progress update
+        progress = IrrigationProgress.overwatering_check(plant.plant_id, current_moisture, plant.desired_moisture, is_overwatered)
+        await self.send_progress_update(progress)
         
         if is_overwatered:
-            await self.log_to_server(f"🚫 BLOCKING VALVE — Plant is overwatered!")
-            await self.log_to_server(f"🌡️ CURRENT MOISTURE: {current_moisture}%")
-            await self.log_to_server(f"🎯 DESIRED MOISTURE: {plant.desired_moisture}%")
-            await self.log_to_server(f"💧 EXCESS MOISTURE: {current_moisture - plant.desired_moisture:.1f}%")
             plant.valve.block()
             return IrrigationResult.error(
                 plant_id=plant.plant_id,
@@ -88,20 +99,17 @@ class IrrigationAlgorithm:
             )
 
         # Case 4: Otherwise, perform irrigation cycle
-        await self.log_to_server(f"\n🚰 STARTING IRRIGATION CYCLE")
-        await self.log_to_server(f"🎯 TARGET MOISTURE: {plant.desired_moisture}%")
-        await self.log_to_server(f"🌡️ CURRENT MOISTURE: {current_moisture}%")
-        await self.log_to_server(f"💧 WATER NEEDED: {plant.desired_moisture - current_moisture:.1f}%")
+        await self.log_to_server(f"\n🚰 Starting irrigation cycle for plant {plant.plant_id}")
+        await self.log_to_server(f"   Target: {plant.desired_moisture}%, Current: {current_moisture}%, Water needed: {plant.desired_moisture - current_moisture:.1f}%")
         return await self.perform_irrigation(plant, current_moisture)
 
     async def is_overwatered(self, plant: "Plant", moisture: float) -> bool:
         """
         Determines if the plant is overwatered.
         """
-        # Debug: Log the types and values being compared
-        await self.log_to_server(f"🔍 DEBUG - is_overwatered comparison:")
-        await self.log_to_server(f"🌡️ CURRENT MOISTURE: {moisture}% (type: {type(moisture)})")
-        await self.log_to_server(f"🎯 DESIRED MOISTURE: {plant.desired_moisture}% (type: {type(plant.desired_moisture)})")
+        # Debug logging for overwatering analysis
+        print(f"   📊 CURRENT MOISTURE: {moisture}% (type: {type(moisture)})")
+        print(f"   🎯 DESIRED MOISTURE: {plant.desired_moisture}% (type: {type(plant.desired_moisture)})")
         
         # Ensure both values are float
         try:
@@ -130,10 +138,9 @@ class IrrigationAlgorithm:
         """
         Checks if irrigation is necessary based on desired moisture level.
         """
-        # Debug: Log the types and values being compared
-        await self.log_to_server(f"🔍 DEBUG - should_irrigate comparison:")
-        await self.log_to_server(f"🌡️ CURRENT MOISTURE: {current_moisture}% (type: {type(current_moisture)})")
-        await self.log_to_server(f"🎯 DESIRED MOISTURE: {plant.desired_moisture}% (type: {type(plant.desired_moisture)})")
+        # Debug logging for irrigation need analysis
+        print(f"   📊 CURRENT MOISTURE: {current_moisture}% (type: {type(current_moisture)})")
+        print(f"   🎯 DESIRED MOISTURE: {plant.desired_moisture}% (type: {type(plant.desired_moisture)})")
         
         # Ensure both values are float
         try:
@@ -189,8 +196,16 @@ class IrrigationAlgorithm:
             current_moisture: float = await plant.get_moisture()
             moisture_gap = plant.desired_moisture - current_moisture
             
-            await self.log_to_server(f"🌡️ PULSE {pulse_count+1} - CURRENT MOISTURE: {current_moisture:.1f}%")
-            await self.log_to_server(f"   {pulse_count+1:<6} {total_water:<8.2f}L {current_moisture:<10.1f}% {plant.desired_moisture:<8.1f}% {moisture_gap:<8.1f}%")
+            # Send pulse progress update
+            progress = IrrigationProgress.pulse_update(
+                plant.plant_id, 
+                pulse_count + 1, 
+                current_moisture, 
+                plant.desired_moisture, 
+                total_water, 
+                water_limit
+            )
+            await self.send_progress_update(progress)
             
             if current_moisture >= plant.desired_moisture:
                 await self.log_to_server("✅ TARGET REACHED")
@@ -224,8 +239,18 @@ class IrrigationAlgorithm:
 
         final_moisture: float = await plant.get_moisture()
         
-        await self.log_to_server(f"\n📊 IRRIGATION SUMMARY:")
-        await self.log_to_server(f"🌡️ FINAL MOISTURE READING: {final_moisture:.1f}%")
+        # Send final summary progress update
+        target_reached = final_moisture >= plant.desired_moisture
+        progress = IrrigationProgress.final_summary(
+            plant.plant_id,
+            initial_moisture,
+            final_moisture,
+            plant.desired_moisture,
+            total_water,
+            pulse_count,
+            target_reached
+        )
+        await self.send_progress_update(progress)
         await self.log_to_server(f"   Pulses Completed: {pulse_count}")
         await self.log_to_server(f"   Total Water Used: {total_water:.2f}L")
         await self.log_to_server(f"   Initial Moisture: {initial_moisture:.1f}%")
@@ -236,10 +261,15 @@ class IrrigationAlgorithm:
 
         # Fault detection: watered but moisture didn't rise
         if total_water >= water_limit and final_moisture < plant.desired_moisture:
-            await self.log_to_server(f"\n🚨 FAULT DETECTED!")
-            await self.log_to_server(f"   ❌ Watered {total_water:.2f}L but moisture is still low!")
-            await self.log_to_server(f"🌡️ FINAL MOISTURE: {final_moisture:.1f}% < TARGET: {plant.desired_moisture:.1f}%")
-            await self.log_to_server(f"   🔧 Possible issues: Sensor fault, valve malfunction, or soil drainage")
+            # Send fault detection progress update
+            progress = IrrigationProgress.fault_detected(
+                plant.plant_id,
+                final_moisture,
+                plant.desired_moisture,
+                total_water,
+                water_limit
+            )
+            await self.send_progress_update(progress)
             plant.valve.block()
             return IrrigationResult.error(
                 plant_id=plant.plant_id,
