@@ -5,13 +5,14 @@ const { sendSuccess, sendError } = require('./utils/wsResponses');
 const { testConnection } = require('./config/database');
 // Test the database connection at startup
 //const wss = new WebSocket.Server({ port: 8080 });
-const wss = new WebSocket.Server({ port: 8080, host: '0.0.0.0' });
+const port = process.env.PORT || 8080;
+const wss = new WebSocket.Server({ port: port, host: '0.0.0.0' });
 testConnection();
 
 // Handle incoming WebSocket connections
 wss.on('connection', (ws) => {
   console.log('New WebSocket connection established');
-  
+
   ws.once('message', (msg) => {
     let data;
     try {
@@ -24,10 +25,12 @@ wss.on('connection', (ws) => {
       ws.close();
     }
   });
-  
+
   ws.on('close', () => {
     console.log('WebSocket connection closed');
   });
 });
 
-console.log('WebSocket server running on ws://192.168.68.71:8080');
+
+console.log(`🚀 WebSocket server running on port ${port}`);
+

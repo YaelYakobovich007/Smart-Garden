@@ -5,6 +5,7 @@ const { sendError, sendSuccess } = require('../utils/wsResponses');
 const { removeUserSession } = require('../models/userSessions');
 const { handleIrrigationMessage } = require('../controllers/irrigationController');
 const { handleUserMessage } = require('../controllers/userController');
+const { handlePlantIdentify } = require('../controllers/plantIdentificationController');
 
 
 function handleUserSocket(ws) {
@@ -27,6 +28,9 @@ function handleUserSocket(ws) {
       handleAuthMessage(data, ws);
     } else if (data.type === 'GET_WEATHER') {
       handleGetWeather(ws);
+    } else if (data.type === 'PLANT_IDENTIFY') {
+      console.log('🌱 Received PLANT_IDENTIFY message in userSocket');
+      handlePlantIdentify(data, ws);
     } else if (['UPDATE_PLANT_SCHEDULE', 'GET_IRRIGATION_RESULT', 'IRRIGATE_PLANT', 'OPEN_VALVE', 'CLOSE_VALVE'].includes(data.type)) {
       handleIrrigationMessage(data, ws);
     } else if (['GET_USER_NAME', 'UPDATE_FULL_NAME', 'UPDATE_LOCATION', 'UPDATE_PASSWORD', 'FORGOT_PASSWORD', 'RESET_PASSWORD', 'VALIDATE_RESET_TOKEN'].includes(data.type)) {
