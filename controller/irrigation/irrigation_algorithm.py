@@ -47,13 +47,14 @@ class IrrigationAlgorithm:
         """
         Main function that decides whether to irrigate a plant and performs the process.
         """
-        await self.log_to_server(f"\n🌱 === IRRIGATION ALGORITHM START ===")
-        await self.log_to_server(f"📊 Plant ID: {plant.plant_id}")
-        await self.log_to_server(f"📍 Location: ({plant.lat}, {plant.lon})")
-        await self.log_to_server(f"💧 Desired Moisture: {plant.desired_moisture}%")
-        await self.log_to_server(f"🚰 Valve ID: {plant.valve.valve_id}")
-        await self.log_to_server(f"📡 Sensor Port: {plant.sensor.port}")
-        await self.log_to_server(f"⏰ Last Irrigation: {plant.last_irrigation_time}")
+        # Log irrigation start locally (not sent to server)
+        print(f"\n🌱 === IRRIGATION ALGORITHM START ===")
+        print(f"📊 Plant ID: {plant.plant_id}")
+        print(f"📍 Location: ({plant.lat}, {plant.lon})")
+        print(f"💧 Desired Moisture: {plant.desired_moisture}%")
+        print(f"🚰 Valve ID: {plant.valve.valve_id}")
+        print(f"📡 Sensor Port: {plant.sensor.port}")
+        print(f"⏰ Last Irrigation: {plant.last_irrigation_time}")
         
         # Get current moisture
         current_moisture = await plant.get_moisture()
@@ -68,7 +69,7 @@ class IrrigationAlgorithm:
 
         # Case 1: Skip irrigation if rain is expected
         if self.weather_service.will_rain_today(plant.lat, plant.lon):
-            await self.log_to_server(f"Skipping irrigation for {plant.plant_id} — rain expected today.")
+            print(f"Skipping irrigation for {plant.plant_id} — rain expected today.")
             return IrrigationResult.skipped(
                 plant_id=plant.plant_id,
                 moisture=current_moisture,
@@ -99,8 +100,8 @@ class IrrigationAlgorithm:
             )
 
         # Case 4: Otherwise, perform irrigation cycle
-        await self.log_to_server(f"\n🚰 Starting irrigation cycle for plant {plant.plant_id}")
-        await self.log_to_server(f"   Target: {plant.desired_moisture}%, Current: {current_moisture}%, Water needed: {plant.desired_moisture - current_moisture:.1f}%")
+        print(f"\n🚰 Starting irrigation cycle for plant {plant.plant_id}")
+        print(f"   Target: {plant.desired_moisture}%, Current: {current_moisture}%, Water needed: {plant.desired_moisture - current_moisture:.1f}%")
         return await self.perform_irrigation(plant, current_moisture)
 
     async def is_overwatered(self, plant: "Plant", moisture: float) -> bool:
@@ -165,32 +166,33 @@ class IrrigationAlgorithm:
         """
         Executes the irrigation cycle using water pulses with non-blocking operations.
         """
-        await self.log_to_server(f"\n💧 === IRRIGATION CYCLE DETAILS ===")
-        await self.log_to_server(f"🚰 Valve Configuration:")
-        await self.log_to_server(f"   Valve ID: {plant.valve.valve_id}")
-        await self.log_to_server(f"   Water Limit: {plant.valve.water_limit}L")
-        await self.log_to_server(f"   Flow Rate: {plant.valve.flow_rate}L/s")
-        await self.log_to_server(f"   Pipe Diameter: {plant.valve.pipe_diameter}cm")
+        # Log irrigation details locally
+        print(f"\n💧 === IRRIGATION CYCLE DETAILS ===")
+        print(f"🚰 Valve Configuration:")
+        print(f"   Valve ID: {plant.valve.valve_id}")
+        print(f"   Water Limit: {plant.valve.water_limit}L")
+        print(f"   Flow Rate: {plant.valve.flow_rate}L/s")
+        print(f"   Pipe Diameter: {plant.valve.pipe_diameter}cm")
         
-        await self.log_to_server(f"\n⚙️  Pulse Configuration:")
-        await self.log_to_server(f"   Water Per Pulse: {self.water_per_pulse}L")
-        await self.log_to_server(f"   Pause Between Pulses: {self.pause_between_pulses}s")
+        print(f"\n⚙️  Pulse Configuration:")
+        print(f"   Water Per Pulse: {self.water_per_pulse}L")
+        print(f"   Pause Between Pulses: {self.pause_between_pulses}s")
         pulse_time: float = plant.valve.calculate_open_time(self.water_per_pulse)
-        await self.log_to_server(f"   Pulse Duration: {pulse_time:.2f}s")
+        print(f"   Pulse Duration: {pulse_time:.2f}s")
         
-        await self.log_to_server(f"\n📊 Irrigation Parameters:")
-        await self.log_to_server(f"🌡️ INITIAL MOISTURE: {initial_moisture}%")
-        await self.log_to_server(f"🎯 TARGET MOISTURE: {plant.desired_moisture}%")
-        await self.log_to_server(f"💧 MOISTURE GAP: {plant.desired_moisture - initial_moisture:.1f}%")
-        await self.log_to_server(f"🚰 MAX WATER: {plant.valve.water_limit}L")
+        print(f"\n📊 Irrigation Parameters:")
+        print(f"🌡️ INITIAL MOISTURE: {initial_moisture}%")
+        print(f"🎯 TARGET MOISTURE: {plant.desired_moisture}%")
+        print(f"💧 MOISTURE GAP: {plant.desired_moisture - initial_moisture:.1f}%")
+        print(f"🚰 MAX WATER: {plant.valve.water_limit}L")
         
         total_water: float = 0.0
         water_limit: float = plant.valve.water_limit
         pulse_count = 0
 
-        await self.log_to_server(f"\n🔄 Starting Water Pulses...")
-        await self.log_to_server(f"   {'Pulse':<6} {'Water':<8} {'Current':<10} {'Target':<8} {'Gap':<8} {'Status':<15}")
-        await self.log_to_server(f"   {'-----':<6} {'-----':<8} {'-------':<10} {'------':<8} {'---':<8} {'------':<15}")
+        print(f"\n🔄 Starting Water Pulses...")
+        print(f"   {'Pulse':<6} {'Water':<8} {'Current':<10} {'Target':<8} {'Gap':<8} {'Status':<15}")
+        print(f"   {'-----':<6} {'-----':<8} {'-------':<10} {'------':<8} {'---':<8} {'------':<15}")
         
         while total_water < water_limit:
             current_moisture: float = await plant.get_moisture()
@@ -208,20 +210,20 @@ class IrrigationAlgorithm:
             await self.send_progress_update(progress)
             
             if current_moisture >= plant.desired_moisture:
-                await self.log_to_server("✅ TARGET REACHED")
+                print("✅ TARGET REACHED")
                 break
             elif total_water >= water_limit:
-                await self.log_to_server("🚫 WATER LIMIT REACHED")
+                print("🚫 WATER LIMIT REACHED")
                 break
             else:
-                await self.log_to_server("💧 WATERING...")
+                print("💧 WATERING...")
             
             # Perform water pulse using non-blocking async sleep
-            await self.log_to_server(f"      🔓 Opening valve for {pulse_time:.2f}s...")
+            print(f"      🔓 Opening valve for {pulse_time:.2f}s...")
             plant.valve.request_open()
             await asyncio.sleep(pulse_time)  # Use asyncio.sleep instead of time.sleep
             plant.valve.request_close()
-            await self.log_to_server(f"      🔒 Valve closed")
+            print(f"      🔒 Valve closed")
             
             total_water += self.water_per_pulse
             pulse_count += 1
@@ -230,11 +232,11 @@ class IrrigationAlgorithm:
             if plant.sensor.simulation_mode:
                 old_moisture = current_moisture
                 plant.sensor.update_simulated_value(5)  # 5% increase after each pulse
-                await self.log_to_server(f"      📈 Simulation: {old_moisture:.1f}% → {plant.sensor.simulated_value:.1f}% (+5%)")
+                print(f"      📈 Simulation: {old_moisture:.1f}% → {plant.sensor.simulated_value:.1f}% (+5%)")
             
             # Pause between pulses using non-blocking async sleep
             if total_water < water_limit and current_moisture < plant.desired_moisture:
-                await self.log_to_server(f"      ⏸️  Pausing {self.pause_between_pulses}s before next pulse...")
+                print(f"      ⏸️  Pausing {self.pause_between_pulses}s before next pulse...")
                 await asyncio.sleep(self.pause_between_pulses)  # Use asyncio.sleep instead of time.sleep
 
         final_moisture: float = await plant.get_moisture()
@@ -251,13 +253,13 @@ class IrrigationAlgorithm:
             target_reached
         )
         await self.send_progress_update(progress)
-        await self.log_to_server(f"   Pulses Completed: {pulse_count}")
-        await self.log_to_server(f"   Total Water Used: {total_water:.2f}L")
-        await self.log_to_server(f"   Initial Moisture: {initial_moisture:.1f}%")
-        await self.log_to_server(f"   Final Moisture: {final_moisture:.1f}%")
-        await self.log_to_server(f"   Moisture Increase: {final_moisture - initial_moisture:.1f}%")
-        await self.log_to_server(f"   Target Moisture: {plant.desired_moisture:.1f}%")
-        await self.log_to_server(f"   Target Reached: {'✅ YES' if final_moisture >= plant.desired_moisture else '❌ NO'}")
+        print(f"   Pulses Completed: {pulse_count}")
+        print(f"   Total Water Used: {total_water:.2f}L")
+        print(f"   Initial Moisture: {initial_moisture:.1f}%")
+        print(f"   Final Moisture: {final_moisture:.1f}%")
+        print(f"   Moisture Increase: {final_moisture - initial_moisture:.1f}%")
+        print(f"   Target Moisture: {plant.desired_moisture:.1f}%")
+        print(f"   Target Reached: {'✅ YES' if final_moisture >= plant.desired_moisture else '❌ NO'}")
 
         # Fault detection: watered but moisture didn't rise
         if total_water >= water_limit and final_moisture < plant.desired_moisture:

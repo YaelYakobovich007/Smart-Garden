@@ -123,7 +123,6 @@ function handlePiSocket(ws) {
       const progressData = data.data || {};
       const plantId = progressData.plant_id;
       const stage = progressData.stage;
-      const message = progressData.message;
       const timestamp = progressData.timestamp || new Date().toISOString();
       
       console.log(`🚰 [IRRIGATION PROGRESS - ${timestamp}] Plant ${plantId} - ${stage.toUpperCase()}`);
@@ -132,7 +131,17 @@ function handlePiSocket(ws) {
       console.log(`   💧 Moisture Gap: ${progressData.moisture_gap}%`);
       console.log(`   💦 Total Water Used: ${progressData.total_water_used}L`);
       console.log(`   📈 Pulse Number: ${progressData.pulse_number || 'N/A'}`);
-      console.log(`   📝 Message: ${message}`);
+      console.log(`   🚰 Water Limit: ${progressData.water_limit || 'N/A'}L`);
+      console.log(`   📋 Status: ${progressData.status}`);
+      console.log(`   📝 Message: ${progressData.message}`);
+      
+      // Display details object if it exists
+      if (progressData.details) {
+        console.log(`   🔍 Details:`);
+        Object.entries(progressData.details).forEach(([key, value]) => {
+          console.log(`      ${key}: ${value}`);
+        });
+      }
       
       // You could also broadcast this to connected clients if needed
       // For now, just log to server console
