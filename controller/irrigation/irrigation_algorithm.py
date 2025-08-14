@@ -190,7 +190,7 @@ class IrrigationAlgorithm:
             moisture_gap = plant.desired_moisture - current_moisture
             
             await self.log_to_server(f"🌡️ PULSE {pulse_count+1} - CURRENT MOISTURE: {current_moisture:.1f}%")
-            await self.log_to_server(f"   {pulse_count+1:<6} {total_water:<8.2f}L {current_moisture:<10.1f}% {plant.desired_moisture:<8.1f}% {moisture_gap:<8.1f}% ", end="")
+            await self.log_to_server(f"   {pulse_count+1:<6} {total_water:<8.2f}L {current_moisture:<10.1f}% {plant.desired_moisture:<8.1f}% {moisture_gap:<8.1f}%")
             
             if current_moisture >= plant.desired_moisture:
                 await self.log_to_server("✅ TARGET REACHED")
