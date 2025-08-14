@@ -100,8 +100,8 @@ export default function App() {
           // Wait for WebSocket connection before validating session
           const checkConnection = () => {
             if (websocketService.isConnected()) {
-              // Validate session with server by requesting user name
-              websocketService.sendMessage({ type: 'GET_USER_NAME' });
+              // Validate session with server by requesting user details
+              websocketService.sendMessage({ type: 'GET_USER_DETAILS' });
 
               // Set up a timeout to handle server response
               const validationTimeout = setTimeout(() => {
@@ -113,11 +113,11 @@ export default function App() {
               // Listen for session validation response
               const handleValidation = (data) => {
                 clearTimeout(validationTimeout);
-                websocketService.offMessage('GET_USER_NAME_SUCCESS', handleValidation);
-                websocketService.offMessage('GET_USER_NAME_FAIL', handleValidation);
+                websocketService.offMessage('GET_USER_DETAILS_SUCCESS', handleValidation);
+                websocketService.offMessage('GET_USER_DETAILS_FAIL', handleValidation);
                 websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
 
-                if (data.type === 'GET_USER_NAME_SUCCESS') {
+                if (data.type === 'GET_USER_DETAILS_SUCCESS') {
                   console.log('App: Session validated successfully, navigating to Main');
                   setInitialRoute('Main');
                 } else {
@@ -130,8 +130,8 @@ export default function App() {
 
               const handleUnauthorized = (data) => {
                 clearTimeout(validationTimeout);
-                websocketService.offMessage('GET_USER_NAME_SUCCESS', handleValidation);
-                websocketService.offMessage('GET_USER_NAME_FAIL', handleValidation);
+                websocketService.offMessage('GET_USER_DETAILS_SUCCESS', handleValidation);
+                websocketService.offMessage('GET_USER_DETAILS_FAIL', handleValidation);
                 websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
 
                 console.log('App: Unauthorized response, clearing session and redirecting to login');
@@ -140,8 +140,8 @@ export default function App() {
                 setIsLoading(false);
               };
 
-              websocketService.onMessage('GET_USER_NAME_SUCCESS', handleValidation);
-              websocketService.onMessage('GET_USER_NAME_FAIL', handleValidation);
+              websocketService.onMessage('GET_USER_DETAILS_SUCCESS', handleValidation);
+              websocketService.onMessage('GET_USER_DETAILS_FAIL', handleValidation);
               websocketService.onMessage('UNAUTHORIZED', handleUnauthorized);
             } else {
               // If not connected yet, try again in 500ms

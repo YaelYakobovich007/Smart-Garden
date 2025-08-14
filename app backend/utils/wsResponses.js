@@ -1,7 +1,10 @@
 function sendSuccess(ws, type, payload) {
     try {
         if (ws.readyState === 1) { // WebSocket.OPEN
-            ws.send(JSON.stringify({ type, ...payload }));
+            const body = (payload && typeof payload === 'object' && !Array.isArray(payload))
+                ? { type, ...payload }
+                : { type, data: payload };
+            ws.send(JSON.stringify(body));
         } else {
             console.error(`Cannot send success message: WebSocket not open. State: ${ws.readyState}`);
         }
@@ -9,7 +12,7 @@ function sendSuccess(ws, type, payload) {
         console.error('Error sending success message:', error.message);
     }
 }
-  
+
 function sendError(ws, type, reason) {
     try {
         if (ws.readyState === 1) { // WebSocket.OPEN
@@ -20,7 +23,6 @@ function sendError(ws, type, reason) {
     } catch (error) {
         console.error('Error sending error message:', error.message);
     }
-}  
-  
+}
+
 module.exports = { sendSuccess, sendError };
-  

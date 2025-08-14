@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
+    // Header
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -26,15 +27,47 @@ export const styles = StyleSheet.create({
     content: {
         padding: 16,
     },
+    // Hero
+    heroCard: {
+        backgroundColor: '#EAF6EF',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    heroIconWrap: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#D9F0E0',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    heroTextWrap: {
+        flex: 1,
+    },
+    heroTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#2C3E50',
+    },
+    heroSubtitle: {
+        marginTop: 4,
+        fontSize: 13,
+        color: '#4B5563',
+    },
     card: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 16,
         marginBottom: 16,
         shadowColor: '#000',
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 3,
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 4,
     },
     cardTitle: {
         fontSize: 16,
@@ -42,6 +75,11 @@ export const styles = StyleSheet.create({
         color: '#333',
         marginBottom: 12,
         fontFamily: 'Nunito_600SemiBold',
+    },
+    cardSubtitle: {
+        fontSize: 13,
+        color: '#6B7280',
+        marginBottom: 10,
     },
     inputRow: {
         flexDirection: 'row',
@@ -77,6 +115,22 @@ export const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontWeight: '600',
         fontFamily: 'Nunito_600SemiBold',
+    },
+    buttonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 6,
+    },
+    linkButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 4,
+    },
+    linkText: {
+        color: '#2563EB',
+        fontWeight: '600',
+    },
+    buttonIconLeft: {
+        marginRight: 6,
     },
     hintText: {
         marginTop: 10,
@@ -119,6 +173,11 @@ export const styles = StyleSheet.create({
         borderRadius: 10,
         overflow: 'hidden',
         marginTop: 6,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#F1F5F9',
+        marginVertical: 8,
     },
 });
 

@@ -5,10 +5,9 @@ const { isValidName, isValidPassword, isValidLocation, isValidCountryAndCity, is
 const emailService = require('../services/emailService');
 
 const userHandlers = {};
-userHandlers.GET_USER_NAME = handleGetUserName;
-userHandlers.UPDATE_FULL_NAME = handleUpdateName;
-userHandlers.UPDATE_LOCATION = handleUpdateLocation;
-userHandlers.UPDATE_PASSWORD = handleUpdatePassword;
+userHandlers.GET_USER_DETAILS = handleGetUserDetails;
+userHandlers.GET_USER_NAME = handleGetUserDetails; // legacy alias
+userHandlers.UPDATE_USER_DETAILS = handleUpdateUserDetails;
 userHandlers.FORGOT_PASSWORD = handleForgotPassword;
 userHandlers.RESET_PASSWORD = handleResetPassword;
 userHandlers.VALIDATE_RESET_TOKEN = handleValidateResetToken;
@@ -36,98 +35,88 @@ async function handleUserMessage(data, ws) {
   }
 }
 
-async function handleGetUserName(data, ws, email) {
+async function handleGetUserDetails(data, ws, email) {
   const user = await getUser(email);
-  if (!user) return sendError(ws, 'GET_USER_NAME_FAIL', 'User not found');
-  sendSuccess(ws, 'GET_USER_NAME_SUCCESS', { fullName: user.full_name });
+  if (!user) return sendError(ws, 'GET_USER_DETAILS_FAIL', 'User not found');
+  // Standardized new event name
+  sendSuccess(ws, 'GET_USER_DETAILS_SUCCESS', { fullName: user.full_name, country: user.country, city: user.city });
 }
 
-async function handleUpdateName(data, ws, email) {
+// Unified update handler - updates only provided fields
+async function handleUpdateUserDetails(data, ws, email) {
   try {
-    const { newName } = data;
+    const { newName, country, city, currentPassword, newPassword } = data;
 
-    if (!newName) {
-      return sendError(ws, 'UPDATE_FULL_NAME_FAIL', 'New name is required');
+    const changed = [];
+    const result = {};
+
+    // Update name if provided
+    if (newName !== undefined) {
+      if (!newName) {
+        return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'New name is required');
+      }
+      if (!isValidName(newName)) {
+        return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'Invalid name format. Name should be 2-50 characters with letters, spaces, hyphens, and apostrophes only');
+      }
+      const updatedName = await updateUserName(email, newName.trim());
+      if (!updatedName) {
+        return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'Failed to update name');
+      }
+      result.fullName = updatedName;
+      changed.push('fullName');
     }
 
-    if (!isValidName(newName)) {
-      return sendError(ws, 'UPDATE_FULL_NAME_FAIL', 'Invalid name format. Name should be 2-50 characters with letters, spaces, hyphens, and apostrophes only');
+    // Update location if provided (requires both country and city)
+    const wantsLocationUpdate = country !== undefined || city !== undefined;
+    if (wantsLocationUpdate) {
+      if (!isValidLocation(country, city)) {
+        return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'Country and city are required');
+      }
+      if (!isValidCountryAndCity(country, city)) {
+        return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'Invalid country or city');
+      }
+      const updatedLocation = await updateUserLocation(email, country.trim(), city.trim());
+      if (!updatedLocation) {
+        return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'Failed to update location');
+      }
+      result.country = updatedLocation.country;
+      result.city = updatedLocation.city;
+      changed.push('location');
     }
 
-    const updatedName = await updateUserName(email, newName.trim());
-    if (!updatedName) {
-      return sendError(ws, 'UPDATE_FULL_NAME_FAIL', 'Failed to update name');
+    // Update password if provided (requires both fields)
+    const wantsPasswordUpdate = newPassword !== undefined || currentPassword !== undefined;
+    if (wantsPasswordUpdate) {
+      if (!currentPassword || !newPassword) {
+        return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'Current password and new password are required');
+      }
+      if (!isValidPassword(newPassword)) {
+        return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'New password must be at least 8 characters with at least one letter and one number');
+      }
+      const user = await getUser(email);
+      if (!user) {
+        return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'User not found');
+      }
+      const bcrypt = require('bcrypt');
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password || '');
+      if (!isCurrentPasswordValid) {
+        return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'Current password is incorrect');
+      }
+      const pwdUpdated = await updateUserPassword(email, newPassword);
+      if (!pwdUpdated) {
+        return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'Failed to update password');
+      }
+      changed.push('password');
     }
 
-    sendSuccess(ws, 'UPDATE_FULL_NAME_SUCCESS', { fullName: updatedName });
+    if (changed.length === 0) {
+      return sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'No changes provided');
+    }
+
+    sendSuccess(ws, 'UPDATE_USER_DETAILS_SUCCESS', { changed, ...result });
   } catch (err) {
-    console.error('Update name error:', err);
-    sendError(ws, 'UPDATE_FULL_NAME_FAIL', 'Failed to update name');
-  }
-}
-
-async function handleUpdateLocation(data, ws, email) {
-  try {
-    const { country, city } = data;
-
-    if (!isValidLocation(country, city)) {
-      return sendError(ws, 'UPDATE_LOCATION_FAIL', 'Country and city are required');
-    }
-
-    if (!isValidCountryAndCity(country, city)) {
-      return sendError(ws, 'UPDATE_LOCATION_FAIL', 'Invalid country or city');
-    }
-
-    const updatedLocation = await updateUserLocation(email, country.trim(), city.trim());
-    if (!updatedLocation) {
-      return sendError(ws, 'UPDATE_LOCATION_FAIL', 'Failed to update location');
-    }
-
-    sendSuccess(ws, 'UPDATE_LOCATION_SUCCESS', {
-      country: updatedLocation.country,
-      city: updatedLocation.city
-    });
-  } catch (err) {
-    console.error('Update location error:', err);
-    sendError(ws, 'UPDATE_LOCATION_FAIL', 'Failed to update location');
-  }
-}
-
-async function handleUpdatePassword(data, ws, email) {
-  try {
-    const { currentPassword, newPassword } = data;
-
-    if (!currentPassword || !newPassword) {
-      return sendError(ws, 'UPDATE_PASSWORD_FAIL', 'Current password and new password are required');
-    }
-
-    if (!isValidPassword(newPassword)) {
-      return sendError(ws, 'UPDATE_PASSWORD_FAIL', 'New password must be at least 8 characters with at least one letter and one number');
-    }
-
-    // Get current user to verify current password
-    const user = await getUser(email);
-    if (!user) {
-      return sendError(ws, 'UPDATE_PASSWORD_FAIL', 'User not found');
-    }
-
-    // Verify current password
-    const bcrypt = require('bcrypt');
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isCurrentPasswordValid) {
-      return sendError(ws, 'UPDATE_PASSWORD_FAIL', 'Current password is incorrect');
-    }
-
-    // Update password
-    const success = await updateUserPassword(email, newPassword);
-    if (!success) {
-      return sendError(ws, 'UPDATE_PASSWORD_FAIL', 'Failed to update password');
-    }
-
-    sendSuccess(ws, 'UPDATE_PASSWORD_SUCCESS', { message: 'Password updated successfully' });
-  } catch (err) {
-    console.error('Update password error:', err);
-    sendError(ws, 'UPDATE_PASSWORD_FAIL', 'Failed to update password');
+    console.error('Update user details error:', err);
+    sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'Failed to update user details');
   }
 }
 

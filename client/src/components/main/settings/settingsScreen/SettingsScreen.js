@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { styles } from './styles';
 import sessionService from '../../../../services/sessionService';
@@ -96,7 +97,7 @@ const SettingsScreen = () => {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#F0F4F8' }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#F0F4F8' }}>
             <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
             {/* Header */}
@@ -182,7 +183,7 @@ const SettingsScreen = () => {
                     </TouchableOpacity>
                 </View>
             </ScrollView>
-        </View>
+        </SafeAreaView>
     );
 };
 
