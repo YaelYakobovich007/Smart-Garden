@@ -245,6 +245,12 @@ const PlantDetail = () => {
       Alert.alert('Unblock Failed', data?.message || 'Failed to unblock valve.');
     };
 
+    const handleValveBlocked = (data) => {
+      Alert.alert('Valve Blocked', data?.message || 'The valve has been blocked and cannot be operated.');
+      // Refresh the plant data to show the blocked status
+      // This will trigger a re-render with the updated valve_blocked status
+    };
+
     websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleFail);
     websocketService.onMessage('IRRIGATE_SKIPPED', handleSkipped);
@@ -255,6 +261,7 @@ const PlantDetail = () => {
     websocketService.onMessage('GET_MOISTURE_FAIL', handleMoistureFail);
     websocketService.onMessage('UNBLOCK_VALVE_SUCCESS', handleUnblockSuccess);
     websocketService.onMessage('UNBLOCK_VALVE_FAIL', handleUnblockFail);
+    websocketService.onMessage('VALVE_BLOCKED', handleValveBlocked);
 
     return () => {
       websocketService.offMessage('IRRIGATE_SUCCESS', handleSuccess);
@@ -267,6 +274,7 @@ const PlantDetail = () => {
       websocketService.offMessage('GET_MOISTURE_FAIL', handleMoistureFail);
       websocketService.offMessage('UNBLOCK_VALVE_SUCCESS', handleUnblockSuccess);
       websocketService.offMessage('UNBLOCK_VALVE_FAIL', handleUnblockFail);
+      websocketService.offMessage('VALVE_BLOCKED', handleValveBlocked);
     };
   }, [navigation, plant.name]);
 

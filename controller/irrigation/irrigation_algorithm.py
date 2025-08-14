@@ -87,7 +87,7 @@ class IrrigationAlgorithm:
             plant.valve.block()
             return IrrigationResult.error(
                 plant_id=plant.plant_id,
-                error_message="overwatered",
+                error_message="Plant is overwatered. The soil moisture is too high and irrigation has been blocked to prevent further damage. Please allow the soil to dry out before attempting irrigation again.",
                 moisture=current_moisture
             )
 
@@ -335,7 +335,7 @@ class IrrigationAlgorithm:
             plant.valve.block()
             return IrrigationResult.error(
                 plant_id=plant.plant_id,
-                error_message="sensor mismatch or irrigation fault",
+                error_message="Water limit reached but desired moisture not achieved. The plant received the maximum allowed water but the soil moisture did not reach the target level. This may indicate a sensor issue, soil drainage problem, or the water limit may be too low for this plant's needs.",
                 moisture=initial_moisture,
                 final_moisture=final_moisture,
                 water_added_liters=total_water

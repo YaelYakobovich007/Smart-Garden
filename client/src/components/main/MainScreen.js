@@ -84,6 +84,18 @@ const MainScreen = () => {
   };
 
   /**
+   * Handle valve blocking - refresh plant list to show updated valve status
+   * @param {Object} data - Valve blocking data
+   */
+  const handleValveBlocked = (data) => {
+    console.log('MainScreen: Valve blocked, refreshing plant list...');
+    // Refresh plant list to show updated valve_blocked status
+    if (websocketService.isConnected()) {
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+    }
+  };
+
+  /**
    * Handle plant data received from server
    * Transforms server data to match local plant format
    * @param {Object} data - Server plant data
@@ -102,6 +114,7 @@ const MainScreen = () => {
           temperature: 0, // Will be updated with real data from Pi
           lightLevel: 0, // Will be updated with real data from Pi
           isHealthy: true, // Default to healthy
+          valve_blocked: plant.valve_blocked || false, // Include valve blocked status
         };
         return transformed;
       });
@@ -213,6 +226,7 @@ const MainScreen = () => {
     websocketService.onMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
     websocketService.onMessage('PLANT_IDENTIFY_RESULT', handlePlantIdentified);
     websocketService.onMessage('PLANT_IDENTIFY_FAIL', handlePlantIdentified);
+    websocketService.onMessage('VALVE_BLOCKED', handleValveBlocked);
 
     /**
      * Handle WebSocket connection status changes
@@ -260,6 +274,7 @@ const MainScreen = () => {
       websocketService.offMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
       websocketService.offMessage('PLANT_IDENTIFY_RESULT', handlePlantIdentified);
       websocketService.offMessage('PLANT_IDENTIFY_FAIL', handlePlantIdentified);
+      websocketService.offMessage('VALVE_BLOCKED', handleValveBlocked);
       websocketService.offConnectionChange(handleConnectionChange);
     };
   }, []);

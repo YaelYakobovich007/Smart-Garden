@@ -265,10 +265,12 @@ function handlePiSocket(ws) {
         // Irrigation failed
         console.error(`❌ Plant ${plantId} irrigation failed: ${responseData.error_message}`);
 
-        // Check if it's a valve blocking error
+        // Check if it's a valve blocking error - more specific detection
         const isValveBlocked = responseData.error_message && 
-          (responseData.error_message.toLowerCase().includes('blocked') || 
-           responseData.error_message.toLowerCase().includes('valve'));
+          (responseData.error_message.toLowerCase().includes('valve is blocked') || 
+           responseData.error_message.toLowerCase().includes('blocked') ||
+           responseData.error_message.toLowerCase().includes('overwatered') ||
+           responseData.error_message.toLowerCase().includes('water limit reached'));
 
         // Save error result to database
         const irrigationModel = require('../models/irrigationModel');
@@ -288,8 +290,17 @@ function handlePiSocket(ws) {
           // Notify client of irrigation failure with appropriate message
           if (pendingInfo && pendingInfo.ws) {
             if (isValveBlocked) {
-              sendError(pendingInfo.ws, 'VALVE_BLOCKED',
-                `Plant "${pendingInfo.plantData.plant_name}" irrigation failed: ${responseData.error_message}. Please check the valve manually and unblock it if needed.`);
+              // For valve blocking, send a more specific message
+              let userMessage = responseData.error_message;
+              if (responseData.error_message.includes('Water limit reached')) {
+                userMessage = `Irrigation completed but the water limit was reached before achieving the desired moisture level. The plant received ${responseData.water_added_liters || 0}L of water but the soil moisture only increased from ${responseData.moisture}% to ${responseData.final_moisture}%. The valve has been blocked to prevent overwatering.`;
+              } else if (responseData.error_message.includes('overwatered')) {
+                userMessage = `Irrigation blocked: The plant is already overwatered with ${responseData.moisture}% moisture. The valve has been blocked to prevent further damage.`;
+              } else if (responseData.error_message.includes('valve is blocked')) {
+                userMessage = `Irrigation failed: The valve is physically blocked and cannot be opened. Please check the valve manually and unblock it if needed.`;
+              }
+              
+              sendError(pendingInfo.ws, 'VALVE_BLOCKED', userMessage);
             } else {
               sendError(pendingInfo.ws, 'IRRIGATE_FAIL',
                 `Plant "${pendingInfo.plantData.plant_name}" irrigation failed: ${responseData.error_message || 'Unknown error'}`);
