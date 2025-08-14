@@ -438,14 +438,47 @@ export default function AddPlantScreen() {
                 style={[styles.numberInput, errors.waterLimit && styles.inputError]}
                 value={formData.waterLimit.toString()}
                 onChangeText={(text) => {
-                  const value = parseFloat(text) || 0;
+                  // More permissive input handling for decimal values
+                  // Allow typing decimal point even if it results in incomplete number
+                  if (text === '' || text === '.') {
+                    updateFormData('waterLimit', text === '.' ? 0 : 0);
+                    return;
+                  }
+                  
+                  // Allow decimal numbers with proper validation
+                  const cleanText = text.replace(/[^0-9.]/g, '');
+                  
+                  // Handle multiple decimal points - keep only the first one
+                  const parts = cleanText.split('.');
+                  if (parts.length > 2) {
+                    const firstPart = parts[0];
+                    const secondPart = parts[1];
+                    const validText = firstPart + '.' + secondPart;
+                    const value = parseFloat(validText) || 0;
+                    updateFormData('waterLimit', Math.max(0, value));
+                    return;
+                  }
+                  
+                  // Handle single decimal point
+                  if (parts.length === 2) {
+                    // Allow typing like "0." or "1.5"
+                    const value = parseFloat(cleanText) || 0;
+                    updateFormData('waterLimit', Math.max(0, value));
+                    return;
+                  }
+                  
+                  // Handle whole numbers
+                  const value = parseInt(cleanText) || 0;
                   updateFormData('waterLimit', Math.max(0, value));
                 }}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
                 placeholder="0.0"
+                returnKeyType="done"
+                maxLength={10}
               />
               <Text style={styles.unit}>L</Text>
             </View>
+            <Text style={styles.hintText}>Enter value in liters (e.g., 0.5 for half a liter)</Text>
             {errors.waterLimit && (
               <View style={styles.errorContainer}>
                 <Feather name="alert-circle" size={16} color="#EF4444" />

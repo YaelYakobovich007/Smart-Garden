@@ -239,6 +239,11 @@ function handlePiSocket(ws) {
         // Irrigation failed
         console.error(`❌ Plant ${plantId} irrigation failed: ${responseData.error_message}`);
 
+        // Check if it's a valve blocking error
+        const isValveBlocked = responseData.error_message && 
+          (responseData.error_message.toLowerCase().includes('blocked') || 
+           responseData.error_message.toLowerCase().includes('valve'));
+
         // Save error result to database
         const irrigationModel = require('../models/irrigationModel');
 
@@ -254,10 +259,15 @@ function handlePiSocket(ws) {
             event_data: responseData
           });
 
-          // Notify client of irrigation failure
+          // Notify client of irrigation failure with appropriate message
           if (pendingInfo && pendingInfo.ws) {
-            sendError(pendingInfo.ws, 'IRRIGATE_FAIL',
-              `Plant "${pendingInfo.plantData.plant_name}" irrigation failed: ${responseData.error_message || 'Unknown error'}`);
+            if (isValveBlocked) {
+              sendError(pendingInfo.ws, 'VALVE_BLOCKED',
+                `Plant "${pendingInfo.plantData.plant_name}" irrigation failed: ${responseData.error_message}. Please check the valve manually and unblock it if needed.`);
+            } else {
+              sendError(pendingInfo.ws, 'IRRIGATE_FAIL',
+                `Plant "${pendingInfo.plantData.plant_name}" irrigation failed: ${responseData.error_message || 'Unknown error'}`);
+            }
           }
 
         } catch (err) {
@@ -527,6 +537,46 @@ function handlePiSocket(ws) {
         console.log(`📊 Received all plants moisture data - ${responseData.total_plants} plants`);
       } else {
         console.error(`❌ All plants moisture request failed: ${responseData.error_message}`);
+      }
+      return;
+    }
+
+    // Handle VALVE_STATUS_RESPONSE from Pi
+    if (data.type === 'VALVE_STATUS_RESPONSE') {
+      const responseData = data.data || {};
+      const plantId = responseData.plant_id;
+
+      if (responseData.error) {
+        console.error(`❌ Valve status request failed for plant ${plantId}: ${responseData.error_message}`);
+      } else {
+        console.log(`🚰 Valve status for plant ${plantId}:`);
+        console.log(`   Valve ID: ${responseData.valve_id}`);
+        console.log(`   Is Blocked: ${responseData.is_blocked ? 'YES' : 'NO'}`);
+        console.log(`   Is Open: ${responseData.is_open ? 'YES' : 'NO'}`);
+        console.log(`   Can Irrigate: ${responseData.can_irrigate ? 'YES' : 'NO'}`);
+        console.log(`   User Message: ${responseData.user_message}`);
+        
+        // Get pending irrigation info to notify client
+        const pendingInfo = completePendingIrrigation(plantId);
+        
+        if (pendingInfo && pendingInfo.ws) {
+          if (responseData.is_blocked) {
+            sendError(pendingInfo.ws, 'VALVE_BLOCKED', {
+              plant_id: plantId,
+              valve_id: responseData.valve_id,
+              message: responseData.user_message,
+              can_irrigate: false
+            });
+          } else {
+            sendSuccess(pendingInfo.ws, 'VALVE_STATUS', {
+              plant_id: plantId,
+              valve_id: responseData.valve_id,
+              message: responseData.user_message,
+              can_irrigate: true,
+              status: responseData.status
+            });
+          }
+        }
       }
       return;
     }

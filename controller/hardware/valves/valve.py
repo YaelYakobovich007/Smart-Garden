@@ -143,4 +143,18 @@ class Valve:
             'last_irrigation_time': self.last_irrigation_time.isoformat() if self.last_irrigation_time else None
         }
 
+    def get_user_friendly_status(self) -> str:
+        """
+        Get a user-friendly status message for the valve.
+        
+        Returns:
+            str: Human-readable status message
+        """
+        if self.is_blocked:
+            return f"Valve {self.valve_id} is BLOCKED and cannot be opened. Please check the valve manually and unblock it if needed."
+        elif self.is_open:
+            return f"Valve {self.valve_id} is currently OPEN and watering."
+        else:
+            return f"Valve {self.valve_id} is CLOSED and ready for operation."
+
 

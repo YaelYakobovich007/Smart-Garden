@@ -99,7 +99,27 @@ class IrrigationAlgorithm:
                 reason="already moist"
             )
 
-        # Case 4: Otherwise, perform irrigation cycle
+        # Case 4: Check if valve is blocked before starting irrigation
+        if plant.valve.is_blocked:
+            print(f"❌ VALVE BLOCKED: Cannot irrigate plant {plant.plant_id} - valve is blocked")
+            # Send blocked valve progress update
+            progress = IrrigationProgress.fault_detected(
+                plant.plant_id,
+                current_moisture,
+                plant.desired_moisture,
+                0.0,  # No water used
+                plant.valve.water_limit
+            )
+            await self.send_progress_update(progress)
+            return IrrigationResult.error(
+                plant_id=plant.plant_id,
+                error_message="Valve is blocked and cannot be opened. Please check the valve manually and unblock it if needed.",
+                moisture=current_moisture,
+                final_moisture=current_moisture,
+                water_added_liters=0.0
+            )
+
+        # Case 5: Otherwise, perform irrigation cycle
         print(f"\n🚰 Starting irrigation cycle for plant {plant.plant_id}")
         print(f"   Target: {plant.desired_moisture}%, Current: {current_moisture}%, Water needed: {plant.desired_moisture - current_moisture:.1f}%")
         return await self.perform_irrigation(plant, current_moisture)
@@ -220,10 +240,50 @@ class IrrigationAlgorithm:
             
             # Perform water pulse using non-blocking async sleep
             print(f"      🔓 Opening valve for {pulse_time:.2f}s...")
-            plant.valve.request_open()
-            await asyncio.sleep(pulse_time)  # Use asyncio.sleep instead of time.sleep
-            plant.valve.request_close()
-            print(f"      🔒 Valve closed")
+            try:
+                plant.valve.request_open()
+                await asyncio.sleep(pulse_time)  # Use asyncio.sleep instead of time.sleep
+                plant.valve.request_close()
+                print(f"      🔒 Valve closed")
+            except RuntimeError as valve_error:
+                # Handle valve blocking or hardware errors
+                error_message = str(valve_error)
+                if "blocked" in error_message.lower():
+                    print(f"❌ VALVE BLOCKED: {error_message}")
+                    # Send blocked valve progress update
+                    progress = IrrigationProgress.fault_detected(
+                        plant.plant_id,
+                        current_moisture,
+                        plant.desired_moisture,
+                        total_water,
+                        water_limit
+                    )
+                    await self.send_progress_update(progress)
+                    return IrrigationResult.error(
+                        plant_id=plant.plant_id,
+                        error_message=f"Valve is blocked and cannot be opened. Please check the valve manually and unblock it if needed.",
+                        moisture=initial_moisture,
+                        final_moisture=current_moisture,
+                        water_added_liters=total_water
+                    )
+                else:
+                    print(f"❌ VALVE ERROR: {error_message}")
+                    # Send valve error progress update
+                    progress = IrrigationProgress.fault_detected(
+                        plant.plant_id,
+                        current_moisture,
+                        plant.desired_moisture,
+                        total_water,
+                        water_limit
+                    )
+                    await self.send_progress_update(progress)
+                    return IrrigationResult.error(
+                        plant_id=plant.plant_id,
+                        error_message=f"Valve hardware error: {error_message}. Please check the valve connection and hardware.",
+                        moisture=initial_moisture,
+                        final_moisture=current_moisture,
+                        water_added_liters=total_water
+                    )
             
             total_water += self.water_per_pulse
             pulse_count += 1

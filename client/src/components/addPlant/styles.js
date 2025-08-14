@@ -90,6 +90,7 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: '#E74C3C',
   },
+
   numberInput: {
     borderWidth: 1,
     borderColor: '#ECF0F1',
@@ -125,6 +126,13 @@ const styles = StyleSheet.create({
     color: '#E74C3C',
     fontSize: 14,
     fontFamily: 'Nunito_400Regular',
+  },
+  hintText: {
+    color: '#7F8C8D',
+    fontSize: 12,
+    fontFamily: 'Nunito_400Regular',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   imageContainer: {
     borderRadius: 16,

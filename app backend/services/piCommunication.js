@@ -141,6 +141,36 @@ class PiCommunication {
     }
 
     /**
+     * Get valve status for a specific plant
+     * @param {number} plantId - The plant ID
+     * @returns {Promise<boolean>} - Success status
+     */
+    getValveStatus(plantId) {
+        const piSocket = getPiSocket();
+        if (!piSocket) {
+            console.log('Pi not connected - cannot get valve status');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        try {
+            const request = {
+                type: 'VALVE_STATUS',
+                data: {
+                    plant_id: plantId
+                }
+            };
+            
+            console.log(`🚰 Requesting valve status for plant ${plantId}`);
+            piSocket.send(JSON.stringify(request));
+            return { success: true };
+
+        } catch (error) {
+            console.error(`❌ Failed to request valve status for plant ${plantId}:`, error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
      * Send CLOSE_VALVE request to Pi (no waiting)
      */
     closeValve(plantId) {

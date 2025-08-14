@@ -343,6 +343,51 @@ class SmartGardenPiClient:
             )
             await self.send_message("VALVE_STATUS_RESPONSE", error_result.to_websocket_data())
     
+    async def handle_valve_status_request(self, data):
+        """Handle valve status request from server."""
+        try:
+            plant_id = data.get("plant_id")
+            if not plant_id:
+                self.logger.error("No plant_id provided in valve status request")
+                return
+            
+            self.logger.info(f"Received VALVE_STATUS request for plant {plant_id}")
+            
+            # Get plant from engine
+            if plant_id not in self.engine.plants:
+                self.logger.error(f"Plant {plant_id} not found in engine")
+                return
+            
+            plant = self.engine.plants[plant_id]
+            valve = plant.valve
+            
+            # Get valve status
+            status = valve.get_status()
+            user_message = valve.get_user_friendly_status()
+            
+            # Create response data
+            response_data = {
+                "plant_id": plant_id,
+                "valve_id": valve.valve_id,
+                "is_blocked": valve.is_blocked,
+                "is_open": valve.is_open,
+                "status": status,
+                "user_message": user_message,
+                "can_irrigate": not valve.is_blocked
+            }
+            
+            await self.send_message("VALVE_STATUS_RESPONSE", response_data)
+            self.logger.info(f"Valve status sent for plant {plant_id}: {user_message}")
+            
+        except Exception as e:
+            self.logger.error(f"Error during valve status request: {e}")
+            error_response = {
+                "plant_id": plant_id,
+                "error": True,
+                "error_message": f"Failed to get valve status: {str(e)}"
+            }
+            await self.send_message("VALVE_STATUS_RESPONSE", error_response)
+    
     async def handle_message(self, message: str):
         """Process incoming messages from the server."""
         try:
@@ -379,6 +424,9 @@ class SmartGardenPiClient:
             
             elif message_type == "GET_VALVE_STATUS":
                 await self.handle_get_valve_status_request(message_data)
+            
+            elif message_type == "VALVE_STATUS":
+                await self.handle_valve_status_request(message_data)
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")
