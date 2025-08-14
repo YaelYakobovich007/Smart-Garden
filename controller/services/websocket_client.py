@@ -199,7 +199,8 @@ class SmartGardenPiClient:
             
             self.logger.info(f"=== IRRIGATION RESPONSE DEBUG ===")
             self.logger.info(f"Result status: {result.status}")
-            self.logger.info(f"Result message: {result.message}")
+            self.logger.info(f"Result reason: {result.reason}")
+            self.logger.info(f"Result error_message: {result.error_message}")
             self.logger.info(f"Response data keys: {list(response_data.keys())}")
             self.logger.info(f"Response data values: {response_data}")
             self.logger.info("====================================")
@@ -253,7 +254,8 @@ class SmartGardenPiClient:
             
             self.logger.info(f"=== OPEN_VALVE RESPONSE DEBUG ===")
             self.logger.info(f"Result status: {result.status}")
-            self.logger.info(f"Result message: {result.message}")
+            self.logger.info(f"Result reason: {result.reason}")
+            self.logger.info(f"Result error_message: {result.error_message}")
             self.logger.info(f"Response data keys: {list(response_data.keys())}")
             self.logger.info(f"Response data values: {response_data}")
             self.logger.info("====================================")

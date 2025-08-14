@@ -259,7 +259,7 @@ function handlePiSocket(ws) {
       if (responseData.status === 'success') {
         console.log(`✅ DEBUG - Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
         console.log(`   - Duration: ${timeMinutes} minutes`);
-        console.log(`   - Message: ${responseData.message}`);
+        console.log(`   - Reason: ${responseData.reason}`);
 
         // Save valve operation result to database
         const irrigationModel = require('../models/irrigationModel');
@@ -268,7 +268,7 @@ function handlePiSocket(ws) {
           const irrigationResult = await irrigationModel.addIrrigationResult({
             plant_id: plantId,
             status: 'valve_opened',
-            reason: responseData.message || 'Pi valve opened',
+            reason: responseData.reason || 'Pi valve opened',
             moisture: responseData.moisture || null,
             final_moisture: responseData.moisture || null,
             water_added_liters: 0, // No water added during valve opening
@@ -361,7 +361,7 @@ function handlePiSocket(ws) {
 
       if (responseData.status === 'success') {
         console.log(`✅ DEBUG - Plant ${plantId} valve closed successfully`);
-        console.log(`   - Message: ${responseData.message}`);
+        console.log(`   - Reason: ${responseData.reason}`);
 
         // Save valve operation result to database
         const irrigationModel = require('../models/irrigationModel');
@@ -370,7 +370,7 @@ function handlePiSocket(ws) {
           const irrigationResult = await irrigationModel.addIrrigationResult({
             plant_id: plantId,
             status: 'valve_closed',
-            reason: responseData.message || 'Pi valve closed',
+            reason: responseData.reason || 'Pi valve closed',
             moisture: responseData.moisture || null,
             final_moisture: responseData.moisture || null,
             water_added_liters: 0, // No water added during valve closing
