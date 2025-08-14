@@ -21,10 +21,12 @@ import {
   Alert,
   StatusBar,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 // Import components
 import PlantList from './PlantList/PlantList';
@@ -48,6 +50,8 @@ const MainScreen = () => {
   const [weather, setWeather] = useState(null);
   const [weatherError, setWeatherError] = useState(false);
   const [weatherLoading, setWeatherLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   /**
    * Handle successful plant addition from server
@@ -203,6 +207,8 @@ const MainScreen = () => {
     websocketService.onMessage('UNAUTHORIZED', handleUnauthorized);
     websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handlePlantMoistureResponse);
     websocketService.onMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
+    websocketService.onMessage('PLANT_IDENTIFY_RESULT', handlePlantIdentified);
+    websocketService.onMessage('PLANT_IDENTIFY_FAIL', handlePlantIdentified);
 
     /**
      * Handle WebSocket connection status changes
@@ -248,6 +254,8 @@ const MainScreen = () => {
       websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
       websocketService.offMessage('PLANT_MOISTURE_RESPONSE', handlePlantMoistureResponse);
       websocketService.offMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
+      websocketService.offMessage('PLANT_IDENTIFY_RESULT', handlePlantIdentified);
+      websocketService.offMessage('PLANT_IDENTIFY_FAIL', handlePlantIdentified);
       websocketService.offConnectionChange(handleConnectionChange);
     };
   }, []);
@@ -384,6 +392,114 @@ const MainScreen = () => {
       'Help functionality will be implemented here',
       [{ text: 'OK' }]
     );
+  };
+
+  /**
+   * Handle plant identification
+   * Opens image picker and sends image to backend for identification
+   */
+  const handleIdentifyPlant = async () => {
+    try {
+      // Request camera roll permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera roll permissions to identify plants.');
+        return;
+      }
+
+      // Launch image picker with higher compression for plant identification
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6, // Lower quality for smaller file size
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        const base64Image = result.assets[0].base64;
+
+        // Check image size before sending (5MB limit)
+        const imageSizeBytes = Math.ceil((base64Image.length * 3) / 4);
+        const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+
+        if (imageSizeBytes > maxSizeBytes) {
+          Alert.alert(
+            'Image Too Large',
+            'The selected image is too large. Please try with a smaller image or lower quality.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+
+        console.log(`Image size: ${Math.round(imageSizeBytes / 1024 / 1024 * 100) / 100}MB`);
+
+        if (!websocketService.isConnected()) {
+          Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
+          return;
+        }
+
+        // Show loading state
+        setLoading(true);
+        setLoadingMessage('Identifying plant... This may take 10-15 seconds');
+
+        // Send image to backend for identification
+        websocketService.sendMessage({
+          type: 'PLANT_IDENTIFY',
+          imageBase64: base64Image
+        });
+
+        console.log('Plant identification request sent');
+      }
+    } catch (error) {
+      console.error('Error in plant identification:', error);
+      Alert.alert('Error', 'Failed to identify plant. Please try again.');
+    }
+  };
+
+  /**
+   * Handle plant identification response
+   * Shows alert with identified plant type
+   * @param {Object} data - Plant identification response data
+   */
+  const handlePlantIdentified = (message) => {
+    console.log('🌱 Plant identification response received:', message);
+
+    // Hide loading state
+    setLoading(false);
+    setLoadingMessage('');
+
+    // Extract the actual data from the message
+    const data = message.data || message;
+
+    if (message.type === 'PLANT_IDENTIFY_FAIL') {
+      console.log('❌ Plant identification failed:', message.message);
+      Alert.alert('Identification Failed', message.message || 'Unable to identify the plant. Please try again.');
+      return;
+    }
+
+    if (data.species && data.probability) {
+      const confidence = Math.round(data.probability * 100);
+      console.log('✅ High confidence identification:', data.species, confidence + '%');
+      Alert.alert(
+        'Plant Identified!',
+        `This appears to be a ${data.species} (${confidence}% confidence)`,
+        [{ text: 'OK' }]
+      );
+    } else if (data.suggestions && data.suggestions.length > 0) {
+      const topSuggestion = data.suggestions[0];
+      const confidence = Math.round(topSuggestion.probability * 100);
+      console.log('✅ Suggestion-based identification:', topSuggestion.species, confidence + '%');
+      Alert.alert(
+        'Plant Identified!',
+        `This might be a ${topSuggestion.species} (${confidence}% confidence)`,
+        [{ text: 'OK' }]
+      );
+    } else {
+      console.log('❌ No identification results found');
+      Alert.alert('Identification Failed', 'Unable to identify the plant. Please try with a clearer image.');
+    }
   };
 
   /**
@@ -538,10 +654,21 @@ const MainScreen = () => {
       {/* Bottom Toolbar - moved outside mainContentCard for fixed bottom position */}
       <BottomToolbar
         onAddPlant={handleAddPlant}
+        onIdentifyPlant={handleIdentifyPlant}
         onSchedule={handleSchedule}
         onSettings={handleSettings}
         onHelp={handleHelp}
       />
+
+      {/* Loading Overlay */}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#4A90E2" />
+            <Text style={styles.loadingText}>{loadingMessage}</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
