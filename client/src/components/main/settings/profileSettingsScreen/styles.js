@@ -27,6 +27,18 @@ export const styles = StyleSheet.create({
     content: {
         padding: 16,
     },
+    // Unified panel container
+    panelContainer: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 4,
+    },
     // Hero
     heroCard: {
         backgroundColor: '#EAF6EF',
@@ -80,6 +92,18 @@ export const styles = StyleSheet.create({
         fontSize: 13,
         color: '#6B7280',
         marginBottom: 10,
+    },
+    // Unified section spacing and divider
+    sectionUnified: {
+        paddingVertical: 12,
+        marginBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+    },
+    lastSection: {
+        borderBottomWidth: 0,
+        marginBottom: 0,
+        paddingBottom: 0,
     },
     inputRow: {
         flexDirection: 'row',
