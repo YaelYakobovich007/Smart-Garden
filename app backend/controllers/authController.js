@@ -25,7 +25,7 @@ async function handleRegister(data, ws) {
     return sendError(ws, 'REGISTER_FAIL', 'Email and password are required');
   }
 
-  if (!isValidEmail(data.email)) {
+  if (!isValidEmail((data.email || '').toLowerCase().trim())) {
     return sendError(ws, 'REGISTER_FAIL', 'Invalid email format');
   }
 
@@ -51,7 +51,7 @@ async function handleRegister(data, ws) {
 
   try {
     const success = await authService.register(
-      data.email,
+      (data.email || '').toLowerCase().trim(),
       data.password,
       data.fullName.trim(),
       data.country.trim(),
@@ -68,7 +68,7 @@ async function handleRegister(data, ws) {
 
 async function handleLogin(data, ws) {
   try {
-    const user = await authService.login(data.email, data.password);
+    const user = await authService.login((data.email || '').toLowerCase().trim(), data.password);
 
     if (user) {
       addUserSession(ws, user.email);
@@ -89,15 +89,16 @@ async function handleGoogleLogin(data, ws) {
 
   try {
     const userData = await verifyGoogleToken(data.googleToken);
-    let user = await userModel.getUser(userData.email);
+    const normalizedEmail = (userData.email || '').toLowerCase().trim();
+    let user = await userModel.getUser(normalizedEmail);
 
     if (!user) {
-      await userModel.createUser(userData.email, null); // No password needed for Google login
-      user = await userModel.getUser(userData.email);
+      await userModel.createUser(normalizedEmail, null); // No password needed for Google login
+      user = await userModel.getUser(normalizedEmail);
     }
 
     addUserSession(ws, user.email);
-    return sendSuccess(ws, 'LOGIN_SUCCESS', { userId: userData.email, name: userData.name, });
+    return sendSuccess(ws, 'LOGIN_SUCCESS', { userId: normalizedEmail, name: userData.name, });
   } catch (err) {
     console.error('Google login failed:', err);
     return sendError(ws, 'LOGIN_FAIL', 'Google authentication failed');

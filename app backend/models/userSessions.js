@@ -2,8 +2,9 @@ const socketToEmail = new Map(); // ws → email
 const emailToSocket = new Map(); // email → ws
 
 function addUserSession(ws, email) {
-  socketToEmail.set(ws, email);
-  emailToSocket.set(email, ws);
+  const normalizedEmail = (email || '').toLowerCase().trim();
+  socketToEmail.set(ws, normalizedEmail);
+  emailToSocket.set(normalizedEmail, ws);
 }
 
 function removeUserSession(ws) {
@@ -17,7 +18,8 @@ function getEmailBySocket(ws) {
 }
 
 function getSocketByEmail(email) {
-  return emailToSocket.get(email);
+  const normalizedEmail = (email || '').toLowerCase().trim();
+  return emailToSocket.get(normalizedEmail);
 }
 
 function getAllSessions() {
@@ -28,6 +30,6 @@ module.exports = {
   addUserSession,
   removeUserSession,
   getEmailBySocket,
-  getSocketByEmail,      
+  getSocketByEmail,
   getAllSessions
 };

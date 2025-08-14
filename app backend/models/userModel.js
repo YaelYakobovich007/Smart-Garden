@@ -3,18 +3,22 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 async function createUser(email, hashedPassword, fullName, country, city) {
-    // Check if user already exists
-    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    // Normalize email to lowercase
+    const normalizedEmail = (email || '').toLowerCase().trim();
+
+    // Check if user already exists (case-insensitive)
+    const existing = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [normalizedEmail]);
     if (existing.rows.length > 0) return false;
     await pool.query(
         'INSERT INTO users (email, password, full_name, country, city) VALUES ($1, $2, $3, $4, $5)',
-        [email, hashedPassword, fullName, country, city]
+        [normalizedEmail, hashedPassword, fullName, country, city]
     );
     return true;
 }
 
 async function getUser(email) {
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const normalizedEmail = (email || '').toLowerCase().trim();
+    const result = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [normalizedEmail]);
     return result.rows[0] || null;
 }
 
@@ -24,26 +28,29 @@ async function getUserById(id) {
 }
 
 async function updateUserName(email, newName) {
+    const normalizedEmail = (email || '').toLowerCase().trim();
     const result = await pool.query(
-        'UPDATE users SET full_name = $1 WHERE email = $2 RETURNING full_name',
-        [newName, email]
+        'UPDATE users SET full_name = $1 WHERE LOWER(email) = LOWER($2) RETURNING full_name',
+        [newName, normalizedEmail]
     );
     return result.rows[0]?.full_name || null;
 }
 
 async function updateUserLocation(email, country, city) {
+    const normalizedEmail = (email || '').toLowerCase().trim();
     const result = await pool.query(
-        'UPDATE users SET country = $1, city = $2 WHERE email = $3 RETURNING country, city',
-        [country, city, email]
+        'UPDATE users SET country = $1, city = $2 WHERE LOWER(email) = LOWER($3) RETURNING country, city',
+        [country, city, normalizedEmail]
     );
     return result.rows[0] || null;
 }
 
 async function updateUserPassword(email, newPassword) {
+    const normalizedEmail = (email || '').toLowerCase().trim();
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     const result = await pool.query(
-        'UPDATE users SET password = $1 WHERE email = $2 RETURNING id',
-        [hashedPassword, email]
+        'UPDATE users SET password = $1 WHERE LOWER(email) = LOWER($2) RETURNING id',
+        [hashedPassword, normalizedEmail]
     );
     return result.rows.length > 0;
 }
@@ -51,7 +58,7 @@ async function updateUserPassword(email, newPassword) {
 // Password Reset Functions
 async function createPasswordResetToken(email) {
     try {
-        // Check if user exists
+        // Check if user exists (case-insensitive)
         const user = await getUser(email);
         if (!user) {
             return null;

@@ -13,6 +13,13 @@ async function checkDuplicatePlantName(userId, plantName) {
 }
 
 async function addPlant(userId, plantData) {
+  // Enforce max 2 plants per user (due to 2 sensors limitation)
+  const countRes = await pool.query('SELECT COUNT(*)::int AS count FROM plants WHERE user_id = $1', [userId]);
+  const existingCount = countRes.rows[0]?.count || 0;
+  if (existingCount >= 2) {
+    return { error: 'MAX_PLANTS_REACHED' };
+  }
+
   // Check for duplicate plant name for this user
   const isDuplicate = await checkDuplicatePlantName(userId, plantData.name);
   if (isDuplicate) {
@@ -108,6 +115,11 @@ async function updatePlantDetails(userId, plantId, updateData) {
     if (updateData.waterLimit !== undefined) {
       updateFields.push(`water_limit = $${paramIndex++}`);
       updateValues.push(updateData.waterLimit);
+    }
+
+    if (updateData.imageUrl !== undefined) {
+      updateFields.push(`image_url = $${paramIndex++}`);
+      updateValues.push(updateData.imageUrl);
     }
 
     // Add updated_at timestamp

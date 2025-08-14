@@ -104,6 +104,9 @@ async function handleAddPlant(data, ws, email) {
   if (result.error === 'DUPLICATE_NAME') {
     return sendError(ws, 'ADD_PLANT_FAIL', 'You already have a plant with this name');
   }
+  if (result.error === 'MAX_PLANTS_REACHED') {
+    return sendError(ws, 'ADD_PLANT_FAIL', 'You can only have up to 2 plants connected at the same time');
+  }
 
   console.log(`💾 Plant "${plantName}" saved to database with ID ${result.plant.plant_id}`);
 
@@ -183,7 +186,7 @@ async function handleDeletePlant(data, ws, email) {
 
 async function handleUpdatePlantDetails(data, ws, email) {
   try {
-    const { plantName, newPlantName, desiredMoisture, waterLimit } = data;
+    const { plantName, newPlantName, desiredMoisture, waterLimit, imageData } = data;
 
     // Validate required fields
     if (!plantName) {
@@ -217,11 +220,26 @@ async function handleUpdatePlantDetails(data, ws, email) {
       return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Plant not found');
     }
 
+    let imageUrlToSave;
+    if (imageData) {
+      if (typeof imageData !== 'object' || !imageData.base64 || !imageData.filename) {
+        return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'imageData must contain base64 and filename');
+      }
+      try {
+        const generatedName = googleCloudStorage.generateFileName(user.id, imageData.filename);
+        imageUrlToSave = await googleCloudStorage.uploadBase64Image(imageData.base64, generatedName);
+      } catch (e) {
+        console.error('Error updating plant image:', e);
+        return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Failed to upload new image');
+      }
+    }
+
     // Update plant details
     const updatedPlant = await updatePlantDetails(user.id, plant.plant_id, {
       plantName: newPlantName?.trim(),
       desiredMoisture,
-      waterLimit
+      waterLimit,
+      imageUrl: imageUrlToSave
     });
 
     if (!updatedPlant) {
