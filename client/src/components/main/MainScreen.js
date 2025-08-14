@@ -12,7 +12,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import GlobalIrrigationControl from './GlobalIrrigationControl';
 import {
   View,
   Text,
@@ -36,10 +35,14 @@ import ArticlesSection from './Articles/ArticlesSection/ArticlesSection';
 // Import services
 import websocketService from '../../services/websocketService';
 import sessionService from '../../services/sessionService';
+import { useIrrigation } from '../../contexts/IrrigationContext';
 import styles from './styles';
 
 const MainScreen = () => {
   const navigation = useNavigation();
+
+  // Get irrigation state from context
+  const { getPlantWateringState, getWateringPlants } = useIrrigation();
 
   // State management for screen data and UI
   const [plants, setPlants] = useState([]);
@@ -526,6 +529,7 @@ const MainScreen = () => {
               plants={plants}
               onWaterPlant={handleWaterPlant}
               onAddPlant={handleAddPlant}
+              getPlantWateringState={getPlantWateringState}
             />
           </View>
 
@@ -543,9 +547,6 @@ const MainScreen = () => {
         onSettings={handleSettings}
         onHelp={handleHelp}
       />
-
-      {/* Global Irrigation Control */}
-      <GlobalIrrigationControl />
     </View>
   );
 };

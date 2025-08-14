@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import websocketService from '../services/websocketService';
 
@@ -13,37 +13,140 @@ export const useIrrigation = () => {
 };
 
 export const IrrigationProvider = ({ children }) => {
-  // Global irrigation state
-  const [isWateringActive, setIsWateringActive] = useState(false);
-  const [wateringTimeLeft, setWateringTimeLeft] = useState(0);
-  const [isManualMode, setIsManualMode] = useState(false);
-  const [selectedTime, setSelectedTime] = useState(10);
-  const [currentPlant, setCurrentPlant] = useState(null);
-  const [timerInterval, setTimerInterval] = useState(null);
-  const [pendingValveRequest, setPendingValveRequest] = useState(false);
+  // Per-plant irrigation state - each plant has its own watering state
+  const [wateringPlants, setWateringPlants] = useState(new Map()); // Map of plantId -> watering state
+  const [pendingValveRequests, setPendingValveRequests] = useState(new Set()); // Set of plantIds with pending requests
+  
+  // Use ref to track current state without causing re-renders
+  const wateringPlantsRef = useRef(new Map());
 
-  // Countdown timer effect
+  // Update ref whenever state changes
   useEffect(() => {
-    let interval;
-    if (isWateringActive && wateringTimeLeft > 0 && !pendingValveRequest) {
-      interval = setInterval(() => {
-        setWateringTimeLeft(prev => {
-          if (prev <= 1) {
-            setIsWateringActive(false);
-            handleStopWatering();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      setTimerInterval(interval);
-    }
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
+    wateringPlantsRef.current = new Map(wateringPlants);
+  }, [wateringPlants]);
+
+  // Helper function to get watering state for a specific plant
+  const getPlantWateringState = (plantId) => {
+    return wateringPlants.get(plantId) || {
+      isWateringActive: false,
+      wateringTimeLeft: 0,
+      isManualMode: false,
+      selectedTime: 0,
+      timerStartTime: null,
+      timerEndTime: null,
+      timerInterval: null
     };
-  }, [isWateringActive, wateringTimeLeft, pendingValveRequest]);
+  };
+
+  // Helper function to update watering state for a specific plant
+  const updatePlantWateringState = (plantId, updates) => {
+    setWateringPlants(prev => {
+      const newMap = new Map(prev);
+      const currentState = newMap.get(plantId) || {
+        isWateringActive: false,
+        wateringTimeLeft: 0,
+        isManualMode: false,
+        selectedTime: 0,
+        timerStartTime: null,
+        timerEndTime: null,
+        timerInterval: null
+      };
+      const newState = { ...currentState, ...updates };
+      newMap.set(plantId, newState);
+      return newMap;
+    });
+  };
+
+  // Helper function to remove watering state for a specific plant
+  const removePlantWateringState = (plantId) => {
+    setWateringPlants(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(plantId);
+      return newMap;
+    });
+  };
+
+  // Check if any plant is currently being watered
+  const isAnyPlantWatering = () => {
+    return Array.from(wateringPlants.values()).some(state => state.isWateringActive);
+  };
+
+  // Get all currently watering plants
+  const getWateringPlants = () => {
+    return Array.from(wateringPlants.entries())
+      .filter(([_, state]) => state.isWateringActive)
+      .map(([plantId, state]) => ({ plantId, ...state }));
+  };
+
+  // Timer accuracy improvements
+  const [timerStartTime, setTimerStartTime] = useState(null);
+  const [timerEndTime, setTimerEndTime] = useState(null);
+
+  // Countdown timer effect with improved accuracy
+  useEffect(() => {
+    const intervals = new Map();
+    
+    // Function to check and manage timers for all watering plants
+    const checkAndManageTimers = () => {
+      const currentWateringPlants = wateringPlantsRef.current;
+      
+      currentWateringPlants.forEach((state, plantId) => {
+        if (state.isWateringActive && state.wateringTimeLeft > 0 && !state.pendingValveRequest && state.timerStartTime && state.timerEndTime) {
+          // Only create interval if one doesn't exist
+          if (!intervals.has(plantId)) {
+            const interval = setInterval(() => {
+              const now = Date.now();
+              const remainingTime = Math.max(0, Math.ceil((state.timerEndTime - now) / 1000));
+              
+              if (remainingTime <= 0) {
+                console.log(`⏰ Timer completed for plant ${plantId} - valve should be closed`);
+                updatePlantWateringState(plantId, {
+                  isWateringActive: false,
+                  wateringTimeLeft: 0,
+                  timerStartTime: null,
+                  timerEndTime: null,
+                  timerInterval: null
+                });
+                handleStopWatering(plantId);
+                // Clear this interval
+                if (intervals.has(plantId)) {
+                  clearInterval(intervals.get(plantId));
+                  intervals.delete(plantId);
+                }
+              } else {
+                updatePlantWateringState(plantId, { wateringTimeLeft: remainingTime });
+              }
+            }, 100); // Update more frequently for better accuracy
+            
+            intervals.set(plantId, interval);
+            updatePlantWateringState(plantId, { timerInterval: interval });
+          }
+        } else {
+          // Clear interval if plant is no longer watering
+          if (intervals.has(plantId)) {
+            clearInterval(intervals.get(plantId));
+            intervals.delete(plantId);
+          }
+        }
+      });
+    };
+    
+    // Check for new watering plants every second
+    const checkInterval = setInterval(checkAndManageTimers, 1000);
+    
+    // Initial check
+    checkAndManageTimers();
+    
+    return () => {
+      // Clean up all intervals
+      intervals.forEach((interval) => {
+        if (interval) {
+          clearInterval(interval);
+        }
+      });
+      clearInterval(checkInterval);
+    };
+  }, []); // Empty dependency array - no infinite loop
 
   // Format time as MM:SS
   const formatTime = (seconds) => {
@@ -64,15 +167,15 @@ export const IrrigationProvider = ({ children }) => {
       return;
     }
 
-    setCurrentPlant(plant);
-    setSelectedTime(timeMinutes);
-    setPendingValveRequest(true);
-    setIsManualMode(true);
+    const plantId = plant.id; // Assuming plant object has an 'id' property
+    updatePlantWateringState(plantId, {
+      isManualMode: true,
+      selectedTime: timeMinutes,
+      pendingValveRequest: true,
+      currentPlant: plant // Store the plant reference
+    });
 
-    console.log('🔍 DEBUG - Starting manual irrigation:');
-    console.log('   - Plant name:', plant.name);
-    console.log('   - Selected time:', timeMinutes);
-    console.log('   - WebSocket connected:', websocketService.isConnected());
+    // Starting manual irrigation for plant
 
     const message = {
       type: 'OPEN_VALVE',
@@ -80,116 +183,151 @@ export const IrrigationProvider = ({ children }) => {
       timeMinutes: timeMinutes
     };
 
-    console.log('📤 Sending OPEN_VALVE message:', JSON.stringify(message));
     websocketService.sendMessage(message);
   };
 
-  // Stop irrigation
-  const handleStopWatering = () => {
-    console.log('🔴 handleStopWatering called');
-    console.log('   - currentPlant:', currentPlant);
-    console.log('   - isManualMode:', isManualMode);
-    console.log('   - isWateringActive:', isWateringActive);
+  // Stop irrigation for a specific plant
+  const handleStopWatering = (plantId) => {
+    const state = getPlantWateringState(plantId);
     
-    setIsWateringActive(false);
-    setIsManualMode(false);
-    setWateringTimeLeft(0);
-    setCurrentPlant(null);
+    updatePlantWateringState(plantId, {
+      isWateringActive: false,
+      isManualMode: false,
+      wateringTimeLeft: 0,
+      timerStartTime: null,
+      timerEndTime: null,
+      timerInterval: null
+    });
     
-    if (currentPlant?.name) {
-      console.log('📤 Sending CLOSE_VALVE message for plant:', currentPlant.name);
+    if (state.currentPlant?.name) {
       websocketService.sendMessage({
         type: 'CLOSE_VALVE',
-        plantName: currentPlant.name
+        plantName: state.currentPlant.name
       });
-    } else {
-      console.log('⚠️ No current plant found, cannot send CLOSE_VALVE message');
     }
   };
 
   // Timer control functions
-  const pauseTimer = () => {
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
+  const pauseTimer = (plantId) => {
+    const state = getPlantWateringState(plantId);
+    if (state.timerInterval) {
+      clearInterval(state.timerInterval);
+      updatePlantWateringState(plantId, { timerInterval: null });
     }
-    setIsWateringActive(false);
+    updatePlantWateringState(plantId, { isWateringActive: false });
   };
 
-  const resumeTimer = () => {
-    setIsWateringActive(true);
-    const interval = setInterval(() => {
-      setWateringTimeLeft(prev => {
-        if (prev <= 1) {
-          setIsWateringActive(false);
-          clearInterval(interval);
-          setTimerInterval(null);
-          handleStopWatering();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    setTimerInterval(interval);
+  const resumeTimer = (plantId) => {
+    const state = getPlantWateringState(plantId);
+    if (state.timerStartTime && state.timerEndTime) {
+      const now = Date.now();
+      const remainingTime = Math.max(0, Math.ceil((state.timerEndTime - now) / 1000));
+      
+      if (remainingTime > 0) {
+        updatePlantWateringState(plantId, { wateringTimeLeft: remainingTime, isWateringActive: true });
+      } else {
+        // Timer has expired
+        updatePlantWateringState(plantId, { isWateringActive: false, wateringTimeLeft: 0, timerStartTime: null, timerEndTime: null });
+        handleStopWatering(plantId);
+      }
+    }
   };
 
-  const resetTimer = () => {
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
+  const resetTimer = (plantId) => {
+    const state = getPlantWateringState(plantId);
+    if (state.timerInterval) {
+      clearInterval(state.timerInterval);
+      updatePlantWateringState(plantId, { timerInterval: null });
     }
-    setIsWateringActive(false);
-    setWateringTimeLeft(0);
-    handleStopWatering();
+    updatePlantWateringState(plantId, { isWateringActive: false, wateringTimeLeft: 0, timerStartTime: null, timerEndTime: null });
+    handleStopWatering(plantId);
   };
 
   // WebSocket message handlers
   useEffect(() => {
     const handleOpenValveSuccess = (data) => {
-      console.log('✅ OPEN_VALVE success:', data);
+      // Valve opened successfully
       
-      if (pendingValveRequest) {
-        setIsManualMode(true);
-        setIsWateringActive(true);
-        setWateringTimeLeft(selectedTime * 60);
-        setPendingValveRequest(false);
-        
-        Alert.alert('Valve Control', data?.message || 'Valve opened successfully! Timer started.');
+      // Find the plant by name in the watering plants
+      let targetPlantId = null;
+      wateringPlantsRef.current.forEach((state, plantId) => {
+        if (state.pendingValveRequest) {
+          targetPlantId = plantId;
+        }
+      });
+      
+      if (targetPlantId) {
+        const state = wateringPlantsRef.current.get(targetPlantId);
+        if (state && state.pendingValveRequest) {
+          const now = Date.now();
+          const durationMs = state.selectedTime * 60 * 1000; // Convert minutes to milliseconds
+          
+          updatePlantWateringState(targetPlantId, {
+            timerStartTime: now,
+            timerEndTime: now + durationMs,
+            wateringTimeLeft: state.selectedTime * 60,
+            pendingValveRequest: false,
+            isManualMode: true,
+            isWateringActive: true
+          });
+          
+          Alert.alert('Valve Control', data?.message || 'Valve opened successfully! Timer started.');
+        }
       }
     };
 
     const handleOpenValveFail = (data) => {
-      console.log('❌ OPEN_VALVE failed:', data);
+      // Failed to open valve
       
-      setIsManualMode(false);
-      setIsWateringActive(false);
-      setWateringTimeLeft(0);
-      setCurrentPlant(null);
-      setPendingValveRequest(false);
+      // Find the plant by name in the watering plants
+      let targetPlantId = null;
+      wateringPlantsRef.current.forEach((state, plantId) => {
+        if (state.pendingValveRequest) {
+          targetPlantId = plantId;
+        }
+      });
+      
+      if (targetPlantId) {
+        updatePlantWateringState(targetPlantId, {
+          isManualMode: false,
+          isWateringActive: false,
+          wateringTimeLeft: 0,
+          currentPlant: null,
+          pendingValveRequest: false
+        });
+      }
       
       Alert.alert('Valve Control', data?.message || 'Failed to open valve. Timer not started.');
     };
 
     const handleCloseValveSuccess = (data) => {
-      console.log('✅ CLOSE_VALVE success:', data);
+      // Valve closed successfully
       
-      // Reset the irrigation state
-      setIsManualMode(false);
-      setIsWateringActive(false);
-      setWateringTimeLeft(0);
-      setCurrentPlant(null);
+      // Find the plant by name in the watering plants
+      let targetPlantId = null;
+      wateringPlantsRef.current.forEach((state, plantId) => {
+        if (state.isWateringActive || state.isManualMode) {
+          targetPlantId = plantId;
+        }
+      });
       
-      // Clear any running timer
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        setTimerInterval(null);
+      if (targetPlantId) {
+        updatePlantWateringState(targetPlantId, {
+          isManualMode: false,
+          isWateringActive: false,
+          wateringTimeLeft: 0,
+          currentPlant: null,
+          timerStartTime: null,
+          timerEndTime: null,
+          timerInterval: null
+        });
       }
       
       Alert.alert('Valve Control', data?.message || 'Valve closed successfully!');
     };
 
     const handleCloseValveFail = (data) => {
-      console.log('❌ CLOSE_VALVE failed:', data);
+      // Failed to close valve
       Alert.alert('Valve Control', data?.message || 'Failed to close valve.');
     };
 
@@ -204,23 +342,22 @@ export const IrrigationProvider = ({ children }) => {
       websocketService.offMessage('CLOSE_VALVE_SUCCESS', handleCloseValveSuccess);
       websocketService.offMessage('CLOSE_VALVE_FAIL', handleCloseValveFail);
     };
-  }, [pendingValveRequest, selectedTime]);
+  }, []); // Empty dependency array - no infinite loop
 
   const value = {
     // State
-    isWateringActive,
-    wateringTimeLeft,
-    isManualMode,
-    selectedTime,
-    currentPlant,
+    wateringPlants,
+    getPlantWateringState,
+    getWateringPlants,
+    isAnyPlantWatering,
     
     // Functions
-    formatTime,
     startManualIrrigation,
     handleStopWatering,
     pauseTimer,
     resumeTimer,
     resetTimer,
+    formatTime,
   };
 
   return (

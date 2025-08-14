@@ -47,18 +47,39 @@ const PlantDetail = () => {
   
   // Global irrigation state
   const {
-    isWateringActive,
-    wateringTimeLeft,
-    isManualMode,
-    selectedTime,
-    currentPlant,
-    formatTime,
+    getPlantWateringState,
     startManualIrrigation,
     handleStopWatering,
     pauseTimer,
     resumeTimer,
     resetTimer,
+    formatTime,
   } = useIrrigation();
+
+  // Get this plant's specific watering state
+  const plantWateringState = getPlantWateringState(plant?.id);
+  const {
+    isWateringActive,
+    wateringTimeLeft,
+    isManualMode,
+    selectedTime,
+  } = plantWateringState;
+
+  // Helper function to round sensor values
+  const roundSensorValue = (value, decimals = 1) => {
+    if (typeof value !== 'number' || isNaN(value)) return 0;
+    return Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
+  };
+
+  // Request latest sensor data when component mounts
+  useEffect(() => {
+    if (plant?.name && websocketService.isConnected()) {
+      websocketService.sendMessage({
+        type: 'GET_PLANT_MOISTURE',
+        plantName: plant.name
+      });
+    }
+  }, [plant?.name]);
 
   // Available irrigation times (in minutes)
   const irrigationTimes = [0, 5, 10, 15, 20, 30, 45, 60];
@@ -120,6 +141,7 @@ const PlantDetail = () => {
       return;
     }
 
+    // Manual request for sensor data
     websocketService.sendMessage({
       type: 'GET_PLANT_MOISTURE',
       plantName: plant.name
@@ -199,13 +221,13 @@ const PlantDetail = () => {
 
     const handleMoistureSuccess = (data) => {
       if (data.moisture !== undefined) {
-        setCurrentMoisture(data.moisture);
-        console.log(`📊 Updated moisture for ${plant.name}: ${data.moisture}%`);
+        setCurrentMoisture(roundSensorValue(data.moisture));
+        // Updated moisture
       }
       
       if (data.temperature !== undefined) {
-        setCurrentTemperature(data.temperature);
-        console.log(`🌡️ Updated temperature for ${plant.name}: ${data.temperature}°C`);
+        setCurrentTemperature(roundSensorValue(data.temperature));
+        // Updated temperature
       }
     };
 
@@ -246,6 +268,53 @@ const PlantDetail = () => {
         <Text style={styles.headerTitle}>Plant Details</Text>
         <View style={styles.headerSpacer} />
       </View>
+
+      {/* Irrigation Control Bar - Shows when watering is active */}
+      {(isWateringActive || isManualMode) && (
+        <View style={styles.irrigationControlBar}>
+          <View style={styles.irrigationStatus}>
+            <View style={styles.wateringIndicator}>
+              <View style={styles.wateringDot} />
+            </View>
+            <Text style={styles.irrigationStatusText}>
+              Watering {plant.name} • {formatTime(wateringTimeLeft)}
+            </Text>
+          </View>
+          <View style={styles.irrigationActions}>
+            {isWateringActive ? (
+              <TouchableOpacity
+                style={styles.irrigationActionButton}
+                onPress={() => pauseTimer(plant.id)}
+              >
+                <Feather name="pause" size={16} color="#FFFFFF" />
+                <Text style={styles.irrigationActionText}>Pause</Text>
+              </TouchableOpacity>
+            ) : wateringTimeLeft > 0 ? (
+              <TouchableOpacity
+                style={styles.irrigationActionButton}
+                onPress={() => resumeTimer(plant.id)}
+              >
+                <Feather name="play" size={16} color="#FFFFFF" />
+                <Text style={styles.irrigationActionText}>Resume</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              style={styles.irrigationActionButton}
+              onPress={() => resetTimer(plant.id)}
+            >
+              <Feather name="rotate-ccw" size={16} color="#FFFFFF" />
+              <Text style={styles.irrigationActionText}>Reset</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.irrigationActionButton, styles.stopButton]}
+              onPress={() => handleStopWatering(plant.id)}
+            >
+              <Feather name="square" size={16} color="#FFFFFF" />
+              <Text style={styles.irrigationActionText}>Stop</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 1. Plant Information Section */}
@@ -323,10 +392,7 @@ const PlantDetail = () => {
             <TouchableOpacity 
               style={[styles.primaryButton, styles.halfButton, isWateringActive && styles.disabledButton]} 
               onPress={() => {
-                console.log('🔵 Open Valve button pressed');
-                console.log('   - isManualMode:', isManualMode);
-                console.log('   - isWateringActive:', isWateringActive);
-                console.log('   - wateringTimeLeft:', wateringTimeLeft);
+                        // Open Valve button pressed
                 handleManualIrrigation();
               }}
               disabled={isWateringActive}
@@ -340,11 +406,8 @@ const PlantDetail = () => {
             <TouchableOpacity 
               style={[styles.stopButton, styles.halfButton, !isManualMode && styles.disabledButton]} 
               onPress={() => {
-                console.log('🔴 Close Valve button pressed');
-                console.log('   - isManualMode:', isManualMode);
-                console.log('   - isWateringActive:', isWateringActive);
-                console.log('   - wateringTimeLeft:', wateringTimeLeft);
-                handleStopWatering();
+                        // Close Valve button pressed
+                handleStopWatering(plant.id);
               }}
               disabled={!isManualMode}
             >
@@ -401,7 +464,7 @@ const PlantDetail = () => {
               {isWateringActive ? (
                 <TouchableOpacity
                   style={styles.pauseButton}
-                  onPress={pauseTimer}
+                  onPress={() => pauseTimer(plant.id)}
                 >
                   <Feather name="pause" size={18} color="#FFFFFF" />
                   <Text style={styles.pauseButtonText}>Pause</Text>
@@ -409,7 +472,7 @@ const PlantDetail = () => {
               ) : wateringTimeLeft > 0 ? (
                 <TouchableOpacity
                   style={styles.resumeButton}
-                  onPress={resumeTimer}
+                  onPress={() => resumeTimer(plant.id)}
                 >
                   <Feather name="play" size={18} color="#FFFFFF" />
                   <Text style={styles.resumeButtonText}>Resume</Text>
@@ -418,7 +481,7 @@ const PlantDetail = () => {
               
               <TouchableOpacity
                 style={styles.resetButton}
-                onPress={resetTimer}
+                onPress={() => resetTimer(plant.id)}
               >
                 <Feather name="rotate-ccw" size={18} color="#FFFFFF" />
                 <Text style={styles.resetButtonText}>Reset</Text>
@@ -459,9 +522,9 @@ const PlantDetail = () => {
       <IrrigationOverlay 
         isActive={isWateringActive || isManualMode}
         timeLeft={wateringTimeLeft}
-        onPause={pauseTimer}
-        onResume={resumeTimer}
-        onStop={handleStopWatering}
+        onPause={() => pauseTimer(plant.id)}
+        onResume={() => resumeTimer(plant.id)}
+        onStop={() => handleStopWatering(plant.id)}
       />
     </SafeAreaView>
   );

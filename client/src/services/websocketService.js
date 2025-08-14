@@ -251,7 +251,6 @@ class WebSocketService {
       }
     };
     this.send(message);
-    console.log('Requested moisture for plant:', plantId);
   }
 
   /**
@@ -263,7 +262,6 @@ class WebSocketService {
       data: {}
     };
     this.send(message);
-    console.log('Requested moisture for all plants');
   }
 }
 

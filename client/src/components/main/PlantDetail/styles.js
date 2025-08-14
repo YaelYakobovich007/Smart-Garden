@@ -27,6 +27,59 @@ export const styles = StyleSheet.create({
   headerSpacer: {
     width: 32,
   },
+  irrigationControlBar: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2563EB',
+  },
+  irrigationStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  wateringIndicator: {
+    marginRight: 8,
+  },
+  wateringDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+  },
+  irrigationStatusText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Nunito_700Bold',
+  },
+  irrigationActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  irrigationActionButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  irrigationActionText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Nunito_700Bold',
+  },
+  stopButton: {
+    backgroundColor: '#EF4444',
+  },
   content: {
     flex: 1,
     paddingHorizontal: 16,
@@ -95,6 +148,17 @@ export const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 8,
     borderRadius: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
   },
   sectionTitle: {
     fontSize: 18,
