@@ -100,6 +100,19 @@ function handlePiSocket(ws) {
       return;
     }
 
+    // Handle PI_LOG messages from Pi
+    if (data.type === 'PI_LOG') {
+      const logData = data.data || {};
+      const timestamp = logData.timestamp || new Date().toISOString();
+      const message = logData.message || 'No message';
+      
+      console.log(`🌱 [PI LOG - ${timestamp}] ${message}`);
+      
+      // You could also broadcast this to connected clients if needed
+      // For now, just log to server console
+      return;
+    }
+
     // Handle IRRIGATE_PLANT_RESPONSE from Pi
     if (data.type === 'IRRIGATE_PLANT_RESPONSE') {
       const responseData = data.data || {};

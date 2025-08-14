@@ -17,18 +17,20 @@ class SmartGardenEngine:
     Manages plants, sensors, valves, and irrigation operations.
     """
 
-    def __init__(self, total_valves: int = 2, total_sensors: int = 2):
+    def __init__(self, total_valves: int = 2, total_sensors: int = 2, websocket_client=None):
         """
         Initialize the Smart Garden Engine.
         
         Args:
             total_valves (int): Number of valves available in the system
             total_sensors (int): Number of sensors available in the system
+            websocket_client: WebSocket client for sending logs to server
         """
         self.plants: Dict[int, Plant] = {}
         self.valves_manager = ValvesManager(total_valves)
         self.sensor_manager = SensorManager(total_sensors)
-        self.irrigation_algorithm = IrrigationAlgorithm()
+        self.irrigation_algorithm = IrrigationAlgorithm(websocket_client)
+        self.websocket_client = websocket_client
         
         # Valve state tracking for non-blocking operations
         self.valve_tasks: Dict[int, asyncio.Task] = {}  # Track running valve tasks

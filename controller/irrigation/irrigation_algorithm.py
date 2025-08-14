@@ -10,22 +10,38 @@ class IrrigationAlgorithm:
     This class encapsulates the core irrigation algorithm for a plant.
     """
 
-    def __init__(self):
+    def __init__(self, websocket_client=None):
         self.water_per_pulse: float = 0.03
         self.pause_between_pulses: int = 10
         self.weather_service = WeatherService()
+        self.websocket_client = websocket_client  # For sending logs to server
+
+    async def log_to_server(self, message: str):
+        """
+        Send log message to server via WebSocket if available.
+        Also prints locally for immediate feedback.
+        """
+        print(message)  # Local print for immediate feedback
+        if self.websocket_client and hasattr(self.websocket_client, 'send_message'):
+            try:
+                await self.websocket_client.send_message("PI_LOG", {
+                    "message": message,
+                    "timestamp": datetime.now().isoformat()
+                })
+            except Exception as e:
+                print(f"Failed to send log to server: {e}")
 
     async def irrigate(self, plant: "Plant") -> IrrigationResult:
         """
         Main function that decides whether to irrigate a plant and performs the process.
         """
-        print(f"\n🌱 === IRRIGATION ALGORITHM START ===")
-        print(f"📊 Plant ID: {plant.plant_id}")
-        print(f"📍 Location: ({plant.lat}, {plant.lon})")
-        print(f"💧 Desired Moisture: {plant.desired_moisture}%")
-        print(f"🚰 Valve ID: {plant.valve.valve_id}")
-        print(f"📡 Sensor Port: {plant.sensor.port}")
-        print(f"⏰ Last Irrigation: {plant.last_irrigation_time}")
+        await self.log_to_server(f"\n🌱 === IRRIGATION ALGORITHM START ===")
+        await self.log_to_server(f"📊 Plant ID: {plant.plant_id}")
+        await self.log_to_server(f"📍 Location: ({plant.lat}, {plant.lon})")
+        await self.log_to_server(f"💧 Desired Moisture: {plant.desired_moisture}%")
+        await self.log_to_server(f"🚰 Valve ID: {plant.valve.valve_id}")
+        await self.log_to_server(f"📡 Sensor Port: {plant.sensor.port}")
+        await self.log_to_server(f"⏰ Last Irrigation: {plant.last_irrigation_time}")
         
         # Get current moisture
         current_moisture = await plant.get_moisture()
@@ -34,11 +50,11 @@ class IrrigationAlgorithm:
         if current_moisture is not None:
             current_moisture = float(current_moisture)
         
-        print(f"Initial moisture for plant {plant.plant_id}: {current_moisture}%")
+        await self.log_to_server(f"Initial moisture for plant {plant.plant_id}: {current_moisture}%")
 
         # Case 1: Skip irrigation if rain is expected
         if self.weather_service.will_rain_today(plant.lat, plant.lon):
-            print(f"Skipping irrigation for {plant.plant_id} — rain expected today.")
+            await self.log_to_server(f"Skipping irrigation for {plant.plant_id} — rain expected today.")
             return IrrigationResult.skipped(
                 plant_id=plant.plant_id,
                 moisture=current_moisture,
@@ -46,15 +62,15 @@ class IrrigationAlgorithm:
             )
 
         # Case 2: Overwatered — block and stop
-        print(f"\n🚨 Checking for overwatering...")
-        is_overwatered = self.is_overwatered(plant, current_moisture)
-        print(f"   Overwatered Check: {'❌ OVERWATERED' if is_overwatered else '✅ Not overwatered'}")
+        await self.log_to_server(f"\n🚨 Checking for overwatering...")
+        is_overwatered = await self.is_overwatered(plant, current_moisture)
+        await self.log_to_server(f"   Overwatered Check: {'❌ OVERWATERED' if is_overwatered else '✅ Not overwatered'}")
         
         if is_overwatered:
-            print(f"🚫 BLOCKING VALVE — Plant is overwatered!")
-            print(f"   Current Moisture: {current_moisture}%")
-            print(f"   Desired Moisture: {plant.desired_moisture}%")
-            print(f"   Excess: {current_moisture - plant.desired_moisture:.1f}%")
+            await self.log_to_server(f"🚫 BLOCKING VALVE — Plant is overwatered!")
+            await self.log_to_server(f"   Current Moisture: {current_moisture}%")
+            await self.log_to_server(f"   Desired Moisture: {plant.desired_moisture}%")
+            await self.log_to_server(f"   Excess: {current_moisture - plant.desired_moisture:.1f}%")
             plant.valve.block()
             return IrrigationResult.error(
                 plant_id=plant.plant_id,
@@ -63,7 +79,7 @@ class IrrigationAlgorithm:
             )
 
         # Case 3: If soil is already moist enough, skip irrigation
-        if not self.should_irrigate(plant, current_moisture):
+        if not await self.should_irrigate(plant, current_moisture):
             return IrrigationResult.skipped(
                 plant_id=plant.plant_id,
                 moisture=current_moisture,
@@ -77,21 +93,65 @@ class IrrigationAlgorithm:
         print(f"   Water Needed: {plant.desired_moisture - current_moisture:.1f}%")
         return await self.perform_irrigation(plant, current_moisture)
 
-    def is_overwatered(self, plant: "Plant", moisture: float) -> bool:
+    async def is_overwatered(self, plant: "Plant", moisture: float) -> bool:
         """
         Determines if the plant is overwatered.
         """
-        if plant.last_irrigation_time:
-            time_since = asyncio.get_event_loop().time() - plant.last_irrigation_time.timestamp()
-            if time_since > 86400 and moisture > plant.desired_moisture + 10:  # 86400 = 1 day
-                return True
-        return False
+        # Debug: Log the types and values being compared
+        await self.log_to_server(f"🔍 DEBUG - is_overwatered comparison:")
+        await self.log_to_server(f"   moisture: {moisture} (type: {type(moisture)})")
+        await self.log_to_server(f"   plant.desired_moisture: {plant.desired_moisture} (type: {type(plant.desired_moisture)})")
+        
+        # Ensure both values are float
+        try:
+            moisture_float = float(moisture) if moisture is not None else 0.0
+            desired_moisture_float = float(plant.desired_moisture) if plant.desired_moisture is not None else 0.0
+            
+            print(f"   Converted moisture: {moisture_float} (type: {type(moisture_float)})")
+            print(f"   Converted desired_moisture: {desired_moisture_float} (type: {type(desired_moisture_float)})")
+            
+            if plant.last_irrigation_time:
+                time_since = asyncio.get_event_loop().time() - plant.last_irrigation_time.timestamp()
+                threshold = desired_moisture_float + 10
+                result = time_since > 86400 and moisture_float > threshold  # 86400 = 1 day
+                print(f"   Comparison: {moisture_float} > {threshold} = {moisture_float > threshold}")
+                print(f"   Final result: {result}")
+                return result
+            return False
+        except (ValueError, TypeError) as e:
+            print(f"❌ ERROR - Failed to convert moisture values to float in is_overwatered: {e}")
+            print(f"   moisture: {moisture} (type: {type(moisture)})")
+            print(f"   plant.desired_moisture: {plant.desired_moisture} (type: {type(plant.desired_moisture)})")
+            # Return False as a safe default
+            return False
 
-    def should_irrigate(self, plant: "Plant", current_moisture: float) -> bool:
+    async def should_irrigate(self, plant: "Plant", current_moisture: float) -> bool:
         """
         Checks if irrigation is necessary based on desired moisture level.
         """
-        return current_moisture < plant.desired_moisture
+        # Debug: Log the types and values being compared
+        await self.log_to_server(f"🔍 DEBUG - should_irrigate comparison:")
+        await self.log_to_server(f"   current_moisture: {current_moisture} (type: {type(current_moisture)})")
+        await self.log_to_server(f"   plant.desired_moisture: {plant.desired_moisture} (type: {type(plant.desired_moisture)})")
+        
+        # Ensure both values are float
+        try:
+            current_moisture_float = float(current_moisture) if current_moisture is not None else 0.0
+            desired_moisture_float = float(plant.desired_moisture) if plant.desired_moisture is not None else 0.0
+            
+            print(f"   Converted current_moisture: {current_moisture_float} (type: {type(current_moisture_float)})")
+            print(f"   Converted desired_moisture: {desired_moisture_float} (type: {type(desired_moisture_float)})")
+            
+            result = current_moisture_float < desired_moisture_float
+            print(f"   Comparison result: {current_moisture_float} < {desired_moisture_float} = {result}")
+            
+            return result
+        except (ValueError, TypeError) as e:
+            print(f"❌ ERROR - Failed to convert moisture values to float: {e}")
+            print(f"   current_moisture: {current_moisture} (type: {type(current_moisture)})")
+            print(f"   plant.desired_moisture: {plant.desired_moisture} (type: {type(plant.desired_moisture)})")
+            # Return False as a safe default
+            return False
 
     async def perform_irrigation(self, plant: "Plant", initial_moisture: float) -> IrrigationResult:
         """

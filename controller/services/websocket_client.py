@@ -33,6 +33,12 @@ class SmartGardenPiClient:
             raise ValueError("SmartGardenEngine instance is required")
         self.engine = engine
         
+        # Update the engine's websocket client reference for logging
+        if hasattr(self.engine, 'websocket_client'):
+            self.engine.websocket_client = self
+        if hasattr(self.engine.irrigation_algorithm, 'websocket_client'):
+            self.engine.irrigation_algorithm.websocket_client = self
+        
         # No plant_id mapping needed - use server plant_id directly
     
     async def connect(self):

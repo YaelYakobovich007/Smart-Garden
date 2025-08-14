@@ -63,6 +63,12 @@ class PiClientRunner:
                 # Create WebSocket client with the SAME engine instance (no recreation)
                 self.client = SmartGardenPiClient(self.server_url, self.engine)
                 
+                # Update the engine's websocket client reference for logging
+                if hasattr(self.engine, 'websocket_client'):
+                    self.engine.websocket_client = self.client
+                if hasattr(self.engine.irrigation_algorithm, 'websocket_client'):
+                    self.engine.irrigation_algorithm.websocket_client = self.client
+                
                 # Run the client (includes connection, hello, assignments, and message listening)
                 await self.client.run()
                 
