@@ -235,6 +235,16 @@ const PlantDetail = () => {
       Alert.alert('Sensor Error', data?.message || 'Failed to get sensor data.');
     };
 
+    const handleUnblockSuccess = (data) => {
+      Alert.alert('Valve Unblocked', data?.message || 'Valve has been unblocked successfully!');
+      // Refresh the plant data or navigate back
+      navigation.goBack();
+    };
+
+    const handleUnblockFail = (data) => {
+      Alert.alert('Unblock Failed', data?.message || 'Failed to unblock valve.');
+    };
+
     websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleFail);
     websocketService.onMessage('IRRIGATE_SKIPPED', handleSkipped);
@@ -243,6 +253,8 @@ const PlantDetail = () => {
     websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
     websocketService.onMessage('GET_MOISTURE_SUCCESS', handleMoistureSuccess);
     websocketService.onMessage('GET_MOISTURE_FAIL', handleMoistureFail);
+    websocketService.onMessage('UNBLOCK_VALVE_SUCCESS', handleUnblockSuccess);
+    websocketService.onMessage('UNBLOCK_VALVE_FAIL', handleUnblockFail);
 
     return () => {
       websocketService.offMessage('IRRIGATE_SUCCESS', handleSuccess);
@@ -253,6 +265,8 @@ const PlantDetail = () => {
       websocketService.offMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
       websocketService.offMessage('GET_MOISTURE_SUCCESS', handleMoistureSuccess);
       websocketService.offMessage('GET_MOISTURE_FAIL', handleMoistureFail);
+      websocketService.offMessage('UNBLOCK_VALVE_SUCCESS', handleUnblockSuccess);
+      websocketService.offMessage('UNBLOCK_VALVE_FAIL', handleUnblockFail);
     };
   }, [navigation, plant.name]);
 
@@ -360,6 +374,27 @@ const PlantDetail = () => {
           </View>
         </View>
 
+        {/* Valve Blocked Warning */}
+        {plant.valve_blocked && (
+          <View style={styles.valveBlockedContainer}>
+            <View style={styles.valveBlockedHeader}>
+              <Feather name="alert-triangle" size={24} color="#F59E0B" />
+              <Text style={styles.valveBlockedTitle}>Tap is Blocked</Text>
+            </View>
+            <Text style={styles.valveBlockedDescription}>
+              The valve for this plant is currently blocked and cannot be operated. 
+              Please troubleshoot the hardware issue to restore irrigation functionality.
+            </Text>
+            <TouchableOpacity
+              style={styles.troubleshootButton}
+              onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
+            >
+              <Feather name="tool" size={20} color="#FFFFFF" />
+              <Text style={styles.troubleshootButtonText}>Troubleshoot Valve</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* 2. Smart Irrigation Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Smart Irrigation</Text>
@@ -367,12 +402,14 @@ const PlantDetail = () => {
             Smart irrigation automatically waters your plant based on soil moisture levels and optimal conditions.
           </Text>
           <TouchableOpacity 
-            style={[styles.primaryButton, isWateringActive && styles.disabledButton]} 
+            style={[styles.primaryButton, (isWateringActive || plant.valve_blocked) && styles.disabledButton]} 
             onPress={handleSmartIrrigation}
-            disabled={isWateringActive}
+            disabled={isWateringActive || plant.valve_blocked}
           >
             <Feather name="zap" size={20} color="#FFFFFF" />
-            <Text style={styles.primaryButtonText}>Start Smart Irrigation</Text>
+            <Text style={styles.primaryButtonText}>
+              {plant.valve_blocked ? 'Valve Blocked' : 'Start Smart Irrigation'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -390,29 +427,31 @@ const PlantDetail = () => {
 
           <View style={styles.valveButtonsContainer}>
             <TouchableOpacity 
-              style={[styles.primaryButton, styles.halfButton, isWateringActive && styles.disabledButton]} 
+              style={[styles.primaryButton, styles.halfButton, (isWateringActive || plant.valve_blocked) && styles.disabledButton]} 
               onPress={() => {
                         // Open Valve button pressed
                 handleManualIrrigation();
               }}
-              disabled={isWateringActive}
+              disabled={isWateringActive || plant.valve_blocked}
             >
               <Feather name="droplet" size={20} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>
-                {wateringTimeLeft > 0 ? 'Change Timer' : 'Open Valve'}
+                {plant.valve_blocked ? 'Valve Blocked' : (wateringTimeLeft > 0 ? 'Change Timer' : 'Open Valve')}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.stopButton, styles.halfButton, !isManualMode && styles.disabledButton]} 
+              style={[styles.stopButton, styles.halfButton, (!isManualMode || plant.valve_blocked) && styles.disabledButton]} 
               onPress={() => {
                         // Close Valve button pressed
                 handleStopWatering(plant.id);
               }}
-              disabled={!isManualMode}
+              disabled={!isManualMode || plant.valve_blocked}
             >
               <Feather name="square" size={20} color="#FFFFFF" />
-              <Text style={styles.stopButtonText}>Close Valve</Text>
+              <Text style={styles.stopButtonText}>
+                {plant.valve_blocked ? 'Valve Blocked' : 'Close Valve'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

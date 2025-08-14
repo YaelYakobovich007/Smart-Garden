@@ -364,6 +364,14 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
             <View style={styles.plantContent}>
               <Text style={styles.plantName}>{plant.name}</Text>
               <Text style={styles.plantType}>{plant.type}</Text>
+              
+              {/* Valve Blocked Warning */}
+              {plant.valve_blocked && (
+                <View style={styles.valveBlockedWarning}>
+                  <Feather name="alert-triangle" size={14} color="#F59E0B" />
+                  <Text style={styles.valveBlockedText}>Tap Blocked</Text>
+                </View>
+              )}
             </View>
 
             {/* Plant Status Indicators */}

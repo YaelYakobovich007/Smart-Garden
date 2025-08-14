@@ -164,6 +164,13 @@ async function updatePlantHardware(plantId, sensorPort, valveId) {
   );
 }
 
+async function updateValveStatus(plantId, isBlocked) {
+  await pool.query(
+    'UPDATE plants SET valve_blocked = $1, updated_at = CURRENT_TIMESTAMP WHERE plant_id = $2',
+    [isBlocked, plantId]
+  );
+}
+
 
 module.exports = {
   addPlant,
@@ -177,4 +184,5 @@ module.exports = {
   deletePlantById,
   updatePlantDetails,
   updatePlantHardware,
+  updateValveStatus,
 };

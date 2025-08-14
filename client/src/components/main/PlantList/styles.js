@@ -99,6 +99,23 @@ export const styles = StyleSheet.create({
     color: '#6B7280',
     fontStyle: 'italic',
   },
+  valveBlockedWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 8,
+  },
+  valveBlockedText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#F59E0B',
+    marginLeft: 4,
+  },
   separator: {
     height: 1,
     backgroundColor: '#E5E7EB',

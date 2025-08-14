@@ -14,7 +14,8 @@ const irrigationHandlers = {
   OPEN_VALVE: handleOpenValve,
   CLOSE_VALVE: handleCloseValve,
   GET_IRRIGATION_RESULT: handleGetIrrigationResult,
-  GET_VALVE_STATUS: handleGetValveStatus
+  GET_VALVE_STATUS: handleGetValveStatus,
+  UNBLOCK_VALVE: handleUnblockValve
 };
 
 async function handleIrrigationMessage(data, ws) {
@@ -69,7 +70,17 @@ async function handleIrrigatePlant(data, ws, email) {
       ideal_moisture: parseFloat(plant.ideal_moisture)
     });
 
+    // Send irrigation start notification to user
+    const { notifyUserOfIrrigationStart } = require('../services/userNotifier');
+    notifyUserOfIrrigationStart({
+      plantName: plant.name,
+      email: email,
+      initialMoisture: plant.current_moisture || 0,
+      targetMoisture: parseFloat(plant.ideal_moisture)
+    });
+
     console.log(`⏳ Irrigation request for plant ${plant.plant_id} (${plant.name}) sent to Pi controller...`);
+    console.log(`📱 Sent irrigation start notification to user ${email}`);
     // No immediate response - client will get success/failure when Pi responds with irrigation result
   } else {
     // Pi not connected - return error 
@@ -271,6 +282,35 @@ async function handleGetValveStatus(data, ws, email) {
     console.log('❌ ERROR - Pi communication failed for valve status:', piResult.error);
     return sendError(ws, 'GET_VALVE_STATUS_FAIL',
       'Pi controller not connected. Cannot get valve status. Please try again when Pi is online.');
+  }
+}
+
+// Unblock valve for a specific plant
+async function handleUnblockValve(data, ws, email) {
+  const { plantName } = data;
+  if (!plantName) return sendError(ws, 'UNBLOCK_VALVE_FAIL', 'Missing plantName');
+  
+  const user = await getUser(email);
+  if (!user) return sendError(ws, 'UNBLOCK_VALVE_FAIL', 'User not found');
+  
+  const plant = await getPlantByName(user.id, plantName);
+  if (!plant) return sendError(ws, 'UNBLOCK_VALVE_FAIL', 'Plant not found');
+
+  try {
+    // Update valve status in database
+    const { updateValveStatus } = require('../models/plantModel');
+    await updateValveStatus(plant.plant_id, false);
+    
+    console.log(`✅ Valve unblocked for plant ${plant.plant_id} (${plant.name})`);
+    
+    sendSuccess(ws, 'UNBLOCK_VALVE_SUCCESS', {
+      message: `Valve for "${plant.name}" has been unblocked successfully!`,
+      plantName: plant.name
+    });
+    
+  } catch (err) {
+    console.error(`Failed to unblock valve for plant ${plant.plant_id}:`, err);
+    sendError(ws, 'UNBLOCK_VALVE_FAIL', 'Failed to unblock valve. Please try again.');
   }
 }
 

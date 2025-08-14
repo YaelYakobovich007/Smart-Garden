@@ -194,6 +194,21 @@ function handlePiSocket(ws) {
             console.log(`No pending client found for plant ${plantId} irrigation - result saved but client not notified`);
           }
 
+          // Send user notification about irrigation completion
+          if (pendingInfo && pendingInfo.email) {
+            const { notifyUserOfIrrigationComplete } = require('../services/userNotifier');
+            notifyUserOfIrrigationComplete({
+              plantName: pendingInfo.plantData.plant_name,
+              email: pendingInfo.email,
+              irrigationData: {
+                water_added_liters: responseData.water_added_liters,
+                final_moisture: responseData.final_moisture,
+                initial_moisture: responseData.moisture
+              }
+            });
+            console.log(`📱 Sent irrigation completion notification to user ${pendingInfo.email}`);
+          }
+
         } catch (err) {
           console.error(`Failed to save irrigation result for plant ${plantId}:`, err);
 
@@ -229,6 +244,17 @@ function handlePiSocket(ws) {
               reason: responseData.reason
             });
             console.log(`ℹ️ Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation skipped`);
+          }
+
+          // Send user notification about irrigation being skipped
+          if (pendingInfo && pendingInfo.email) {
+            const { notifyUserOfIrrigationSkipped } = require('../services/userNotifier');
+            notifyUserOfIrrigationSkipped({
+              plantName: pendingInfo.plantData.plant_name,
+              email: pendingInfo.email,
+              reason: responseData.reason
+            });
+            console.log(`📱 Sent irrigation skipped notification to user ${pendingInfo.email}`);
           }
 
         } catch (err) {
@@ -267,6 +293,28 @@ function handlePiSocket(ws) {
             } else {
               sendError(pendingInfo.ws, 'IRRIGATE_FAIL',
                 `Plant "${pendingInfo.plantData.plant_name}" irrigation failed: ${responseData.error_message || 'Unknown error'}`);
+            }
+          }
+
+          // Send user notification about irrigation error
+          if (pendingInfo && pendingInfo.email) {
+            const { notifyUserOfIrrigationError } = require('../services/userNotifier');
+            notifyUserOfIrrigationError({
+              plantName: pendingInfo.plantData.plant_name,
+              email: pendingInfo.email,
+              errorMessage: responseData.error_message || 'Unknown error'
+            });
+            console.log(`📱 Sent irrigation error notification to user ${pendingInfo.email}`);
+          }
+
+          // Update valve status in database if it's a valve blocking error
+          if (isValveBlocked) {
+            const { updateValveStatus } = require('../models/plantModel');
+            try {
+              await updateValveStatus(plantId, true);
+              console.log(`📊 Updated plant ${plantId} valve status to BLOCKED in database`);
+            } catch (err) {
+              console.error(`Failed to update valve status for plant ${plantId}:`, err);
             }
           }
 
