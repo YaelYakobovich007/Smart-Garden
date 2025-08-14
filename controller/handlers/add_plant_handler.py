@@ -34,7 +34,7 @@ class AddPlantHandler:
         logger.info(f"Available keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
         
         # Extract data from server message
-        plant_id = data.get("plantId")
+        plant_id = data.get("plant_id")
         
         # Validate plant_id
         if plant_id is None:

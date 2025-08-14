@@ -98,7 +98,7 @@ class SmartGardenPiClient:
             self.logger.info(f"Received ADD_PLANT command from server")
             self.logger.info(f"Full message: {data}")
             self.logger.info(f"Parsed data: {data}")
-            self.logger.info(f"Plant ID: {data.get('plantId')}")
+            self.logger.info(f"Plant ID: {data.get('plant_id')}")
             self.logger.info(f"Desired Moisture: {data.get('desiredMoisture')}")
             self.logger.info(f"Water Limit: {data.get('waterLimit')}")
             
@@ -110,7 +110,7 @@ class SmartGardenPiClient:
             response_data = response.to_websocket_data()
             
             # Use server's plant_id as the main plant_id in response
-            response_data["plant_id"] = data.get("plantId")  # Use server's plant ID
+            response_data["plant_id"] = data.get("plant_id")  # Use server's plant ID
             
             # Log the response message details
             self.logger.info("=== ADD_PLANT RESPONSE DEBUG ===")
@@ -132,7 +132,7 @@ class SmartGardenPiClient:
             # Create error DTO for unexpected exceptions
             from controller.dto.add_plant_request import AddPlantRequest
             error_result = AddPlantRequest.error(
-                plant_id=data.get("plantId", 0),
+                plant_id=data.get("plant_id", 0),
                 error_message=str(e)
             )
             await self.send_message("ADD_PLANT_RESPONSE", error_result.to_websocket_data())

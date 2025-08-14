@@ -25,7 +25,7 @@ class PiCommunication {
             const request = {
                 type: 'ADD_PLANT',
                 data: {
-                    plantId: plantData.plant_id,
+                    plant_id: plantData.plant_id,
                     desiredMoisture: plantData.ideal_moisture,
                     waterLimit: plantData.water_limit,
                     scheduleData: {
@@ -36,7 +36,7 @@ class PiCommunication {
             };
 
             console.log('Sending ADD_PLANT to Pi:');
-            console.log(`   - Plant ID: ${request.data.plantId} (type: ${typeof request.data.plantId})`);
+            console.log(`   - Plant ID: ${request.data.plant_id} (type: ${typeof request.data.plant_id})`);
             console.log(`   - Plant Name: ${plantData.name}`);
             console.log(`   - Desired Moisture: ${request.data.desiredMoisture} (type: ${typeof request.data.desiredMoisture})`);
             console.log(`   - Water Limit: ${request.data.waterLimit} (type: ${typeof request.data.waterLimit})`);
@@ -123,7 +123,7 @@ class PiCommunication {
             const request = {
                 type: 'IRRIGATE_PLANT',
                 data: {
-                    plantId: plantId
+                    plant_id: plantId
                 }
             };
 
