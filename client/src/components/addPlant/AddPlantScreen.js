@@ -343,15 +343,14 @@ export default function AddPlantScreen() {
    * Includes plant info, care settings, image, and schedule
    */
   return (
-    <View style={{ flex: 1, backgroundColor: '#EAF5E4' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#EAF5E4' }}>
       {/* Header with back button and title */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Main'))} style={styles.backButton}>
           <Feather name="chevron-left" size={24} color="#2C3E50" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Feather name="leaf" size={20} color="#4CAF50" />
-          <Text style={styles.headerTitle}>Add New Plant</Text>
+          <Text style={styles.headerTitle}>🌿 Add New Plant</Text>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -600,6 +599,6 @@ export default function AddPlantScreen() {
           onChange={handleTimeChange}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }

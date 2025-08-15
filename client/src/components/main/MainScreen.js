@@ -206,8 +206,8 @@ const MainScreen = () => {
     websocketService.onMessage('DELETE_PLANT_SUCCESS', handlePlantDeleted);
     websocketService.onMessage('GET_MY_PLANTS_RESPONSE', handlePlantsReceived);
     websocketService.onMessage('GET_MY_PLANTS_FAIL', handlePlantsError);
-    websocketService.onMessage('GET_USER_NAME_SUCCESS', handleUserNameReceived);
-    websocketService.onMessage('GET_USER_NAME_FAIL', handleUserNameError);
+    websocketService.onMessage('GET_USER_DETAILS_SUCCESS', handleUserNameReceived);
+    websocketService.onMessage('GET_USER_DETAILS_FAIL', handleUserNameError);
     websocketService.onMessage('UNAUTHORIZED', handleUnauthorized);
     websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handlePlantMoistureResponse);
     websocketService.onMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
@@ -223,7 +223,7 @@ const MainScreen = () => {
       setIsConnected(connected);
       if (connected) {
         // First check if we're authenticated by requesting user name
-        websocketService.sendMessage({ type: 'GET_USER_NAME' });
+        websocketService.sendMessage({ type: 'GET_USER_DETAILS' });
       }
     };
 
@@ -231,7 +231,7 @@ const MainScreen = () => {
 
     // Request user name from server if already connected
     if (websocketService.isConnected()) {
-      websocketService.sendMessage({ type: 'GET_USER_NAME' });
+      websocketService.sendMessage({ type: 'GET_USER_DETAILS' });
     } else {
       websocketService.connect();
     }
@@ -239,7 +239,7 @@ const MainScreen = () => {
     // Check connection after a short delay to ensure WebSocket has time to connect
     const connectionTimer = setTimeout(() => {
       if (websocketService.isConnected()) {
-        websocketService.sendMessage({ type: 'GET_USER_NAME' });
+        websocketService.sendMessage({ type: 'GET_USER_DETAILS' });
       }
     }, 2000);
 
@@ -253,8 +253,8 @@ const MainScreen = () => {
       websocketService.offMessage('DELETE_PLANT_SUCCESS', handlePlantDeleted);
       websocketService.offMessage('GET_MY_PLANTS_RESPONSE', handlePlantsReceived);
       websocketService.offMessage('GET_MY_PLANTS_FAIL', handlePlantsError);
-      websocketService.offMessage('GET_USER_NAME_SUCCESS', handleUserNameReceived);
-      websocketService.offMessage('GET_USER_NAME_FAIL', handleUserNameError);
+      websocketService.offMessage('GET_USER_DETAILS_SUCCESS', handleUserNameReceived);
+      websocketService.offMessage('GET_USER_DETAILS_FAIL', handleUserNameError);
       websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
       websocketService.offMessage('PLANT_MOISTURE_RESPONSE', handlePlantMoistureResponse);
       websocketService.offMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
@@ -535,7 +535,7 @@ const MainScreen = () => {
    * Includes header, weather, plants, articles, and bottom toolbar
    */
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Thin Top Bar with Logo, App Name, and Notification Icon */}
@@ -674,7 +674,7 @@ const MainScreen = () => {
           </View>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

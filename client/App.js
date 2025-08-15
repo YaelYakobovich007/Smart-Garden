@@ -32,7 +32,8 @@ import PlantDetail from './src/components/main/PlantDetail/PlantDetail';
 import AddPlantScreen from './src/components/addPlant/AddPlantScreen';
 import SensorPlacementScreen from './src/components/addPlant/SensorPlacement/SensorPlacementScreen';
 import TapPlacementScreen from './src/components/addPlant/TapPlacement/TapPlacementScreen';
-import SettingsScreen from './src/components/main/SettingsScreen/SettingsScreen';
+import SettingsScreen from './src/components/main/settings/settingsScreen/SettingsScreen';
+import ProfileSettingsScreen from './src/components/main/settings/profileSettingsScreen/ProfileSettingsScreen';
 import NotificationScreen from './src/components/notification/NotificationScreen';
 import ArticleDetails from './src/components/main/Articles/ArticleDetails/ArticleDetails';
 import ArticlesList from './src/components/main/Articles/ArticlesList/ArticlesList';
@@ -99,8 +100,8 @@ export default function App() {
           // Wait for WebSocket connection before validating session
           const checkConnection = () => {
             if (websocketService.isConnected()) {
-              // Validate session with server by requesting user name
-              websocketService.sendMessage({ type: 'GET_USER_NAME' });
+              // Validate session with server by requesting user details
+              websocketService.sendMessage({ type: 'GET_USER_DETAILS' });
 
               // Set up a timeout to handle server response
               const validationTimeout = setTimeout(() => {
@@ -112,11 +113,11 @@ export default function App() {
               // Listen for session validation response
               const handleValidation = (data) => {
                 clearTimeout(validationTimeout);
-                websocketService.offMessage('GET_USER_NAME_SUCCESS', handleValidation);
-                websocketService.offMessage('GET_USER_NAME_FAIL', handleValidation);
+                websocketService.offMessage('GET_USER_DETAILS_SUCCESS', handleValidation);
+                websocketService.offMessage('GET_USER_DETAILS_FAIL', handleValidation);
                 websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
 
-                if (data.type === 'GET_USER_NAME_SUCCESS') {
+                if (data.type === 'GET_USER_DETAILS_SUCCESS') {
                   console.log('App: Session validated successfully, navigating to Main');
                   setInitialRoute('Main');
                 } else {
@@ -129,8 +130,8 @@ export default function App() {
 
               const handleUnauthorized = (data) => {
                 clearTimeout(validationTimeout);
-                websocketService.offMessage('GET_USER_NAME_SUCCESS', handleValidation);
-                websocketService.offMessage('GET_USER_NAME_FAIL', handleValidation);
+                websocketService.offMessage('GET_USER_DETAILS_SUCCESS', handleValidation);
+                websocketService.offMessage('GET_USER_DETAILS_FAIL', handleValidation);
                 websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
 
                 console.log('App: Unauthorized response, clearing session and redirecting to login');
@@ -139,8 +140,8 @@ export default function App() {
                 setIsLoading(false);
               };
 
-              websocketService.onMessage('GET_USER_NAME_SUCCESS', handleValidation);
-              websocketService.onMessage('GET_USER_NAME_FAIL', handleValidation);
+              websocketService.onMessage('GET_USER_DETAILS_SUCCESS', handleValidation);
+              websocketService.onMessage('GET_USER_DETAILS_FAIL', handleValidation);
               websocketService.onMessage('UNAUTHORIZED', handleUnauthorized);
             } else {
               // If not connected yet, try again in 500ms
@@ -248,27 +249,28 @@ export default function App() {
     <SafeAreaProvider>
       <IrrigationProvider>
         <NavigationContainer ref={navigationRef}>
-        <Stack.Navigator
-          screenOptions={{ headerShown: false }}
-          initialRouteName={initialRoute}
-        >
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-          <Stack.Screen name="EnterCode" component={EnterCodeScreen} />
-          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="Main" component={MainScreen} />
-          <Stack.Screen name="PlantDetail" component={PlantDetail} />
-          <Stack.Screen name="SensorPlacement" component={SensorPlacementScreen} />
-          <Stack.Screen name="TapPlacement" component={TapPlacementScreen} />
-          <Stack.Screen name="AddPlant" component={AddPlantScreen} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
-          <Stack.Screen name="Notification" component={NotificationScreen} />
-          <Stack.Screen name="ArticleDetails" component={ArticleDetails} />
-          <Stack.Screen name="ArticlesList" component={ArticlesList} />
-          <Stack.Screen name="ForecastScreen" component={ForecastScreen} />
-        </Stack.Navigator>
+          <Stack.Navigator
+            screenOptions={{ headerShown: false }}
+            initialRouteName={initialRoute}
+          >
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            <Stack.Screen name="EnterCode" component={EnterCodeScreen} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="Main" component={MainScreen} />
+            <Stack.Screen name="PlantDetail" component={PlantDetail} />
+            <Stack.Screen name="SensorPlacement" component={SensorPlacementScreen} />
+            <Stack.Screen name="TapPlacement" component={TapPlacementScreen} />
+            <Stack.Screen name="AddPlant" component={AddPlantScreen} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} />
+            <Stack.Screen name="Notification" component={NotificationScreen} />
+            <Stack.Screen name="ArticleDetails" component={ArticleDetails} />
+            <Stack.Screen name="ArticlesList" component={ArticlesList} />
+            <Stack.Screen name="ForecastScreen" component={ForecastScreen} />
+          </Stack.Navigator>
         </NavigationContainer>
       </IrrigationProvider>
     </SafeAreaProvider>

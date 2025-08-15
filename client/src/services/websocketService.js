@@ -13,7 +13,7 @@ const WS_CONFIG = {
   // For production, use your server's actual IP address
 
   // CURRENT: Using local IP (works only on same network)
-  SERVER_URL: 'ws://192.168.68.71:8080',
+  SERVER_URL: 'ws://192.168.68.104:8080',
 
   // FOR NGROK TESTING (uncomment and use ngrok URL):
   // SERVER_URL: 'wss://your-ngrok-url.ngrok.io',
@@ -26,8 +26,8 @@ const WS_CONFIG = {
 const CONFIG = {
   // For local development, use 'localhost'
   // For network access, use your computer's IP address
-  SERVER_URL: 'ws://192.168.68.71:8080',
-  
+  SERVER_URL: 'ws://192.168.68.104:8080',
+
   // Alternative configurations
   // LOCAL: 'ws://localhost:8080'
   // NETWORK: 'ws://192.168.68.71:8080'
@@ -47,7 +47,7 @@ class WebSocketService {
     this.messageHandlers = new Map();
     this.connectionHandlers = []; // Initialize the array
     this.connectionState = 'disconnected';
-    
+
     // Auto-reconnect settings
     this.autoReconnect = true;
     this.reconnectInterval = null;

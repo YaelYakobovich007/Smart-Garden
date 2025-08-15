@@ -195,6 +195,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: '#E0E0E0',
     zIndex: 10,
+    elevation: 6,
+    position: 'relative',
   },
   topBarLogo: {
     width: 35,
