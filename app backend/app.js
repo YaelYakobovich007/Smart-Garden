@@ -6,7 +6,12 @@ const { testConnection } = require('./config/database');
 // Test the database connection at startup
 //const wss = new WebSocket.Server({ port: 8080 });
 const port = process.env.PORT || 8080;
-const wss = new WebSocket.Server({ port: port, host: '0.0.0.0' });
+
+// Create WebSocket server
+const wss = new WebSocket.Server({
+  port: port,
+  host: '0.0.0.0'
+});
 testConnection();
 
 // Handle incoming WebSocket connections
