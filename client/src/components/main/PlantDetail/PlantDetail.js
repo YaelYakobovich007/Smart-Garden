@@ -63,6 +63,7 @@ const PlantDetail = () => {
     isWateringActive,
     wateringTimeLeft,
     isManualMode,
+    isSmartMode,
     selectedTime,
   } = plantWateringState;
 
@@ -560,66 +561,7 @@ const PlantDetail = () => {
           </View>
         )}
 
-        {/* Timer Display with Progress Ring */}
-        {(isWateringActive || wateringTimeLeft > 0) && (
-          <View style={styles.timerDisplayContainer}>
-            <View style={styles.timerDisplay}>
-              <Text style={styles.timerTime}>{formatTime(wateringTimeLeft)}</Text>
-              <Text style={styles.timerStatus}>
-                {isWateringActive ? 'Time remaining' : 'Timer finished'}
-              </Text>
-            </View>
-            
-            {/* Progress Ring */}
-            <View style={styles.progressRingContainer}>
-              <View style={styles.progressRing}>
-                <View style={styles.progressRingBackground} />
-                <View style={[
-                  styles.progressRingFill,
-                  {
-                    transform: [{
-                      rotate: `${-90 + (360 * (wateringTimeLeft / (selectedTime * 60)))}deg`
-                    }]
-                  }
-                ]} />
-                <View style={styles.progressRingCenter}>
-                  <Text style={styles.progressRingText}>
-                    {Math.round(((selectedTime * 60 - wateringTimeLeft) / (selectedTime * 60)) * 100)}%
-                  </Text>
-                </View>
-              </View>
-            </View>
-            
-            {/* Timer Controls */}
-            <View style={styles.timerControls}>
-              {isWateringActive ? (
-                <TouchableOpacity
-                  style={styles.pauseButton}
-                  onPress={() => pauseTimer(plant.id)}
-                >
-                  <Feather name="pause" size={18} color="#FFFFFF" />
-                  <Text style={styles.pauseButtonText}>Pause</Text>
-                </TouchableOpacity>
-              ) : wateringTimeLeft > 0 ? (
-                <TouchableOpacity
-                  style={styles.resumeButton}
-                  onPress={() => resumeTimer(plant.id)}
-                >
-                  <Feather name="play" size={18} color="#FFFFFF" />
-                  <Text style={styles.resumeButtonText}>Resume</Text>
-                </TouchableOpacity>
-              ) : null}
-              
-              <TouchableOpacity
-                style={styles.resetButton}
-                onPress={() => resetTimer(plant.id)}
-              >
-                <Feather name="rotate-ccw" size={18} color="#FFFFFF" />
-                <Text style={styles.resetButtonText}>Reset</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+
 
         {/* 5. Additional Actions */}
         <View style={styles.sectionContainer}>
@@ -651,7 +593,7 @@ const PlantDetail = () => {
 
       {/* 7. Irrigation Overlay */}
       <IrrigationOverlay 
-        isActive={isWateringActive || isManualMode}
+        isActive={isWateringActive || isManualMode || isSmartMode}
         timeLeft={wateringTimeLeft}
         onStop={() => handleStopWatering(plant.id)}
       />
