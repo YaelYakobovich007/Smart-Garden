@@ -48,6 +48,7 @@ class AddPlantHandler:
         desired_moisture = float(data.get("desiredMoisture", 60.0))
         water_limit = data.get("waterLimit", 1.0)
         schedule_data = data.get("scheduleData")
+        dripper_type = data.get("dripperType", "2L/h")  # Default to 2L/h if not provided
         
         try:
             # Use the plant_id directly from the server (no conversion needed)
@@ -88,7 +89,8 @@ class AddPlantHandler:
                 plant_lon=34.9896,
                 pipe_diameter=1.0,   # Default values - could be made configurable
                 flow_rate=0.05,
-                water_limit=water_limit
+                water_limit=water_limit,
+                dripper_type=dripper_type  # Add dripper type parameter
             )
             
             # Get assigned hardware info

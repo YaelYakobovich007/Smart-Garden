@@ -12,8 +12,10 @@ class IrrigationAlgorithm:
     """
 
     def __init__(self, websocket_client=None):
-        self.water_per_pulse: float = 0.03
-        self.pause_between_pulses: int = 10
+        # Dripper-based irrigation parameters
+        self.watering_duration_seconds: int = 40  # 40 seconds watering
+        self.break_duration_seconds: int = 40     # 40 seconds break
+        
         self.weather_service = WeatherService()
         self.websocket_client = websocket_client  # For sending logs to server
 
@@ -158,6 +160,7 @@ class IrrigationAlgorithm:
     async def should_irrigate(self, plant: "Plant", current_moisture: float) -> bool:
         """
         Checks if irrigation is necessary based on desired moisture level.
+        Uses the plant's base target (without hysteresis) to determine if irrigation should start.
         """
         # Debug logging for irrigation need analysis
         print(f"   📊 CURRENT MOISTURE: {current_moisture}% (type: {type(current_moisture)})")
@@ -171,8 +174,9 @@ class IrrigationAlgorithm:
             print(f"   Converted current_moisture: {current_moisture_float} (type: {type(current_moisture_float)})")
             print(f"   Converted desired_moisture: {desired_moisture_float} (type: {type(desired_moisture_float)})")
             
+            # Use base target for starting irrigation (no hysteresis)
             result = current_moisture_float < desired_moisture_float
-            print(f"   Comparison result: {current_moisture_float} < {desired_moisture_float} = {result}")
+            print(f"   Should irrigate: {current_moisture_float} < {desired_moisture_float} = {result}")
             
             return result
         except (ValueError, TypeError) as e:
@@ -182,170 +186,232 @@ class IrrigationAlgorithm:
             # Return False as a safe default
             return False
 
-    async def perform_irrigation(self, plant: "Plant", initial_moisture: float) -> IrrigationResult:
-        """
-        Executes the irrigation cycle using water pulses with non-blocking operations.
-        """
-        # Log irrigation details locally
-        print(f"\n💧 === IRRIGATION CYCLE DETAILS ===")
-        print(f"🚰 Valve Configuration:")
+    async def _ensure_valve_closed(self, plant: "Plant") -> None:
+        """Ensure valve is safely closed"""
+        if plant.valve.is_open:
+            try:
+                plant.valve.request_close()
+                print(f"Valve closed for plant {plant.plant_id}")
+            except Exception as e:
+                print(f"Failed to close valve: {e}")
+
+    async def _moisture_monitor(self, plant: "Plant", start_time: datetime, 
+                               max_duration: int, target_reached_event: asyncio.Event,
+                               time_limit_event: asyncio.Event, monitor_type: str = "watering") -> None:
+        """Monitor moisture levels every 10 seconds during watering or breaks"""
+        try:
+            while not target_reached_event.is_set() and not time_limit_event.is_set():
+                current_moisture = await plant.get_moisture()
+                elapsed_time = (datetime.now() - start_time).total_seconds()
+                
+                print(f"{monitor_type.title()} {elapsed_time:.1f}s: moisture = {current_moisture:.1f}%")
+                
+                if monitor_type == "watering":
+                    # During watering: stop if target reached
+                    if plant.is_target_reached(current_moisture, hysteresis=1.5):
+                        effective_target = plant.get_effective_target(hysteresis=1.5)
+                        print(f"Target reached early! {current_moisture:.1f}% >= {effective_target:.1f}%")
+                        target_reached_event.set()
+                        return
+                elif monitor_type == "break":
+                    # During break: restart if moisture drops significantly
+                    if current_moisture < plant.desired_moisture - 2.0:
+                        print(f"Moisture dropped to {current_moisture:.1f}% - starting next cycle early!")
+                        target_reached_event.set()
+                        return
+                
+                # Check if time limit reached
+                if elapsed_time >= max_duration:
+                    time_limit_event.set()
+                    return
+                
+                # Wait 10 seconds or until interrupted
+                try:
+                    await asyncio.wait_for(asyncio.Event().wait(), timeout=10.0)
+                except asyncio.TimeoutError:
+                    pass  # Normal timeout, continue monitoring
+                    
+        except asyncio.CancelledError:
+            print(f"{monitor_type.title()} monitoring cancelled")
+            raise
+
+    async def _time_limit_monitor(self, max_duration: int, time_limit_event: asyncio.Event) -> None:
+        """Monitor maximum time limits"""
+        try:
+            await asyncio.sleep(max_duration)
+            time_limit_event.set()
+        except asyncio.CancelledError:
+            pass  # Task was cancelled, which is fine
+
+    async def _perform_watering_cycle(self, plant: "Plant", cycle_count: int) -> float:
+        """Perform a single watering cycle and return water amount used"""
+        print(f"CYCLE {cycle_count}: Watering for up to {self.watering_duration_seconds}s...")
+        
+        # Events for this cycle
+        target_reached_event = asyncio.Event()
+        time_limit_event = asyncio.Event()
+        
+        try:
+            # Open valve and start timing
+            plant.valve.request_open()
+            start_time = datetime.now()
+            
+            # Create monitoring tasks
+            moisture_task = asyncio.create_task(
+                self._moisture_monitor(plant, start_time, self.watering_duration_seconds,
+                                     target_reached_event, time_limit_event, "watering")
+            )
+            time_task = asyncio.create_task(
+                self._time_limit_monitor(self.watering_duration_seconds, time_limit_event)
+            )
+            
+            # Wait for any event to trigger
+            done, pending = await asyncio.wait(
+                [moisture_task, time_task],
+                return_when=asyncio.FIRST_COMPLETED
+            )
+            
+            # Cancel remaining tasks
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+            
+            # Close valve and calculate water used
+            actual_watering_time = (datetime.now() - start_time).total_seconds()
+            plant.valve.request_close()
+            
+            water_used = plant.dripper_type.calculate_water_amount(actual_watering_time)
+            print(f"Valve closed after {actual_watering_time:.1f}s")
+            print(f"Water used this cycle: {water_used:.6f}L")
+            
+            return water_used
+            
+        except asyncio.CancelledError:
+            print(f"Watering cycle cancelled - closing valve")
+            await self._ensure_valve_closed(plant)
+            raise
+        except RuntimeError as e:
+            print(f"VALVE ERROR: {e}")
+            await self._ensure_valve_closed(plant)
+            return 0.0
+
+    async def _perform_break_cycle(self, plant: "Plant") -> None:
+        """Perform break between watering cycles"""
+        print(f"Breaking for up to {self.break_duration_seconds}s before next cycle...")
+        
+        # Events for break
+        moisture_dropped_event = asyncio.Event()
+        time_limit_event = asyncio.Event()
+        
+        try:
+            start_time = datetime.now()
+            
+            # Create monitoring tasks
+            moisture_task = asyncio.create_task(
+                self._moisture_monitor(plant, start_time, self.break_duration_seconds,
+                                     moisture_dropped_event, time_limit_event, "break")
+            )
+            time_task = asyncio.create_task(
+                self._time_limit_monitor(self.break_duration_seconds, time_limit_event)
+            )
+            
+            # Wait for any event to trigger
+            done, pending = await asyncio.wait(
+                [moisture_task, time_task],
+                return_when=asyncio.FIRST_COMPLETED
+            )
+            
+            # Cancel remaining tasks
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+            
+            actual_break_time = (datetime.now() - start_time).total_seconds()
+            print(f"Break completed after {actual_break_time:.1f}s")
+            
+        except asyncio.CancelledError:
+            print(f"Break cancelled")
+            await self._ensure_valve_closed(plant)  # Safety check
+            raise
+
+    def _log_irrigation_setup(self, plant: "Plant", initial_moisture: float) -> None:
+        """Log irrigation setup information"""
+        print(f"\n=== DRIPPER-BASED IRRIGATION CYCLE ===")
+        print(f"Valve Configuration:")
         print(f"   Valve ID: {plant.valve.valve_id}")
         print(f"   Water Limit: {plant.valve.water_limit}L")
-        print(f"   Flow Rate: {plant.valve.flow_rate}L/s")
         print(f"   Pipe Diameter: {plant.valve.pipe_diameter}cm")
         
-        print(f"\n⚙️  Pulse Configuration:")
-        print(f"   Water Per Pulse: {self.water_per_pulse}L")
-        print(f"   Pause Between Pulses: {self.pause_between_pulses}s")
-        pulse_time: float = plant.valve.calculate_open_time(self.water_per_pulse)
-        print(f"   Pulse Duration: {pulse_time:.2f}s")
+        print(f"\nDripper Configuration:")
+        print(f"   Dripper Type: {plant.dripper_type.display_name}")
+        print(f"   Flow Rate: {plant.dripper_type.flow_rate_lh:.1f} L/h ({plant.dripper_type.flow_rate_ls:.4f} L/s)")
+        print(f"   Watering Duration: {self.watering_duration_seconds}s")
+        print(f"   Break Duration: {self.break_duration_seconds}s")
         
-        print(f"\n📊 Irrigation Parameters:")
-        print(f"🌡️ INITIAL MOISTURE: {initial_moisture}%")
-        print(f"🎯 TARGET MOISTURE: {plant.desired_moisture}%")
-        print(f"💧 MOISTURE GAP: {plant.desired_moisture - initial_moisture:.1f}%")
-        print(f"🚰 MAX WATER: {plant.valve.water_limit}L")
+        expected_water_per_cycle = plant.dripper_type.calculate_water_amount(self.watering_duration_seconds)
+        print(f"   Expected Water Per Cycle: {expected_water_per_cycle:.4f}L")
         
-        total_water: float = 0.0
-        water_limit: float = plant.valve.water_limit
-        pulse_count = 0
+        print(f"\nIrrigation Parameters:")
+        print(f"   INITIAL MOISTURE: {initial_moisture}%")
+        print(f"   TARGET MOISTURE: {plant.desired_moisture}%")
+        print(f"   EFFECTIVE TARGET (with hysteresis): {plant.get_effective_target(1.5):.1f}%")
+        print(f"   MOISTURE GAP: {plant.desired_moisture - initial_moisture:.1f}%")
+        print(f"   MAX WATER: {plant.valve.water_limit}L")
 
-        print(f"\n🔄 Starting Water Pulses...")
-        print(f"   {'Pulse':<6} {'Water':<8} {'Current':<10} {'Target':<8} {'Gap':<8} {'Status':<15}")
-        print(f"   {'-----':<6} {'-----':<8} {'-------':<10} {'------':<8} {'---':<8} {'------':<15}")
-        
-        while total_water < water_limit:
-            current_moisture: float = await plant.get_moisture()
-            moisture_gap = plant.desired_moisture - current_moisture
-            
-            # Send pulse progress update
-            progress = IrrigationProgress.pulse_update(
-                plant.plant_id, 
-                pulse_count + 1, 
-                current_moisture, 
-                plant.desired_moisture, 
-                total_water, 
-                water_limit
-            )
-            await self.send_progress_update(progress)
-            
-            if current_moisture >= plant.desired_moisture:
-                print("✅ TARGET REACHED")
-                break
-            elif total_water >= water_limit:
-                print("🚫 WATER LIMIT REACHED")
-                break
-            else:
-                print("💧 WATERING...")
-            
-            # Perform water pulse using non-blocking async sleep
-            print(f"      🔓 Opening valve for {pulse_time:.2f}s...")
-            try:
-                plant.valve.request_open()
-                await asyncio.sleep(pulse_time)  # Use asyncio.sleep instead of time.sleep
-                plant.valve.request_close()
-                print(f"      🔒 Valve closed")
-            except RuntimeError as valve_error:
-                # Handle valve blocking or hardware errors
-                error_message = str(valve_error)
-                if "blocked" in error_message.lower():
-                    print(f"❌ VALVE BLOCKED: {error_message}")
-                    # Send blocked valve progress update
-                    progress = IrrigationProgress.fault_detected(
-                        plant.plant_id,
-                        current_moisture,
-                        plant.desired_moisture,
-                        total_water,
-                        water_limit
-                    )
-                    await self.send_progress_update(progress)
-                    return IrrigationResult.error(
-                        plant_id=plant.plant_id,
-                        error_message=f"Valve is blocked and cannot be opened. Please check the valve manually and unblock it if needed.",
-                        moisture=initial_moisture,
-                        final_moisture=current_moisture,
-                        water_added_liters=total_water
-                    )
-                else:
-                    print(f"❌ VALVE ERROR: {error_message}")
-                    # Send valve error progress update
-                    progress = IrrigationProgress.fault_detected(
-                        plant.plant_id,
-                        current_moisture,
-                        plant.desired_moisture,
-                        total_water,
-                        water_limit
-                    )
-                    await self.send_progress_update(progress)
-                    return IrrigationResult.error(
-                        plant_id=plant.plant_id,
-                        error_message=f"Valve hardware error: {error_message}. Please check the valve connection and hardware.",
-                        moisture=initial_moisture,
-                        final_moisture=current_moisture,
-                        water_added_liters=total_water
-                    )
-            
-            total_water += self.water_per_pulse
-            pulse_count += 1
-            
-            # Update simulation if needed
-            if plant.sensor.simulation_mode:
-                old_moisture = current_moisture
-                plant.sensor.update_simulated_value(5)  # 5% increase after each pulse
-                print(f"      📈 Simulation: {old_moisture:.1f}% → {plant.sensor.simulated_value:.1f}% (+5%)")
-            
-            # Pause between pulses using non-blocking async sleep
-            if total_water < water_limit and current_moisture < plant.desired_moisture:
-                print(f"      ⏸️  Pausing {self.pause_between_pulses}s before next pulse...")
-                await asyncio.sleep(self.pause_between_pulses)  # Use asyncio.sleep instead of time.sleep
-
-        final_moisture: float = await plant.get_moisture()
+    async def _generate_irrigation_result(self, plant: "Plant", initial_moisture: float, 
+                                         total_water: float, cycle_count: int) -> IrrigationResult:
+        """Generate final irrigation result"""
+        final_moisture = await plant.get_moisture()
         
         # Send final summary progress update
         target_reached = final_moisture >= plant.desired_moisture
         progress = IrrigationProgress.final_summary(
-            plant.plant_id,
-            initial_moisture,
-            final_moisture,
-            plant.desired_moisture,
-            total_water,
-            pulse_count,
-            target_reached
+            plant.plant_id, initial_moisture, final_moisture,
+            plant.desired_moisture, total_water, cycle_count, target_reached
         )
         await self.send_progress_update(progress)
-        print(f"   Pulses Completed: {pulse_count}")
-        print(f"   Total Water Used: {total_water:.2f}L")
-        print(f"   Initial Moisture: {initial_moisture:.1f}%")
-        print(f"   Final Moisture: {final_moisture:.1f}%")
-        print(f"   Moisture Increase: {final_moisture - initial_moisture:.1f}%")
-        print(f"   Target Moisture: {plant.desired_moisture:.1f}%")
-        print(f"   Target Reached: {'✅ YES' if final_moisture >= plant.desired_moisture else '❌ NO'}")
+        
+        # Log results
+        print(f"\nCycles Completed: {cycle_count}")
+        print(f"Total Water Used: {total_water:.6f}L")
+        print(f"Initial Moisture: {initial_moisture:.1f}%")
+        print(f"Final Moisture: {final_moisture:.1f}%")
+        print(f"Moisture Increase: {final_moisture - initial_moisture:.1f}%")
+        print(f"Target Moisture: {plant.desired_moisture:.1f}%")
+        print(f"Target Reached: {'YES' if final_moisture >= plant.desired_moisture else 'NO'}")
+        
+        efficiency = (final_moisture - initial_moisture) / (total_water * 1000) if total_water > 0 else 0
+        print(f"Water Efficiency: {efficiency:.2f} %/mL" if total_water > 0 else "Water Efficiency: N/A")
 
-        # Fault detection: watered but moisture didn't rise
-        if total_water >= water_limit and final_moisture < plant.desired_moisture:
-            # Send fault detection progress update
+        # Check for faults
+        if total_water >= plant.valve.water_limit and final_moisture < plant.desired_moisture:
             progress = IrrigationProgress.fault_detected(
-                plant.plant_id,
-                final_moisture,
-                plant.desired_moisture,
-                total_water,
-                water_limit
+                plant.plant_id, final_moisture, plant.desired_moisture, 
+                total_water, plant.valve.water_limit
             )
             await self.send_progress_update(progress)
             plant.valve.block()
             return IrrigationResult.error(
                 plant_id=plant.plant_id,
-                error_message="Water limit reached but desired moisture not achieved. The plant received the maximum allowed water but the soil moisture did not reach the target level. This may indicate a sensor issue, soil drainage problem, or the water limit may be too low for this plant's needs.",
+                error_message="Water limit reached but desired moisture not achieved.",
                 moisture=initial_moisture,
                 final_moisture=final_moisture,
                 water_added_liters=total_water
             )
 
-        # Update last irrigation time
+        # Success
         plant.last_irrigation_time = datetime.now()
-        print(f"\n✅ IRRIGATION COMPLETED SUCCESSFULLY!")
-        print(f"   ⏰ Irrigation Time: {plant.last_irrigation_time}")
-        print(f"   🎯 Target Reached: {'✅ YES' if final_moisture >= plant.desired_moisture else '⚠️  PARTIAL'}")
+        print(f"\nDRIPPER IRRIGATION COMPLETED SUCCESSFULLY!")
+        print(f"Irrigation Time: {plant.last_irrigation_time}")
+        print(f"Target Reached: {'YES' if final_moisture >= plant.desired_moisture else 'PARTIAL'}")
+        print(f"Dripper Type: {plant.dripper_type.display_name}")
+        print(f"Total Cycles: {cycle_count}")
 
         return IrrigationResult.success(
             plant_id=plant.plant_id,
@@ -353,3 +419,77 @@ class IrrigationAlgorithm:
             final_moisture=final_moisture,
             water_added_liters=total_water
         )
+
+    async def perform_irrigation(self, plant: "Plant", initial_moisture: float) -> IrrigationResult:
+        """Clean irrigation cycle using dripper-based watering with event-driven control"""
+        try:
+            # Log irrigation setup
+            self._log_irrigation_setup(plant, initial_moisture)
+            
+            total_water = 0.0
+            cycle_count = 0
+            water_limit = plant.valve.water_limit
+            
+            print(f"\nStarting irrigation cycles...")
+            
+            # Main irrigation loop
+            while total_water < water_limit:
+                # Check cancellation
+                await asyncio.sleep(0)
+                
+                # Check current moisture
+                current_moisture = await plant.get_moisture()
+                
+                # Send progress update
+                progress = IrrigationProgress.pulse_update(
+                    plant.plant_id, cycle_count + 1, current_moisture, 
+                    plant.desired_moisture, total_water, water_limit
+                )
+                await self.send_progress_update(progress)
+                
+                # Check if target already reached
+                if plant.is_target_reached(current_moisture, hysteresis=1.5):
+                    effective_target = plant.get_effective_target(hysteresis=1.5)
+                    print(f"TARGET REACHED: {current_moisture:.1f}% >= {effective_target:.1f}%")
+                    break
+                
+                # Check water limit
+                expected_water = plant.dripper_type.calculate_water_amount(self.watering_duration_seconds)
+                if total_water + expected_water > water_limit:
+                    print(f"WATER LIMIT WOULD BE EXCEEDED - stopping irrigation")
+                    break
+                
+                # Perform watering cycle
+                cycle_count += 1
+                cycle_water = await self._perform_watering_cycle(plant, cycle_count)
+                total_water += cycle_water
+                
+                print(f"Cycle {cycle_count} completed: {cycle_water:.6f}L added (Total: {total_water:.6f}L)")
+                
+                # Update simulation
+                if plant.sensor.simulation_mode:
+                    moisture_increase = min(5.0, cycle_water * 100)
+                    plant.sensor.update_simulated_value(moisture_increase)
+                    print(f"Simulation: moisture increased by {moisture_increase:.1f}%")
+                
+                # Check if target reached after watering
+                final_cycle_moisture = await plant.get_moisture()
+                if plant.is_target_reached(final_cycle_moisture, hysteresis=1.5):
+                    effective_target = plant.get_effective_target(hysteresis=1.5)
+                    print(f"TARGET REACHED after cycle {cycle_count}: {final_cycle_moisture:.1f}% >= {effective_target:.1f}%")
+                    break
+                
+                # Break between cycles (if not finished)
+                if total_water < water_limit and not plant.is_target_reached(final_cycle_moisture, hysteresis=1.5):
+                    await self._perform_break_cycle(plant)
+
+            # Generate final results
+            return await self._generate_irrigation_result(
+                plant, initial_moisture, total_water, cycle_count
+            )
+            
+        except asyncio.CancelledError:
+            print(f"Irrigation cancelled for plant {plant.plant_id}")
+            await self._ensure_valve_closed(plant)
+            raise
+

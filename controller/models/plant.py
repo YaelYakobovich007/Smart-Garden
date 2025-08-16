@@ -4,6 +4,7 @@ from datetime import datetime
 from controller.hardware.sensors.sensor import Sensor
 from controller.hardware.valves.valve import Valve
 from controller.irrigation.irrigation_schedule import IrrigationSchedule
+from controller.models.dripper_type import DripperType
 
 class Plant:
     """
@@ -23,6 +24,7 @@ class Plant:
         pipe_diameter (float): Diameter of the irrigation pipe in cm.
         flow_rate (float): Water flow rate in L/s.
         water_limit (float): Maximum water limit in L.
+        dripper_type (DripperType): Type of dripper with specific flow rate.
     """
     def __init__(
         self,
@@ -34,7 +36,8 @@ class Plant:
         lon: float,
         pipe_diameter: float = 1.0,
         flow_rate: float = 0.05,
-        water_limit: float = 1.0
+        water_limit: float = 1.0,
+        dripper_type: DripperType = DripperType.TYPE_2LH
     ) -> None:
         self.plant_id: int = plant_id
         self.desired_moisture: float = desired_moisture
@@ -49,6 +52,7 @@ class Plant:
         self.pipe_diameter: float = pipe_diameter
         self.flow_rate: float = flow_rate
         self.water_limit: float = water_limit
+        self.dripper_type: DripperType = dripper_type
             
 
     async def get_moisture(self) -> Optional[float]:
@@ -115,3 +119,34 @@ class Plant:
         sensor_data = await self.get_sensor_data()
         if sensor_data is not None:
             self.moisture_level, self.temperature_level = sensor_data
+
+    def is_target_reached(self, current_moisture: float, hysteresis: float = 1.5) -> bool:
+        """
+        Check if moisture target is reached with hysteresis to prevent oscillation.
+        
+        Args:
+            current_moisture: Current soil moisture reading
+            hysteresis: Additional margin above target to prevent oscillation (default 1.5%)
+            
+        Returns:
+            bool: True if current moisture >= (desired_moisture + hysteresis)
+            
+        Example:
+            desired_moisture = 75%
+            hysteresis = 1.5% 
+            → Stop irrigation when current_moisture >= 76.5%
+        """
+        target_with_hysteresis = self.desired_moisture + hysteresis
+        return current_moisture >= target_with_hysteresis
+    
+    def get_effective_target(self, hysteresis: float = 1.5) -> float:
+        """
+        Get the effective target moisture including hysteresis.
+        
+        Args:
+            hysteresis: Hysteresis margin in percentage points
+            
+        Returns:
+            float: Effective target (desired_moisture + hysteresis)
+        """
+        return self.desired_moisture + hysteresis

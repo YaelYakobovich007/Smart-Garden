@@ -28,6 +28,7 @@ class PiCommunication {
                     plant_id: plantData.plant_id,
                     desiredMoisture: parseFloat(plantData.ideal_moisture),
                     waterLimit: parseFloat(plantData.water_limit),
+                    dripperType: plantData.dripper_type || '2L/h',
                     scheduleData: {
                         irrigation_days: plantData.irrigation_days || null,
                         irrigation_time: plantData.irrigation_time || null
@@ -40,6 +41,7 @@ class PiCommunication {
             console.log(`   - Plant Name: ${plantData.name}`);
             console.log(`   - Desired Moisture: ${request.data.desiredMoisture} (type: ${typeof request.data.desiredMoisture})`);
             console.log(`   - Water Limit: ${request.data.waterLimit} (type: ${typeof request.data.waterLimit})`);
+            console.log(`   - Dripper Type: ${request.data.dripperType} (type: ${typeof request.data.dripperType})`);
             console.log(`   - Schedule Data: ${JSON.stringify(request.data.scheduleData)} (type: ${typeof request.data.scheduleData})`);
             console.log(`   - Full JSON: ${JSON.stringify(request)}`);
 

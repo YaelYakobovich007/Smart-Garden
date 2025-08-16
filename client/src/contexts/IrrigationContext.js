@@ -226,7 +226,14 @@ export const IrrigationProvider = ({ children }) => {
     
     console.log('🛑 handleStopWatering called for plant ID:', plantId);
     console.log('🛑 Current state:', state);
+    console.log('🛑 isSmartMode before clearing:', state.isSmartMode);
+    console.log('🛑 isManualMode before clearing:', state.isManualMode);
     
+    // IMPORTANT: Check irrigation mode BEFORE clearing the state
+    const isSmartIrrigation = state.isSmartMode;
+    const plantName = state.currentPlant?.name;
+    
+    // Clear the watering state
     updatePlantWateringState(plantId, {
       isWateringActive: false,
       isManualMode: false,
@@ -238,20 +245,21 @@ export const IrrigationProvider = ({ children }) => {
       pendingIrrigationRequest: false
     });
     
-    if (state.currentPlant?.name) {
-      if (state.isSmartMode) {
+    // Send appropriate stop message based on irrigation type
+    if (plantName) {
+      if (isSmartIrrigation) {
         // For smart irrigation, send STOP_IRRIGATION message
-        console.log('🛑 Stopping smart irrigation for plant:', state.currentPlant.name);
+        console.log('🛑 Stopping smart irrigation for plant:', plantName);
         websocketService.sendMessage({
           type: 'STOP_IRRIGATION',
-          plantName: state.currentPlant.name
+          plantName: plantName
         });
       } else {
         // For manual irrigation, send CLOSE_VALVE message
-        console.log('🛑 Stopping manual irrigation (closing valve) for plant:', state.currentPlant.name);
+        console.log('🛑 Stopping manual irrigation (closing valve) for plant:', plantName);
         websocketService.sendMessage({
           type: 'CLOSE_VALVE',
-          plantName: state.currentPlant.name
+          plantName: plantName
         });
       }
     } else {

@@ -13,7 +13,7 @@ class StopIrrigationHandler:
     
     async def handle(self, plant_id: int) -> StopIrrigationResponse:
         """
-        Stop smart irrigation for the specified plant.
+        Stop smart irrigation for the specified plant by cancelling its irrigation task.
         
         Args:
             plant_id: ID of the plant to stop irrigation for
@@ -29,32 +29,27 @@ class StopIrrigationHandler:
                     error_message=f"Plant {plant_id} not found"
                 )
             
-            # Get the plant
+            # Get the plant for sensor reading
             plant = self.engine.plants[plant_id]
+            current_moisture = plant.sensor.current_reading if plant.sensor else 0
             
-            try:
-                # Close the valve immediately (emergency stop)
-                if plant.valve.is_open:
-                    plant.valve.request_close()
-                
-                # Get current moisture reading
-                current_moisture = plant.sensor.current_reading if plant.sensor else 0
-                
-                # Return success response
+            # Use the engine's stop_irrigation method to properly cancel the task
+            irrigation_stopped = await self.engine.stop_irrigation(plant_id)
+            
+            if irrigation_stopped:
+                # Irrigation task was successfully cancelled
                 return StopIrrigationResponse.success(
                     plant_id=plant_id,
                     message="Smart irrigation stopped successfully",
                     moisture=current_moisture,
                     final_moisture=current_moisture,
-                    water_added_liters=0
+                    water_added_liters=0  # We don't track partial water in cancellation
                 )
-                
-            except Exception as valve_error:
-                # Handle valve operation errors
-                current_moisture = plant.sensor.current_reading if plant.sensor else 0
+            else:
+                # No irrigation was running (task already completed or not started)
                 return StopIrrigationResponse.error(
                     plant_id=plant_id,
-                    error_message=f"Failed to stop irrigation: {str(valve_error)}",
+                    error_message="No active irrigation found for this plant. Irrigation may have already completed or was not started.",
                     moisture=current_moisture
                 )
                 

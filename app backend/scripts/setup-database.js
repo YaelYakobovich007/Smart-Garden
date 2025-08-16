@@ -55,6 +55,16 @@ async function setupDatabase() {
       console.log('Image URL column already exists or error adding it:', error.message);
     }
 
+    // Add dripper_type column if it doesn't exist (for new feature)
+    try {
+      await pool.query(`
+        ALTER TABLE plants ADD COLUMN IF NOT EXISTS dripper_type VARCHAR(10) DEFAULT '2L/h'
+      `);
+      console.log('Dripper type column added to plants table');
+    } catch (error) {
+      console.log('Dripper type column already exists or error adding it:', error.message);
+    }
+
     try {
       await pool.query(`
         ALTER TABLE plants 

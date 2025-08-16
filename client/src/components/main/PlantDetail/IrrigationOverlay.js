@@ -6,7 +6,7 @@ import { Feather } from '@expo/vector-icons';
  * Irrigation Overlay Component
  * Shows animated water drops and blue background when irrigation is active
  */
-const IrrigationOverlay = ({ isActive, timeLeft, onPause, onResume, onStop }) => {
+const IrrigationOverlay = ({ isActive, timeLeft, onStop }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const dropAnim1 = useRef(new Animated.Value(-50)).current;
   const dropAnim2 = useRef(new Animated.Value(-50)).current;
@@ -132,15 +132,6 @@ const IrrigationOverlay = ({ isActive, timeLeft, onPause, onResume, onStop }) =>
              <Feather name="square" size={20} color="#FFFFFF" />
              <Text style={styles.controlButtonText}>Stop</Text>
            </TouchableOpacity>
-           
-           <TouchableOpacity 
-             style={styles.controlButton} 
-             onPress={onResume}
-             activeOpacity={0.7}
-           >
-             <Feather name="rotate-ccw" size={20} color="#FFFFFF" />
-             <Text style={styles.controlButtonText}>Reset</Text>
-           </TouchableOpacity>
          </View>
       </View>
     </Animated.View>
@@ -220,7 +211,7 @@ const styles = StyleSheet.create({
   },
   controlSection: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   controlButton: {

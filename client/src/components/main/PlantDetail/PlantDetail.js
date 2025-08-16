@@ -305,13 +305,7 @@ const PlantDetail = () => {
                 <Text style={styles.irrigationActionText}>Resume</Text>
               </TouchableOpacity>
             ) : null}
-            <TouchableOpacity
-              style={styles.irrigationActionButton}
-              onPress={() => resetTimer(plant.id)}
-            >
-              <Feather name="rotate-ccw" size={16} color="#FFFFFF" />
-              <Text style={styles.irrigationActionText}>Reset</Text>
-            </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.irrigationActionButton, styles.stopButton]}
               onPress={() => handleStopWatering(plant.id)}
@@ -350,6 +344,40 @@ const PlantDetail = () => {
         <View style={styles.plantTypeContainer}>
           <Text style={styles.infoLabel}>Genus</Text>
           <Text style={styles.plantType}>{plant.type}</Text>
+        </View>
+
+        {/* Plant Configuration */}
+        <View style={styles.plantConfigContainer}>
+          <Text style={styles.sectionTitle}>Plant Configuration</Text>
+          <View style={styles.configGrid}>
+            <View style={styles.configItem}>
+              <View style={styles.configIconContainer}>
+                <Feather name="droplet" size={16} color="#4CAF50" />
+              </View>
+              <View style={styles.configInfo}>
+                <Text style={styles.configLabel}>Dripper Type</Text>
+                <Text style={styles.configValue}>{plant.dripper_type || '2L/h'}</Text>
+              </View>
+            </View>
+            <View style={styles.configItem}>
+              <View style={styles.configIconContainer}>
+                <Feather name="target" size={16} color="#4CAF50" />
+              </View>
+              <View style={styles.configInfo}>
+                <Text style={styles.configLabel}>Target Moisture</Text>
+                <Text style={styles.configValue}>{plant.ideal_moisture}%</Text>
+              </View>
+            </View>
+            <View style={styles.configItem}>
+              <View style={styles.configIconContainer}>
+                <Feather name="bucket" size={16} color="#4CAF50" />
+              </View>
+              <View style={styles.configInfo}>
+                <Text style={styles.configLabel}>Water Limit</Text>
+                <Text style={styles.configValue}>{plant.water_limit}L</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
         {/* Current Conditions */}
@@ -625,8 +653,6 @@ const PlantDetail = () => {
       <IrrigationOverlay 
         isActive={isWateringActive || isManualMode}
         timeLeft={wateringTimeLeft}
-        onPause={() => pauseTimer(plant.id)}
-        onResume={() => resumeTimer(plant.id)}
         onStop={() => handleStopWatering(plant.id)}
       />
     </SafeAreaView>

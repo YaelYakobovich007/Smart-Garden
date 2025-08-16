@@ -49,6 +49,7 @@ export default function AddPlantScreen() {
     plantType: '',
     humidity: 60,
     waterLimit: 1.0,
+    dripperType: '2L/h', // Default dripper type
     image: null,
     useSchedule: false,
     schedule: {
@@ -133,6 +134,12 @@ export default function AddPlantScreen() {
     // Validate water limit (must be positive)
     if (formData.waterLimit <= 0) {
       newErrors.waterLimit = 'Water limit must be greater than 0';
+    }
+
+    // Validate dripper type (must be one of the allowed values)
+    const allowedDripperTypes = ['1L/h', '2L/h', '4L/h', '8L/h'];
+    if (!allowedDripperTypes.includes(formData.dripperType)) {
+      newErrors.dripperType = 'Please select a valid dripper type';
     }
 
     setErrors(newErrors);
@@ -221,6 +228,7 @@ export default function AddPlantScreen() {
             plantType: formData.plantType,
             desiredMoisture: formData.humidity,
             waterLimit: formData.waterLimit,
+            dripperType: formData.dripperType,
             irrigationDays,
             irrigationTime
           },
@@ -483,6 +491,50 @@ export default function AddPlantScreen() {
               <View style={styles.errorContainer}>
                 <Feather name="alert-circle" size={16} color="#EF4444" />
                 <Text style={styles.errorText}>{errors.waterLimit}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Dripper Type Section */}
+          <View style={styles.inputContainer}>
+            <View style={styles.labelContainer}>
+              <Feather name="droplet" size={20} color="#4CAF50" />
+              <Text style={styles.label}>
+                Dripper Type <Text style={styles.required}>*</Text>
+              </Text>
+            </View>
+            <View style={styles.dripperOptionsContainer}>
+              {['1L/h', '2L/h', '4L/h', '8L/h'].map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.dripperOption,
+                    formData.dripperType === option && styles.dripperOptionSelected
+                  ]}
+                  onPress={() => updateFormData('dripperType', option)}
+                >
+                  <View style={[
+                    styles.dripperRadio,
+                    formData.dripperType === option && styles.dripperRadioSelected
+                  ]}>
+                    {formData.dripperType === option && (
+                      <View style={styles.dripperRadioDot} />
+                    )}
+                  </View>
+                  <Text style={[
+                    styles.dripperOptionText,
+                    formData.dripperType === option && styles.dripperOptionTextSelected
+                  ]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.hintText}>Select the flow rate of your dripper system</Text>
+            {errors.dripperType && (
+              <View style={styles.errorContainer}>
+                <Feather name="alert-circle" size={16} color="#EF4444" />
+                <Text style={styles.errorText}>{errors.dripperType}</Text>
               </View>
             )}
           </View>

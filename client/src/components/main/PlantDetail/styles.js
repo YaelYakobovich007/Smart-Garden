@@ -183,6 +183,52 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
     fontFamily: 'Nunito_700Bold',
   },
+
+  // Plant Configuration Styles
+  plantConfigContainer: {
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    marginBottom: 8,
+    borderRadius: 16,
+  },
+  configGrid: {
+    gap: 12,
+  },
+  configItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ECF0F1',
+  },
+  configIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F0F9F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  configInfo: {
+    flex: 1,
+  },
+  configLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 2,
+    fontFamily: 'Nunito_700Bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  configValue: {
+    fontSize: 16,
+    color: '#2C3E50',
+    fontFamily: 'Nunito_700Bold',
+  },
   statsContainer: {
     backgroundColor: '#FFFFFF',
     padding: 20,

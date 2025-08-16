@@ -21,8 +21,8 @@ async function addPlant(userId, plantData) {
 
   // Insert plant into DB without hardware IDs (will be assigned by Pi)
   const result = await pool.query(
-    `INSERT INTO plants (user_id, name, ideal_moisture, water_limit, irrigation_days, irrigation_time, plant_type, image_url, sensor_port, valve_id, last_watered)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+    `INSERT INTO plants (user_id, name, ideal_moisture, water_limit, irrigation_days, irrigation_time, plant_type, dripper_type, image_url, sensor_port, valve_id, last_watered)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
     [
       userId,
       plantData.name,
@@ -31,6 +31,7 @@ async function addPlant(userId, plantData) {
       plantData.irrigation_days ? JSON.stringify(plantData.irrigation_days) : null,
       plantData.irrigation_time || null,
       plantData.plantType || null,
+      plantData.dripper_type || '2L/h', // Default to 2L/h if not provided
       plantData.image_url || null,
       null, // sensor_port - will be assigned by Pi
       null, // valve_id - will be assigned by Pi
