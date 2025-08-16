@@ -38,6 +38,7 @@ import ArticleDetails from './src/components/main/Articles/ArticleDetails/Articl
 import ArticlesList from './src/components/main/Articles/ArticlesList/ArticlesList';
 import OnboardingScreen from './src/components/onboarding/OnboardingScreen';
 import ForecastScreen from './src/components/ForecastScreen/ForecastScreen';
+import ValveTroubleshootingScreen from './src/components/main/ValveTroubleshootingScreen/ValveTroubleshootingScreen';
 
 // Import services
 import websocketService from './src/services/websocketService';
@@ -268,6 +269,7 @@ export default function App() {
           <Stack.Screen name="ArticleDetails" component={ArticleDetails} />
           <Stack.Screen name="ArticlesList" component={ArticlesList} />
           <Stack.Screen name="ForecastScreen" component={ForecastScreen} />
+          <Stack.Screen name="ValveTroubleshooting" component={ValveTroubleshootingScreen} />
         </Stack.Navigator>
         </NavigationContainer>
       </IrrigationProvider>

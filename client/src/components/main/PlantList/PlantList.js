@@ -372,6 +372,11 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                   <Text style={styles.valveBlockedText}>Tap Blocked</Text>
                 </View>
               )}
+              
+              {/* Debug: Show valve_blocked status */}
+              <Text style={{fontSize: 10, color: 'red'}}>
+                Debug: valve_blocked = {plant.valve_blocked ? 'TRUE' : 'FALSE'}
+              </Text>
             </View>
 
             {/* Plant Status Indicators */}

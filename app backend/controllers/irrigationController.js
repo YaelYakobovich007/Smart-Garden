@@ -15,7 +15,8 @@ const irrigationHandlers = {
   CLOSE_VALVE: handleCloseValve,
   GET_IRRIGATION_RESULT: handleGetIrrigationResult,
   GET_VALVE_STATUS: handleGetValveStatus,
-  UNBLOCK_VALVE: handleUnblockValve
+  UNBLOCK_VALVE: handleUnblockValve,
+  TEST_VALVE_BLOCK: handleTestValveBlock
 };
 
 async function handleIrrigationMessage(data, ws) {
@@ -314,6 +315,36 @@ async function handleUnblockValve(data, ws, email) {
   }
 }
 
+// Test valve block for a specific plant (for testing purposes)
+async function handleTestValveBlock(data, ws, email) {
+  const { plantName } = data;
+  if (!plantName) return sendError(ws, 'TEST_VALVE_BLOCK_FAIL', 'Missing plantName');
+  
+  const user = await getUser(email);
+  if (!user) return sendError(ws, 'TEST_VALVE_BLOCK_FAIL', 'User not found');
+  
+  const plant = await getPlantByName(user.id, plantName);
+  if (!plant) return sendError(ws, 'TEST_VALVE_BLOCK_FAIL', 'Plant not found');
+
+  try {
+    // Update valve status in database to blocked (for testing)
+    const { updateValveStatus } = require('../models/plantModel');
+    await updateValveStatus(plant.plant_id, true);
+    
+    console.log(`✅ Valve blocked for testing - plant ${plant.plant_id} (${plant.name})`);
+    
+    sendSuccess(ws, 'TEST_VALVE_BLOCK_SUCCESS', {
+      message: `Valve for "${plant.name}" has been blocked for testing. Refresh the plant list to see the changes.`,
+      plantName: plant.name
+    });
+    
+  } catch (err) {
+    console.error(`Failed to test valve block for plant ${plant.plant_id}:`, err);
+    sendError(ws, 'TEST_VALVE_BLOCK_FAIL', 'Failed to test valve block. Please try again.');
+  }
+}
+
 module.exports = {
-  handleIrrigationMessage
+  handleIrrigationMessage,
+  handleTestValveBlock
 };

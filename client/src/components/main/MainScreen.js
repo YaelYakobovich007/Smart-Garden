@@ -89,6 +89,7 @@ const MainScreen = () => {
    */
   const handleValveBlocked = (data) => {
     console.log('MainScreen: Valve blocked, refreshing plant list...');
+    console.log('MainScreen: Valve blocked data:', data);
     // Refresh plant list to show updated valve_blocked status
     if (websocketService.isConnected()) {
       websocketService.sendMessage({ type: 'GET_MY_PLANTS' });

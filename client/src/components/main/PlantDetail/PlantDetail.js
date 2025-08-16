@@ -246,9 +246,17 @@ const PlantDetail = () => {
     };
 
     const handleValveBlocked = (data) => {
+      console.log('PlantDetail: Valve blocked message received:', data);
       Alert.alert('Valve Blocked', data?.message || 'The valve has been blocked and cannot be operated.');
       // Refresh the plant data to show the blocked status
       // This will trigger a re-render with the updated valve_blocked status
+    };
+
+    const handleTestValveBlockSuccess = (data) => {
+      console.log('PlantDetail: Test valve block success:', data);
+      Alert.alert('Test Success', data?.message || 'Valve has been blocked for testing. Please refresh the plant list to see the changes.');
+      // Navigate back to refresh the plant list
+      navigation.goBack();
     };
 
     websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
@@ -262,6 +270,7 @@ const PlantDetail = () => {
     websocketService.onMessage('UNBLOCK_VALVE_SUCCESS', handleUnblockSuccess);
     websocketService.onMessage('UNBLOCK_VALVE_FAIL', handleUnblockFail);
     websocketService.onMessage('VALVE_BLOCKED', handleValveBlocked);
+    websocketService.onMessage('TEST_VALVE_BLOCK_SUCCESS', handleTestValveBlockSuccess);
 
     return () => {
       websocketService.offMessage('IRRIGATE_SUCCESS', handleSuccess);
@@ -275,6 +284,7 @@ const PlantDetail = () => {
       websocketService.offMessage('UNBLOCK_VALVE_SUCCESS', handleUnblockSuccess);
       websocketService.offMessage('UNBLOCK_VALVE_FAIL', handleUnblockFail);
       websocketService.offMessage('VALVE_BLOCKED', handleValveBlocked);
+      websocketService.offMessage('TEST_VALVE_BLOCK_SUCCESS', handleTestValveBlockSuccess);
     };
   }, [navigation, plant.name]);
 
@@ -382,26 +392,64 @@ const PlantDetail = () => {
           </View>
         </View>
 
-        {/* Valve Blocked Warning */}
-        {plant.valve_blocked && (
-          <View style={styles.valveBlockedContainer}>
-            <View style={styles.valveBlockedHeader}>
-              <Feather name="alert-triangle" size={24} color="#F59E0B" />
-              <Text style={styles.valveBlockedTitle}>Tap is Blocked</Text>
-            </View>
-            <Text style={styles.valveBlockedDescription}>
-              The valve for this plant is currently blocked and cannot be operated. 
-              Please troubleshoot the hardware issue to restore irrigation functionality.
-            </Text>
-            <TouchableOpacity
-              style={styles.troubleshootButton}
-              onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
+                 {/* Valve Blocked Warning */}
+         {plant.valve_blocked && (
+           <View style={styles.valveBlockedContainer}>
+             <View style={styles.valveBlockedHeader}>
+               <Feather name="alert-triangle" size={24} color="#F59E0B" />
+               <Text style={styles.valveBlockedTitle}>Tap is Blocked</Text>
+             </View>
+             <Text style={styles.valveBlockedDescription}>
+               The valve for this plant is currently blocked and cannot be operated. 
+               Please troubleshoot the hardware issue to restore irrigation functionality.
+             </Text>
+             <TouchableOpacity
+               style={styles.troubleshootButton}
+               onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
+             >
+               <Feather name="tool" size={20} color="#FFFFFF" />
+               <Text style={styles.troubleshootButtonText}>Troubleshoot Valve</Text>
+             </TouchableOpacity>
+           </View>
+         )}
+         
+         {/* Debug: Show valve_blocked status */}
+         <View style={{padding: 10, backgroundColor: '#f0f0f0', margin: 10, borderRadius: 5}}>
+           <Text style={{fontSize: 12, color: 'red'}}>
+             Debug: valve_blocked = {plant.valve_blocked ? 'TRUE' : 'FALSE'}
+           </Text>
+                       <TouchableOpacity
+              style={{backgroundColor: '#ff0000', padding: 5, marginTop: 5, borderRadius: 3}}
+              onPress={() => {
+                // Manual test: Send valve blocked message
+                websocketService.sendMessage({
+                  type: 'UNBLOCK_VALVE',
+                  plantName: plant.name
+                });
+                Alert.alert('Test', 'Sent UNBLOCK_VALVE message to test valve blocking');
+              }}
             >
-              <Feather name="tool" size={20} color="#FFFFFF" />
-              <Text style={styles.troubleshootButtonText}>Troubleshoot Valve</Text>
+              <Text style={{color: 'white', fontSize: 10}}>Test: Send UNBLOCK_VALVE</Text>
             </TouchableOpacity>
-          </View>
-        )}
+            
+            <TouchableOpacity
+              style={{backgroundColor: '#ff6600', padding: 5, marginTop: 5, borderRadius: 3}}
+              onPress={() => {
+                // Manual test: Force valve blocked status
+                if (websocketService.isConnected()) {
+                  websocketService.sendMessage({
+                    type: 'TEST_VALVE_BLOCK',
+                    plantName: plant.name
+                  });
+                  Alert.alert('Test Valve Blocking', 'Sent TEST_VALVE_BLOCK message. Check if you see the amber warning and disabled buttons after refreshing.');
+                } else {
+                  Alert.alert('Error', 'Not connected to server');
+                }
+              }}
+            >
+              <Text style={{color: 'white', fontSize: 10}}>Test: Force Valve Blocked</Text>
+            </TouchableOpacity>
+         </View>
 
         {/* 2. Smart Irrigation Section */}
         <View style={styles.sectionContainer}>
