@@ -79,6 +79,14 @@ export const styles = StyleSheet.create({
     borderColor: '#3B82F6',
     zIndex: -1,
   },
+  smartWateringDot: {
+    backgroundColor: '#8B5CF6', // Purple for smart irrigation
+    shadowColor: '#8B5CF6',
+  },
+  smartRippleCircle: {
+    backgroundColor: '#8B5CF6', // Purple for smart irrigation
+    borderColor: '#8B5CF6',
+  },
   plantContent: {
     alignItems: 'flex-start',
     justifyContent: 'center',

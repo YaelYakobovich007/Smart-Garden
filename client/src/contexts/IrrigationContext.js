@@ -186,24 +186,76 @@ export const IrrigationProvider = ({ children }) => {
     websocketService.sendMessage(message);
   };
 
+  // Start smart irrigation
+  const startSmartIrrigation = (plant) => {
+    console.log('🚰 startSmartIrrigation called for plant:', plant?.name, 'ID:', plant?.id);
+    
+    if (!plant?.name) {
+      Alert.alert('Error', 'Plant name is missing.');
+      return;
+    }
+
+    if (!websocketService.isConnected()) {
+      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
+      return;
+    }
+
+    const plantId = plant.id;
+    console.log('🚰 Setting watering state for plant ID:', plantId);
+    
+    updatePlantWateringState(plantId, {
+      isManualMode: false,
+      isSmartMode: true,
+      pendingIrrigationRequest: true,
+      currentPlant: plant,
+      isWateringActive: true  // Set this immediately to show indicator
+    });
+
+    const message = {
+      type: 'IRRIGATE_PLANT',
+      plantName: plant.name
+    };
+
+    console.log('🚰 Sending IRRIGATE_PLANT message:', message);
+    websocketService.sendMessage(message);
+  };
+
   // Stop irrigation for a specific plant
   const handleStopWatering = (plantId) => {
     const state = getPlantWateringState(plantId);
     
+    console.log('🛑 handleStopWatering called for plant ID:', plantId);
+    console.log('🛑 Current state:', state);
+    
     updatePlantWateringState(plantId, {
       isWateringActive: false,
       isManualMode: false,
+      isSmartMode: false,
       wateringTimeLeft: 0,
       timerStartTime: null,
       timerEndTime: null,
-      timerInterval: null
+      timerInterval: null,
+      pendingIrrigationRequest: false
     });
     
     if (state.currentPlant?.name) {
-      websocketService.sendMessage({
-        type: 'CLOSE_VALVE',
-        plantName: state.currentPlant.name
-      });
+      if (state.isSmartMode) {
+        // For smart irrigation, send STOP_IRRIGATION message
+        console.log('🛑 Stopping smart irrigation for plant:', state.currentPlant.name);
+        websocketService.sendMessage({
+          type: 'STOP_IRRIGATION',
+          plantName: state.currentPlant.name
+        });
+      } else {
+        // For manual irrigation, send CLOSE_VALVE message
+        console.log('🛑 Stopping manual irrigation (closing valve) for plant:', state.currentPlant.name);
+        websocketService.sendMessage({
+          type: 'CLOSE_VALVE',
+          plantName: state.currentPlant.name
+        });
+      }
+    } else {
+      console.log('🛑 No plant name available, only updating local state');
     }
   };
 
@@ -331,16 +383,146 @@ export const IrrigationProvider = ({ children }) => {
       Alert.alert('Valve Control', data?.message || 'Failed to close valve.');
     };
 
+    const handleIrrigationStarted = (data) => {
+      // Smart irrigation started
+      
+      // Find the plant by name in the watering plants
+      let targetPlantId = null;
+      wateringPlantsRef.current.forEach((state, plantId) => {
+        if (state.pendingIrrigationRequest) {
+          targetPlantId = plantId;
+        }
+      });
+      
+      if (targetPlantId) {
+        updatePlantWateringState(targetPlantId, {
+          pendingIrrigationRequest: false,
+          isSmartMode: true,
+          isWateringActive: true
+        });
+      }
+    };
+
+    const handleIrrigatePlantSuccess = (data) => {
+      // Smart irrigation completed successfully
+      
+      // Find the plant by name in the watering plants
+      let targetPlantId = null;
+      wateringPlantsRef.current.forEach((state, plantId) => {
+        if (state.isSmartMode && state.isWateringActive) {
+          targetPlantId = plantId;
+        }
+      });
+      
+      if (targetPlantId) {
+        updatePlantWateringState(targetPlantId, {
+          isSmartMode: false,
+          isWateringActive: false,
+          pendingIrrigationRequest: false,
+          currentPlant: null
+        });
+      }
+      
+      Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation completed successfully!');
+    };
+
+    const handleIrrigatePlantFail = (data) => {
+      // Smart irrigation failed
+      
+      // Find the plant by name in the watering plants
+      let targetPlantId = null;
+      wateringPlantsRef.current.forEach((state, plantId) => {
+        if (state.pendingIrrigationRequest) {
+          targetPlantId = plantId;
+        }
+      });
+      
+      if (targetPlantId) {
+        updatePlantWateringState(targetPlantId, {
+          isSmartMode: false,
+          isWateringActive: false,
+          pendingIrrigationRequest: false,
+          currentPlant: null
+        });
+      }
+      
+      Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation failed.');
+    };
+
+    const handleIrrigationComplete = (data) => {
+      // Smart irrigation completed
+      
+      // Find the plant by name in the watering plants
+      let targetPlantId = null;
+      wateringPlantsRef.current.forEach((state, plantId) => {
+        if (state.isSmartMode && state.isWateringActive) {
+          targetPlantId = plantId;
+        }
+      });
+      
+      if (targetPlantId) {
+        updatePlantWateringState(targetPlantId, {
+          isSmartMode: false,
+          isWateringActive: false,
+          pendingIrrigationRequest: false,
+          currentPlant: null
+        });
+      }
+    };
+
+    const handleStopIrrigationSuccess = (data) => {
+      // Smart irrigation stopped successfully
+      console.log('🛑 Stop irrigation success:', data);
+      
+      // Find the plant by name in the watering plants
+      let targetPlantId = null;
+      wateringPlantsRef.current.forEach((state, plantId) => {
+        if (state.isSmartMode && state.isWateringActive) {
+          targetPlantId = plantId;
+        }
+      });
+      
+      if (targetPlantId) {
+        updatePlantWateringState(targetPlantId, {
+          isSmartMode: false,
+          isWateringActive: false,
+          pendingIrrigationRequest: false,
+          currentPlant: null
+        });
+      }
+      
+      Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation stopped successfully!');
+    };
+
+    const handleStopIrrigationFail = (data) => {
+      // Smart irrigation stop failed
+      console.log('🛑 Stop irrigation failed:', data);
+      
+      Alert.alert('Smart Irrigation', data?.message || 'Failed to stop smart irrigation.');
+    };
+
     websocketService.onMessage('OPEN_VALVE_SUCCESS', handleOpenValveSuccess);
     websocketService.onMessage('OPEN_VALVE_FAIL', handleOpenValveFail);
     websocketService.onMessage('CLOSE_VALVE_SUCCESS', handleCloseValveSuccess);
     websocketService.onMessage('CLOSE_VALVE_FAIL', handleCloseValveFail);
+    websocketService.onMessage('IRRIGATION_STARTED', handleIrrigationStarted);
+    websocketService.onMessage('IRRIGATE_SUCCESS', handleIrrigatePlantSuccess);
+    websocketService.onMessage('IRRIGATE_FAIL', handleIrrigatePlantFail);
+    websocketService.onMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
+    websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
+    websocketService.onMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
 
     return () => {
       websocketService.offMessage('OPEN_VALVE_SUCCESS', handleOpenValveSuccess);
       websocketService.offMessage('OPEN_VALVE_FAIL', handleOpenValveFail);
       websocketService.offMessage('CLOSE_VALVE_SUCCESS', handleCloseValveSuccess);
       websocketService.offMessage('CLOSE_VALVE_FAIL', handleCloseValveFail);
+      websocketService.offMessage('IRRIGATION_STARTED', handleIrrigationStarted);
+      websocketService.offMessage('IRRIGATE_SUCCESS', handleIrrigatePlantSuccess);
+      websocketService.offMessage('IRRIGATE_FAIL', handleIrrigatePlantFail);
+      websocketService.offMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
+      websocketService.offMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
+      websocketService.offMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
     };
   }, []); // Empty dependency array - no infinite loop
 
@@ -353,6 +535,7 @@ export const IrrigationProvider = ({ children }) => {
     
     // Functions
     startManualIrrigation,
+    startSmartIrrigation,
     handleStopWatering,
     pauseTimer,
     resumeTimer,

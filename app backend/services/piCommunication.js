@@ -171,6 +171,56 @@ class PiCommunication {
     }
 
     /**
+     * Send STOP_IRRIGATION request to Pi (no waiting)
+     */
+    stopIrrigation(plantId) {
+        console.log('🛑 DEBUG - piCommunication.stopIrrigation called:');
+        console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
+        
+        console.log('🛑 DEBUG - Getting Pi socket...');
+        const piSocket = getPiSocket();
+        console.log('🛑 DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
+        
+        if (!piSocket) {
+            console.log('❌ Pi not connected - cannot stop irrigation');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        console.log('✅ DEBUG - Pi socket found, creating request...');
+        
+        try {
+            const request = {
+                type: 'STOP_IRRIGATION',
+                data: {
+                    plant_id: plantId
+                }
+            };
+
+            console.log('📤 DEBUG - Created request object:');
+            console.log('   - type:', request.type);
+            console.log('   - data.plant_id:', request.data.plant_id, '(type:', typeof request.data.plant_id, ')');
+            console.log('   - Full JSON:', JSON.stringify(request));
+
+            console.log('🛑 DEBUG - Converting to JSON string...');
+            const jsonString = JSON.stringify(request);
+            console.log('✅ DEBUG - JSON string created, length:', jsonString.length);
+
+            console.log('🛑 DEBUG - Sending to Pi socket...');
+            piSocket.send(jsonString);
+            console.log('✅ DEBUG - STOP_IRRIGATION message sent to Pi successfully');
+            
+            console.log('🛑 DEBUG - Returning success result');
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ ERROR - Error sending STOP_IRRIGATION to Pi:');
+            console.error('   - Error message:', error.message);
+            console.error('   - Error stack:', error.stack);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
      * Send CLOSE_VALVE request to Pi (no waiting)
      */
     closeValve(plantId) {

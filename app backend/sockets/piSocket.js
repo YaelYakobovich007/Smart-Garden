@@ -336,6 +336,73 @@ function handlePiSocket(ws) {
       return;
     }
 
+    // Handle STOP_IRRIGATION_RESPONSE from Pi
+    if (data.type === 'STOP_IRRIGATION_RESPONSE') {
+      const responseData = data.data || {};
+      const plantId = responseData.plant_id;
+
+      // Get pending irrigation info (websocket + plant data)
+      const pendingInfo = completePendingIrrigation(plantId);
+
+      if (responseData.status === 'success') {
+        console.log(`🛑 Plant ${plantId} irrigation stopped successfully`);
+        console.log(`   - Reason: ${responseData.reason}`);
+
+        // Save stop irrigation result to database
+        const irrigationModel = require('../models/irrigationModel');
+
+        try {
+          const irrigationResult = await irrigationModel.addIrrigationResult({
+            plant_id: plantId,
+            status: 'stopped',
+            reason: responseData.reason || 'Smart irrigation stopped by user',
+            moisture: responseData.moisture,
+            final_moisture: responseData.final_moisture || responseData.moisture,
+            water_added_liters: responseData.water_added_liters || 0,
+            irrigation_time: new Date(),
+            event_data: responseData.event_data || {}
+          });
+
+          console.log(`Stop irrigation result saved to database for plant ${plantId}`);
+
+          // Notify client of successful irrigation stop
+          if (pendingInfo && pendingInfo.ws) {
+            sendSuccess(pendingInfo.ws, 'STOP_IRRIGATION_SUCCESS', {
+              message: `Plant "${pendingInfo.plantData.plant_name}" irrigation stopped successfully!`,
+              result: irrigationResult,
+              irrigation_data: {
+                water_added_liters: responseData.water_added_liters || 0,
+                final_moisture: responseData.final_moisture || responseData.moisture,
+                initial_moisture: responseData.moisture
+              }
+            });
+            console.log(`🛑 Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation stopped!`);
+          } else {
+            console.log(`No pending client found for plant ${plantId} stop irrigation - result saved but client not notified`);
+          }
+
+        } catch (err) {
+          console.error(`Failed to save stop irrigation result for plant ${plantId}:`, err);
+
+          if (pendingInfo && pendingInfo.ws) {
+            sendError(pendingInfo.ws, 'STOP_IRRIGATION_FAIL',
+              `Irrigation stopped but failed to save result: ${err.message}`);
+          }
+        }
+
+      } else {
+        // Stop irrigation failed
+        console.error(`❌ Plant ${plantId} stop irrigation failed: ${responseData.error_message}`);
+
+        // Notify client of stop irrigation failure
+        if (pendingInfo && pendingInfo.ws) {
+          sendError(pendingInfo.ws, 'STOP_IRRIGATION_FAIL',
+            `Failed to stop irrigation: ${responseData.error_message || 'Unknown error'}`);
+        }
+      }
+      return;
+    }
+
     // Handle OPEN_VALVE_RESPONSE from Pi
     if (data.type === 'OPEN_VALVE_RESPONSE') {
       console.log('🔍 DEBUG - Received OPEN_VALVE_RESPONSE from Pi:');

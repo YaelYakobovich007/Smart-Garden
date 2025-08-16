@@ -49,6 +49,7 @@ const PlantDetail = () => {
   const {
     getPlantWateringState,
     startManualIrrigation,
+    startSmartIrrigation,
     handleStopWatering,
     pauseTimer,
     resumeTimer,
@@ -86,20 +87,7 @@ const PlantDetail = () => {
 
   // Smart irrigation handler
   const handleSmartIrrigation = () => {
-    if (!plant?.name) {
-      Alert.alert('Error', 'Plant name is missing.');
-      return;
-    }
-
-    if (!websocketService.isConnected()) {
-      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
-      return;
-    }
-
-    websocketService.sendMessage({
-      type: 'IRRIGATE_PLANT',
-      plantName: plant.name
-    });
+    startSmartIrrigation(plant);
   };
 
   // Manual irrigation handlers
@@ -114,20 +102,7 @@ const PlantDetail = () => {
 
   // Existing handlers
   const handleWaterPlant = () => {
-    if (!plant?.name) {
-      Alert.alert('Error', 'Plant name is missing.');
-      return;
-    }
-
-    if (!websocketService.isConnected()) {
-      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
-      return;
-    }
-
-    websocketService.sendMessage({
-      type: 'IRRIGATE_PLANT',
-      plantName: plant.name
-    });
+    startSmartIrrigation(plant);
   };
 
   const handleGetCurrentHumidity = () => {
@@ -465,6 +440,39 @@ const PlantDetail = () => {
             <Feather name="zap" size={20} color="#FFFFFF" />
             <Text style={styles.primaryButtonText}>
               {plant.valve_blocked ? 'Valve Blocked' : 'Start Smart Irrigation'}
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Debug: Test watering indicator */}
+          <TouchableOpacity 
+            style={{backgroundColor: '#00ff00', padding: 10, marginTop: 10, borderRadius: 5}}
+            onPress={() => {
+              console.log('🧪 Debug: Testing watering indicator for plant:', plant.name, 'ID:', plant.id);
+              console.log('🧪 Current watering state:', getPlantWateringState(plant.id));
+              Alert.alert('Debug', 'Check console logs and go back to main screen to see if indicator appears');
+            }}
+          >
+            <Text style={{color: 'white', fontSize: 12, textAlign: 'center'}}>
+              DEBUG: Check Watering State (see console)
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Manual test: Force watering indicator */}
+          <TouchableOpacity 
+            style={{backgroundColor: '#0066ff', padding: 10, marginTop: 5, borderRadius: 5}}
+            onPress={() => {
+              console.log('🧪 FORCE: Manually setting watering state for plant:', plant.name, 'ID:', plant.id);
+              // Import the irrigation context functions
+              const { updatePlantWateringState } = useIrrigation();
+              
+              // Manually trigger watering state (this should show the indicator immediately)
+              startSmartIrrigation(plant);
+              
+              Alert.alert('Test', 'Watering indicator should now appear! Go back to main screen to see it.');
+            }}
+          >
+            <Text style={{color: 'white', fontSize: 12, textAlign: 'center'}}>
+              FORCE: Start Watering Indicator Test
             </Text>
           </TouchableOpacity>
         </View>

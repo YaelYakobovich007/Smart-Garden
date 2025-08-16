@@ -11,6 +11,7 @@ const SIMULATION_MODE = process.env.SIMULATION_MODE === 'true';
 const irrigationHandlers = {
   UPDATE_PLANT_SCHEDULE: handleUpdatePlantSchedule,
   IRRIGATE_PLANT: handleIrrigatePlant,
+  STOP_IRRIGATION: handleStopIrrigation,
   OPEN_VALVE: handleOpenValve,
   CLOSE_VALVE: handleCloseValve,
   GET_IRRIGATION_RESULT: handleGetIrrigationResult,
@@ -87,6 +88,59 @@ async function handleIrrigatePlant(data, ws, email) {
     // Pi not connected - return error 
     return sendError(ws, 'IRRIGATE_FAIL',
       'Pi controller not connected. Cannot irrigate plant. Please try again when Pi is online.');
+  }
+}
+
+// Stop smart irrigation for a specific plant
+async function handleStopIrrigation(data, ws, email) {
+  console.log('🛑 DEBUG - handleStopIrrigation received:', JSON.stringify(data));
+  
+  const { plantName } = data;
+  
+  if (!plantName) {
+    console.log('❌ ERROR - Missing plantName');
+    return sendError(ws, 'STOP_IRRIGATION_FAIL', 'Missing plantName');
+  }
+  
+  console.log('🛑 DEBUG - Looking up user by email:', email);
+  
+  const user = await getUser(email);
+  if (!user) {
+    console.log('❌ ERROR - User not found for email:', email);
+    return sendError(ws, 'STOP_IRRIGATION_FAIL', 'User not found');
+  }
+  
+  console.log('🛑 DEBUG - Looking up plant by name:', plantName, 'for user:', user.id);
+  const plant = await getPlantByName(user.id, plantName);
+  if (!plant) {
+    console.log('❌ ERROR - Plant not found:', plantName, 'for user:', user.id);
+    return sendError(ws, 'STOP_IRRIGATION_FAIL', 'Plant not found');
+  }
+
+  console.log('🛑 DEBUG - Plant found:', plant.plant_id, plant.name);
+  console.log('🛑 DEBUG - Calling piCommunication.stopIrrigation');
+  
+  // Send stop irrigation request to Pi controller
+  const piResult = piCommunication.stopIrrigation(plant.plant_id);
+  
+  console.log('🛑 DEBUG - piCommunication.stopIrrigation result:', piResult);
+  
+  if (piResult.success) {
+    console.log('✅ DEBUG - Pi communication successful');
+    // Pi is connected - add to pending list and wait for stop irrigation result
+    addPendingIrrigation(plant.plant_id, ws, email, {
+      plant_id: plant.plant_id,
+      plant_name: plant.name,
+      ideal_moisture: parseFloat(plant.ideal_moisture)
+    });
+
+    console.log(`⏳ Stop irrigation request for plant ${plant.plant_id} (${plant.name}) sent to Pi controller...`);
+    // No immediate response - client will get success/failure when Pi responds with stop irrigation result
+  } else {
+    console.log('❌ ERROR - Pi communication failed:', piResult.error);
+    // Pi not connected - return error 
+    return sendError(ws, 'STOP_IRRIGATION_FAIL',
+      'Pi controller not connected. Cannot stop irrigation. Please try again when Pi is online.');
   }
 }
 

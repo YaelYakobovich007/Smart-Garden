@@ -228,6 +228,45 @@ class SmartGardenPiClient:
             )
             await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
 
+    async def handle_stop_irrigation_request(self, data):
+        """Handle stop irrigation request from server."""
+        try:
+            # Parse request using DTO
+            from controller.dto.stop_irrigation_request import StopIrrigationRequest, StopIrrigationResponse
+            
+            request = StopIrrigationRequest.from_websocket_data(data)
+            plant_id = request.plant_id
+            
+            if not plant_id:
+                self.logger.error("No plant_id provided in stop irrigation request")
+                return
+            
+            self.logger.info(f" Received STOP_IRRIGATION request for plant {plant_id}")
+            
+            # Use the handler to process the request
+            from controller.handlers.stop_irrigation_handler import StopIrrigationHandler
+            handler = StopIrrigationHandler(self.engine)
+            result = await handler.handle(plant_id)
+            
+            # Send response back to server using DTO
+            response_data = result.to_websocket_data()
+            await self.send_message("STOP_IRRIGATION_RESPONSE", response_data["data"])
+            
+            if result.status == "success":
+                self.logger.info(f"Successfully stopped irrigation for plant {plant_id}")
+            else:
+                self.logger.error(f"Failed to stop irrigation for plant {plant_id}: {result.error_message}")
+            
+        except Exception as e:
+            self.logger.error(f"Unexpected error during stop irrigation: {e}")
+            # Create error DTO for unexpected exceptions
+            from controller.dto.stop_irrigation_request import StopIrrigationResponse
+            error_response = StopIrrigationResponse.error(
+                plant_id=plant_id if 'plant_id' in locals() else 0,
+                error_message=str(e)
+            )
+            await self.send_message("STOP_IRRIGATION_RESPONSE", error_response.to_websocket_data()["data"])
+
     async def handle_open_valve_request(self, data):
         """Handle open valve request from server."""
         try:
@@ -416,6 +455,9 @@ class SmartGardenPiClient:
             elif message_type == "IRRIGATE_PLANT":
                 await self.handle_irrigate_plant_request(message_data)
             
+            elif message_type == "STOP_IRRIGATION":
+                await self.handle_stop_irrigation_request(message_data)
+            
             elif message_type == "OPEN_VALVE":
                 await self.handle_open_valve_request(message_data)
             
@@ -469,6 +511,7 @@ class SmartGardenPiClient:
             self.logger.info("  - GET_PLANT_MOISTURE: Get moisture for a specific plant")
             self.logger.info("  - GET_ALL_MOISTURE: Get moisture for all plants")
             self.logger.info("  - IRRIGATE_PLANT: Smart irrigation for a specific plant")
+            self.logger.info("  - STOP_IRRIGATION: Stop smart irrigation for a specific plant")
             self.logger.info("  - OPEN_VALVE: Open valve for a specific plant for a given duration")
             self.logger.info("  - CLOSE_VALVE: Close valve for a specific plant")
             self.logger.info("  - GET_VALVE_STATUS: Get detailed valve status for a specific plant")
