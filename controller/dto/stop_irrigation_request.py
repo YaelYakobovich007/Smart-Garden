@@ -25,8 +25,15 @@ class StopIrrigationRequest:
         """
         Create from WebSocket message data.
         """
+        # Handle both old and new formats
+        plant_id = data.get("plant_id")
+        if plant_id is None and "plant_name" in data:
+            # Log the issue for debugging
+            print(f"⚠️ Warning: Received plant_name instead of plant_id in STOP_IRRIGATION request")
+            print(f"Data: {data}")
+            
         return cls(
-            plant_id=data.get("plant_id")
+            plant_id=plant_id
         )
 
 
