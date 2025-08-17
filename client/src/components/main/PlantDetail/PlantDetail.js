@@ -13,6 +13,7 @@
 
 import React, { useEffect, useState } from 'react';
 import IrrigationOverlay from './IrrigationOverlay';
+import SmartIrrigationLoader from './SmartIrrigationLoader';
 import { useIrrigation } from '../../../contexts/IrrigationContext';
 import {
   View,
@@ -65,6 +66,7 @@ const PlantDetail = () => {
     isManualMode,
     isSmartMode,
     selectedTime,
+    pendingIrrigationRequest,
   } = plantWateringState;
 
   // Helper function to round sensor values
@@ -594,9 +596,14 @@ const PlantDetail = () => {
         timeOptions={irrigationTimes}
       />
 
-      {/* 7. Irrigation Overlay */}
+      {/* 7. Smart Irrigation Loader */}
+      <SmartIrrigationLoader 
+        isVisible={isSmartMode && !isWateringActive && pendingIrrigationRequest}
+      />
+
+      {/* 8. Irrigation Overlay */}
       <IrrigationOverlay 
-        isActive={isWateringActive || isManualMode}
+        isActive={(isWateringActive && (isManualMode || isSmartMode))}
         timeLeft={wateringTimeLeft}
         onStop={() => {
           console.log('🛑 Stop called from PlantDetail, plant.id:', plant.id, 'plant.name:', plant.name);

@@ -31,6 +31,8 @@ export const IrrigationProvider = ({ children }) => {
       isWateringActive: false,
       wateringTimeLeft: 0,
       isManualMode: false,
+      isSmartMode: false,
+      pendingIrrigationRequest: false,
       selectedTime: 0,
       timerStartTime: null,
       timerEndTime: null,
@@ -46,6 +48,8 @@ export const IrrigationProvider = ({ children }) => {
         isWateringActive: false,
         wateringTimeLeft: 0,
         isManualMode: false,
+        isSmartMode: false,
+        pendingIrrigationRequest: false,
         selectedTime: 0,
         timerStartTime: null,
         timerEndTime: null,
@@ -208,7 +212,7 @@ export const IrrigationProvider = ({ children }) => {
       isSmartMode: true,
       pendingIrrigationRequest: true,
       currentPlant: plant,
-      isWateringActive: false  // Don't show overlay until irrigation actually starts
+      isWateringActive: false  // Don't show overlay until we know irrigation is needed
     });
 
     const message = {
@@ -406,7 +410,7 @@ export const IrrigationProvider = ({ children }) => {
       // Find the plant by name in the watering plants
       let targetPlantId = null;
       wateringPlantsRef.current.forEach((state, plantId) => {
-        if (state.pendingIrrigationRequest) {
+        if (state.pendingIrrigationRequest || state.isSmartMode) {
           targetPlantId = plantId;
         }
       });
@@ -414,11 +418,12 @@ export const IrrigationProvider = ({ children }) => {
       if (targetPlantId) {
         console.log('🚰 IrrigationContext: Setting isWateringActive: true for plant ID:', targetPlantId);
         updatePlantWateringState(targetPlantId, {
-          pendingIrrigationRequest: false,
-          isSmartMode: true,
-          isWateringActive: true  // Show overlay - irrigation is actually running
+          pendingIrrigationRequest: false,  // Clear pending request
+          isSmartMode: true,               // Keep smart mode
+          isWateringActive: true,          // Show irrigation overlay
+          currentPlant: data.plantName     // Update current plant
         });
-        console.log('🚰 IrrigationContext: Overlay should now appear for active irrigation');
+        console.log('🚰 IrrigationContext: Loading indicator should disappear, irrigation overlay should appear');
       } else {
         console.log('🚰 IrrigationContext: No target plant found for IRRIGATION_STARTED');
       }

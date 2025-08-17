@@ -72,6 +72,18 @@ class IrrigationAlgorithm:
         # Case 1: Skip irrigation if rain is expected
         if self.weather_service.will_rain_today(plant.lat, plant.lon):
             print(f"Skipping irrigation for {plant.plant_id} — rain expected today.")
+            
+            # Send decision that irrigation will be skipped
+            from controller.dto.irrigation_decision import IrrigationDecision
+            decision = IrrigationDecision.will_skip(
+                plant_id=plant.plant_id,
+                current_moisture=current_moisture,
+                target_moisture=plant.desired_moisture,
+                reason="rain_expected"
+            )
+            if self.websocket_client:
+                await self.websocket_client.send_message("IRRIGATION_DECISION", decision.to_websocket_data())
+            
             return IrrigationResult.skipped(
                 plant_id=plant.plant_id,
                 moisture=current_moisture,
@@ -95,6 +107,17 @@ class IrrigationAlgorithm:
 
         # Case 3: If soil is already moist enough, skip irrigation
         if not await self.should_irrigate(plant, current_moisture):
+            # Send decision that irrigation will be skipped
+            from controller.dto.irrigation_decision import IrrigationDecision
+            decision = IrrigationDecision.will_skip(
+                plant_id=plant.plant_id,
+                current_moisture=current_moisture,
+                target_moisture=plant.desired_moisture,
+                reason="already_moist"
+            )
+            if self.websocket_client:
+                await self.websocket_client.send_message("IRRIGATION_DECISION", decision.to_websocket_data())
+            
             return IrrigationResult.skipped(
                 plant_id=plant.plant_id,
                 moisture=current_moisture,
@@ -104,6 +127,18 @@ class IrrigationAlgorithm:
         # Case 4: Check if valve is blocked before starting irrigation
         if plant.valve.is_blocked:
             print(f"❌ VALVE BLOCKED: Cannot irrigate plant {plant.plant_id} - valve is blocked")
+            
+            # Send decision that irrigation will be skipped
+            from controller.dto.irrigation_decision import IrrigationDecision
+            decision = IrrigationDecision.will_skip(
+                plant_id=plant.plant_id,
+                current_moisture=current_moisture,
+                target_moisture=plant.desired_moisture,
+                reason="valve_blocked"
+            )
+            if self.websocket_client:
+                await self.websocket_client.send_message("IRRIGATION_DECISION", decision.to_websocket_data())
+            
             # Send blocked valve progress update
             progress = IrrigationProgress.fault_detected(
                 plant.plant_id,
@@ -121,9 +156,19 @@ class IrrigationAlgorithm:
                 water_added_liters=0.0
             )
 
-        # Case 5: Otherwise, perform irrigation cycle
+        # Case 5: Otherwise, notify that irrigation will start
+        from controller.dto.irrigation_decision import IrrigationDecision
+        decision = IrrigationDecision.will_start(
+            plant_id=plant.plant_id,
+            current_moisture=current_moisture,
+            target_moisture=plant.desired_moisture
+        )
+        
+        if self.websocket_client:
+            await self.websocket_client.send_message("IRRIGATION_DECISION", decision.to_websocket_data())
+        
         print(f"\n🚰 Starting irrigation cycle for plant {plant.plant_id}")
-        print(f"   Target: {plant.desired_moisture}%, Current: {current_moisture}%, Water needed: {plant.desired_moisture - current_moisture:.1f}%")
+        print(f"   Target: {plant.desired_moisture}%, Current: {current_moisture}%, Water needed: {moisture_gap:.1f}%")
         return await self.perform_irrigation(plant, current_moisture)
 
     async def is_overwatered(self, plant: "Plant", moisture: float) -> bool:

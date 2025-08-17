@@ -70,7 +70,7 @@ function notifyUserOfIrrigationStart({ plantName, email, initialMoisture, target
   const ws = getSocketByEmail(email);
   if (ws) {
     const moistureGap = targetMoisture - initialMoisture;
-    const message = `🚰 Smart irrigation started for "${plantName}"!`;
+    let message = `🚰 Smart irrigation started for "${plantName}"!`;
     message += `\n📊 Current moisture: ${initialMoisture}%`;
     message += `\n🎯 Target moisture: ${targetMoisture}%`;
     message += `\n💧 Moisture gap: ${moistureGap.toFixed(1)}%`;

@@ -118,6 +118,36 @@ function handlePiSocket(ws) {
       return;
     }
 
+    // Handle IRRIGATION_DECISION messages from Pi
+    if (data.type === 'IRRIGATION_DECISION') {
+      const decisionData = data.data || {};
+      const plantId = decisionData.plant_id;
+      
+      console.log(`[IRRIGATION DECISION] Plant ${plantId}`);
+      console.log(`Current Moisture: ${decisionData.current_moisture}%`);
+      console.log(`Target Moisture: ${decisionData.target_moisture}%`);
+      console.log(`Moisture Gap: ${decisionData.moisture_gap}%`);
+      console.log(`Will Irrigate: ${decisionData.will_irrigate}`);
+      console.log(`Reason: ${decisionData.reason}`);
+      
+      // Get pending irrigation info to send notification
+      const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
+      const pendingInfo = getPendingIrrigation(plantId);
+      
+      if (pendingInfo && pendingInfo.email) {
+        const { notifyUserOfIrrigationStart } = require('../services/userNotifier');
+        notifyUserOfIrrigationStart({
+          plantName: pendingInfo.plantData.plant_name,
+          email: pendingInfo.email,
+          initialMoisture: decisionData.current_moisture,
+          targetMoisture: decisionData.target_moisture
+        });
+        console.log(`Sent irrigation start notification to user ${pendingInfo.email} for plant ${pendingInfo.plantData.plant_name}`);
+      }
+      
+      return;
+    }
+
     // Handle IRRIGATION_PROGRESS messages from Pi
     if (data.type === 'IRRIGATION_PROGRESS') {
       const progressData = data.data || {};
