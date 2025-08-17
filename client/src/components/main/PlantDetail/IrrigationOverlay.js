@@ -110,7 +110,7 @@ const IrrigationOverlay = ({ isActive, timeLeft, onStop }) => {
       </Animated.View>
 
             {/* Combined status and control bar */}
-      <View style={styles.combinedBar} pointerEvents="box-none">
+      <View style={styles.combinedBar} pointerEvents="auto">
         {/* Status section */}
         <View style={styles.statusSection}>
                      <View style={styles.statusLeft}>
@@ -126,7 +126,10 @@ const IrrigationOverlay = ({ isActive, timeLeft, onStop }) => {
          <View style={styles.controlSection}>
            <TouchableOpacity 
              style={[styles.controlButton, styles.stopButton]} 
-             onPress={onStop}
+             onPress={() => {
+               console.log('🛑 Stop button pressed in IrrigationOverlay');
+               onStop();
+             }}
              activeOpacity={0.7}
            >
              <Feather name="square" size={20} color="#FFFFFF" />
@@ -146,7 +149,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 1000,
-    pointerEvents: 'none', // This makes the overlay non-blocking
+    pointerEvents: 'box-none', // Allow touches to pass through, except for children with pointerEvents: 'auto'
   },
   background: {
     position: 'absolute',

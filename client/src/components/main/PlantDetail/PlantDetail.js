@@ -595,7 +595,11 @@ const PlantDetail = () => {
       <IrrigationOverlay 
         isActive={isWateringActive || isManualMode || isSmartMode}
         timeLeft={wateringTimeLeft}
-        onStop={() => handleStopWatering(plant.id)}
+        onStop={() => {
+          console.log('🛑 Stop called from PlantDetail, plant.id:', plant.id);
+          console.log('🛑 Irrigation state:', { isWateringActive, isManualMode, isSmartMode });
+          handleStopWatering(plant.id);
+        }}
       />
     </SafeAreaView>
   );
