@@ -118,46 +118,6 @@ function handlePiSocket(ws) {
       return;
     }
 
-    // Handle STOP_IRRIGATION request from client
-    if (data.type === 'STOP_IRRIGATION') {
-      const plantName = data.plantName;
-      console.log(`🛑 Received STOP_IRRIGATION request for plant: ${plantName}`);
-      
-      // Get plant ID from database
-      const { getPlantByName } = require('../models/plantModel');
-      try {
-        const plant = await getPlantByName(plantName);
-        if (!plant) {
-          console.error(`❌ Plant not found: ${plantName}`);
-          sendError(ws, 'STOP_IRRIGATION_FAIL', `Plant not found: ${plantName}`);
-          return;
-        }
-        
-        // Forward the stop request to Pi
-        if (piSocket) {
-          try {
-            piSocket.send(JSON.stringify({
-              type: 'STOP_IRRIGATION',
-              data: { 
-                plant_id: plant.id,
-                plant_name: plantName
-              }
-            }));
-            console.log(`✅ Forwarded STOP_IRRIGATION request to Pi for plant: ${plantName} (ID: ${plant.id})`);
-          } catch (err) {
-            console.error(`❌ Failed to forward STOP_IRRIGATION request to Pi:`, err);
-            sendError(ws, 'STOP_IRRIGATION_FAIL', 'Failed to send stop request to Pi');
-          }
-        } else {
-          console.error('❌ Cannot stop irrigation: Pi is not connected');
-          sendError(ws, 'STOP_IRRIGATION_FAIL', 'Pi is not connected');
-        }
-      } catch (err) {
-        console.error(`❌ Error looking up plant: ${err}`);
-        sendError(ws, 'STOP_IRRIGATION_FAIL', 'Internal server error');
-      }
-      return;
-    }
 
     // Handle IRRIGATION_DECISION messages from Pi
     if (data.type === 'IRRIGATION_DECISION') {

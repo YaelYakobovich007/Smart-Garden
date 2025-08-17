@@ -231,41 +231,66 @@ class SmartGardenPiClient:
     async def handle_stop_irrigation_request(self, data):
         """Handle stop irrigation request from server."""
         try:
-            # Parse request using DTO
-            from controller.dto.stop_irrigation_request import StopIrrigationRequest, StopIrrigationResponse
+            print("\n=== HANDLING STOP IRRIGATION REQUEST ===")
+            print("Step 1: Parsing request data...")
             
-            request = StopIrrigationRequest.from_websocket_data(data)
+            # Parse request using DTO
+            from controller.dto.stop_irrigation import StopIrrigation
+            from controller.dto.stop_irrigation_response import StopIrrigationResponse
+            
+            request = StopIrrigation.from_websocket_data(data)
             plant_id = request.plant_id
             
             if not plant_id:
-                self.logger.error("No plant_id provided in stop irrigation request")
+                print("ERROR: No plant_id provided in stop irrigation request")
                 return
             
-            self.logger.info(f" Received STOP_IRRIGATION request for plant {plant_id}")
+            print("\nStep 2: Checking current state...")
+            print(f"Plant ID: {plant_id}")
+            print(f"Active irrigation tasks: {list(self.engine.irrigation_tasks.keys())}")
+            print(f"Is this plant being irrigated? {'Yes' if plant_id in self.engine.irrigation_tasks else 'No'}")
             
-            # Use the handler to process the request
+            print("\nStep 3: Creating stop irrigation handler...")
             from controller.handlers.stop_irrigation_handler import StopIrrigationHandler
             handler = StopIrrigationHandler(self.engine)
+            
+            print("\nStep 4: Calling handler to stop irrigation...")
             result = await handler.handle(plant_id)
             
-            # Send response back to server using DTO
+            print("\nStep 5: Processing result...")
             response_data = result.to_websocket_data()
-            await self.send_message("STOP_IRRIGATION_RESPONSE", response_data["data"])
+            print(f"Response data: {response_data}")
+            
+            print("\nStep 6: Sending response to server...")
+            await self.send_message("STOP_IRRIGATION_RESPONSE", response_data)
             
             if result.status == "success":
-                self.logger.info(f"Successfully stopped irrigation for plant {plant_id}")
+                print("\nSTOP IRRIGATION SUCCESSFUL:")
+                print(f"- Plant ID: {plant_id}")
+                print(f"- Final moisture: {result.final_moisture}%")
+                print(f"- Water added before stop: {result.water_added_liters}L")
+                print(f"- Active tasks after stop: {list(self.engine.irrigation_tasks.keys())}")
             else:
-                self.logger.error(f"Failed to stop irrigation for plant {plant_id}: {result.error_message}")
+                print("\nSTOP IRRIGATION FAILED:")
+                print(f"- Plant ID: {plant_id}")
+                print(f"- Error: {result.error_message}")
+            
+            print("=========================================\n")
             
         except Exception as e:
-            self.logger.error(f"Unexpected error during stop irrigation: {e}")
+            print("\n=== ERROR DURING STOP IRRIGATION ===")
+            print(f"Error message: {str(e)}")
+            print("Creating error response...")
+            
             # Create error DTO for unexpected exceptions
-            from controller.dto.stop_irrigation_request import StopIrrigationResponse
             error_response = StopIrrigationResponse.error(
                 plant_id=plant_id if 'plant_id' in locals() else 0,
                 error_message=str(e)
             )
-            await self.send_message("STOP_IRRIGATION_RESPONSE", error_response.to_websocket_data()["data"])
+            
+            print("Sending error response to server...")
+            await self.send_message("STOP_IRRIGATION_RESPONSE", error_response.to_websocket_data())
+            print("=========================================\n")
 
     async def handle_open_valve_request(self, data):
         """Handle open valve request from server."""

@@ -368,19 +368,38 @@ class IrrigationAlgorithm:
             return water_used
             
         except asyncio.CancelledError:
-            print(f"🛑 Watering cycle cancelled - cleaning up tasks")
+            print(f"\n=== WATERING CYCLE CANCELLED ===")
+            print(f"Plant ID: {plant.plant_id}")
+            
             # Cancel child tasks first
             for t in (server_update_task, time_task):
                 if t and not t.done():
-                    print(f"  Cancelling child task: {t.get_name()}")
+                    print(f"Cancelling child task: {t.get_name()}")
                     t.cancel()
                     try:
                         await t
                     except asyncio.CancelledError:
                         pass
             
-            print(f"🔒 Closing valve after cancellation")
+            print(f"Closing valve after cancellation...")
             await self._ensure_valve_closed(plant)
+            
+            # Get current moisture for response
+            current_moisture = await plant.get_moisture()
+            print(f"Current moisture: {current_moisture}%")
+            
+            # Create stop response
+            from controller.dto.stop_irrigation_response import StopIrrigationResponse
+            response = StopIrrigationResponse.success(
+                plant_id=plant.plant_id,
+                moisture=current_moisture,
+                water_added_liters=0  # We don't track partial water in cancellation
+            )
+            
+            # Send response to server
+            if self.websocket_client:
+                await self.websocket_client.send_message("STOP_IRRIGATION_RESPONSE", response.to_websocket_data())
+            
             raise  # Re-raise to propagate cancellation
         except RuntimeError as e:
             print(f"VALVE ERROR: {e}")
@@ -587,7 +606,28 @@ class IrrigationAlgorithm:
             )
             
         except asyncio.CancelledError:
-            print(f"Irrigation cancelled for plant {plant.plant_id}")
+            print(f"\n=== IRRIGATION CANCELLED ===")
+            print(f"Plant ID: {plant.plant_id}")
+            
+            # Ensure valve is closed
+            print("Closing valve...")
             await self._ensure_valve_closed(plant)
-            raise
+            
+            # Get current moisture for response
+            current_moisture = await plant.get_moisture()
+            print(f"Current moisture: {current_moisture}%")
+            
+            # Create stop response
+            from controller.dto.stop_irrigation_response import StopIrrigationResponse
+            response = StopIrrigationResponse.success(
+                plant_id=plant.plant_id,
+                moisture=current_moisture,
+                water_added_liters=total_water  # Include any water used before cancellation
+            )
+            
+            # Send response to server
+            if self.websocket_client:
+                await self.websocket_client.send_message("STOP_IRRIGATION_RESPONSE", response.to_websocket_data())
+            
+            raise  # Re-raise to propagate cancellation
 
