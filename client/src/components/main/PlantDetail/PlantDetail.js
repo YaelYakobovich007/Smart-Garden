@@ -185,11 +185,7 @@ const PlantDetail = () => {
 
     const handleSkipped = (data) => {
       // This is now handled by IrrigationContext, but keep local handler for any additional PlantDetail-specific logic
-      Alert.alert('Irrigation', data?.message || 'Irrigation was skipped');
       console.log('🔄 PlantDetail: Irrigation skipped for', plant.name);
-      if (plant?.id ){
-        handleStopWatering(plant.id);
-      }
     };
 
     const handleDeleteSuccess = (data) => {
@@ -242,6 +238,16 @@ const PlantDetail = () => {
       navigation.goBack();
     };
 
+    const handleStopIrrigationSuccess = (data) => {
+      console.log('🛑 Stop irrigation success:', data);
+      // No need for alert since IrrigationContext will handle the state
+    };
+
+    const handleStopIrrigationFail = (data) => {
+      console.log('❌ Stop irrigation failed:', data);
+      Alert.alert('Stop Failed', data?.message || 'Failed to stop irrigation. Please try again.');
+    };
+
     websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleFail);
     websocketService.onMessage('IRRIGATE_SKIPPED', handleSkipped);
@@ -255,6 +261,8 @@ const PlantDetail = () => {
     websocketService.onMessage('UNBLOCK_VALVE_FAIL', handleUnblockFail);
     websocketService.onMessage('VALVE_BLOCKED', handleValveBlocked);
     websocketService.onMessage('TEST_VALVE_BLOCK_SUCCESS', handleTestValveBlockSuccess);
+    websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
+    websocketService.onMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
 
     return () => {
       websocketService.offMessage('IRRIGATE_SUCCESS', handleSuccess);
@@ -270,6 +278,8 @@ const PlantDetail = () => {
       websocketService.offMessage('UNBLOCK_VALVE_FAIL', handleUnblockFail);
       websocketService.offMessage('VALVE_BLOCKED', handleValveBlocked);
       websocketService.offMessage('TEST_VALVE_BLOCK_SUCCESS', handleTestValveBlockSuccess);
+      websocketService.offMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
+      websocketService.offMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
     };
   }, [navigation, plant.name]);
 
@@ -613,18 +623,10 @@ const PlantDetail = () => {
           console.log('🛑 Stop called from PlantDetail, plant.id:', plant.id, 'plant.name:', plant.name);
           console.log('🛑 Irrigation state:', { isWateringActive, isManualMode, isSmartMode });
           
-          // Always send both STOP_IRRIGATION and CLOSE_VALVE for safety
-          console.log('🛑 Stopping irrigation and closing valve for plant:', plant.name);
-          
-          // Send STOP_IRRIGATION first
+          // Send single STOP_IRRIGATION message
+          console.log('🛑 Stopping smart irrigation for plant:', plant.name);
           websocketService.sendMessage({
             type: 'STOP_IRRIGATION',
-            plantName: plant.name
-          });
-          
-          // Also send CLOSE_VALVE as a safety measure
-          websocketService.sendMessage({
-            type: 'CLOSE_VALVE',
             plantName: plant.name
           });
           
