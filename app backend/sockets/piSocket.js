@@ -134,15 +134,41 @@ function handlePiSocket(ws) {
       const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
       const pendingInfo = getPendingIrrigation(plantId);
       
-      if (pendingInfo && pendingInfo.email) {
-        const { notifyUserOfIrrigationStart } = require('../services/userNotifier');
-        notifyUserOfIrrigationStart({
-          plantName: pendingInfo.plantData.plant_name,
-          email: pendingInfo.email,
-          initialMoisture: decisionData.current_moisture,
-          targetMoisture: decisionData.target_moisture
-        });
-        console.log(`Sent irrigation start notification to user ${pendingInfo.email} for plant ${pendingInfo.plantData.plant_name}`);
+      if (pendingInfo) {
+        // If irrigation will start, notify the client
+        if (decisionData.will_irrigate) {
+          if (pendingInfo.ws) {
+            sendSuccess(pendingInfo.ws, 'IRRIGATION_STARTED', {
+              message: `Starting irrigation for plant "${pendingInfo.plantData.plant_name}"`,
+              plantName: pendingInfo.plantData.plant_name,
+              plantId: plantId,
+              currentMoisture: decisionData.current_moisture,
+              targetMoisture: decisionData.target_moisture
+            });
+          }
+        } else {
+          // If irrigation will be skipped, notify the client
+          if (pendingInfo.ws) {
+            sendSuccess(pendingInfo.ws, 'IRRIGATE_SKIPPED', {
+              message: `Irrigation skipped for plant "${pendingInfo.plantData.plant_name}": ${decisionData.reason}`,
+              plantName: pendingInfo.plantData.plant_name,
+              plantId: plantId,
+              reason: decisionData.reason
+            });
+          }
+        }
+        
+        // Send email notification if available
+        if (pendingInfo.email) {
+          const { notifyUserOfIrrigationStart } = require('../services/userNotifier');
+          notifyUserOfIrrigationStart({
+            plantName: pendingInfo.plantData.plant_name,
+            email: pendingInfo.email,
+            initialMoisture: decisionData.current_moisture,
+            targetMoisture: decisionData.target_moisture
+          });
+          console.log(`Sent irrigation start notification to user ${pendingInfo.email} for plant ${pendingInfo.plantData.plant_name}`);
+        }
       }
       
       return;

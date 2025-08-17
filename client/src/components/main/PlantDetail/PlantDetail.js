@@ -598,7 +598,7 @@ const PlantDetail = () => {
 
       {/* 7. Smart Irrigation Loader */}
       <SmartIrrigationLoader 
-        isVisible={isSmartMode && !isWateringActive && pendingIrrigationRequest}
+        isVisible={pendingIrrigationRequest}
       />
 
       {/* 8. Irrigation Overlay */}

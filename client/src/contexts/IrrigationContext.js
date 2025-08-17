@@ -417,12 +417,20 @@ export const IrrigationProvider = ({ children }) => {
       
       if (targetPlantId) {
         console.log('🚰 IrrigationContext: Setting isWateringActive: true for plant ID:', targetPlantId);
+        // First clear the pending request to hide the loader
         updatePlantWateringState(targetPlantId, {
-          pendingIrrigationRequest: false,  // Clear pending request
-          isSmartMode: true,               // Keep smart mode
-          isWateringActive: true,          // Show irrigation overlay
-          currentPlant: data.plantName     // Update current plant
+          pendingIrrigationRequest: false
         });
+        
+        // Then in the next tick, update the irrigation state
+        setTimeout(() => {
+          updatePlantWateringState(targetPlantId, {
+            isSmartMode: true,               // Keep smart mode
+            isWateringActive: true,          // Show irrigation overlay
+            currentPlant: data.plantName     // Update current plant
+          });
+        }, 0);
+        
         console.log('🚰 IrrigationContext: Loading indicator should disappear, irrigation overlay should appear');
       } else {
         console.log('🚰 IrrigationContext: No target plant found for IRRIGATION_STARTED');

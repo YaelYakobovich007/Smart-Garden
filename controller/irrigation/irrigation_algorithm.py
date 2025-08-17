@@ -82,7 +82,14 @@ class IrrigationAlgorithm:
                 reason="rain_expected"
             )
             if self.websocket_client:
-                await self.websocket_client.send_message("IRRIGATION_DECISION", decision.to_websocket_data())
+                await self.websocket_client.send_message("IRRIGATION_DECISION", {
+                    "plant_id": plant.plant_id,
+                    "current_moisture": current_moisture,
+                    "target_moisture": plant.desired_moisture,
+                    "moisture_gap": plant.desired_moisture - current_moisture if current_moisture is not None else 0,
+                    "will_irrigate": False,
+                    "reason": "rain_expected"
+                })
             
             return IrrigationResult.skipped(
                 plant_id=plant.plant_id,
@@ -116,7 +123,14 @@ class IrrigationAlgorithm:
                 reason="already_moist"
             )
             if self.websocket_client:
-                await self.websocket_client.send_message("IRRIGATION_DECISION", decision.to_websocket_data())
+                await self.websocket_client.send_message("IRRIGATION_DECISION", {
+                    "plant_id": plant.plant_id,
+                    "current_moisture": current_moisture,
+                    "target_moisture": plant.desired_moisture,
+                    "moisture_gap": plant.desired_moisture - current_moisture,
+                    "will_irrigate": False,
+                    "reason": "already_moist"
+                })
             
             return IrrigationResult.skipped(
                 plant_id=plant.plant_id,
@@ -137,7 +151,14 @@ class IrrigationAlgorithm:
                 reason="valve_blocked"
             )
             if self.websocket_client:
-                await self.websocket_client.send_message("IRRIGATION_DECISION", decision.to_websocket_data())
+                await self.websocket_client.send_message("IRRIGATION_DECISION", {
+                    "plant_id": plant.plant_id,
+                    "current_moisture": current_moisture,
+                    "target_moisture": plant.desired_moisture,
+                    "moisture_gap": plant.desired_moisture - current_moisture if current_moisture is not None else 0,
+                    "will_irrigate": False,
+                    "reason": "valve_blocked"
+                })
             
             # Send blocked valve progress update
             progress = IrrigationProgress.fault_detected(
@@ -165,7 +186,14 @@ class IrrigationAlgorithm:
         )
         
         if self.websocket_client:
-            await self.websocket_client.send_message("IRRIGATION_DECISION", decision.to_websocket_data())
+            await self.websocket_client.send_message("IRRIGATION_DECISION", {
+                "plant_id": plant.plant_id,
+                "current_moisture": current_moisture,
+                "target_moisture": plant.desired_moisture,
+                "moisture_gap": plant.desired_moisture - current_moisture if current_moisture is not None else 0,
+                "will_irrigate": True,
+                "reason": "moisture_below_target"
+            })
         
         print(f"\n🚰 Starting irrigation cycle for plant {plant.plant_id}")
         print(f"   Target: {plant.desired_moisture}%, Current: {current_moisture}%, Water needed: {moisture_gap:.1f}%")
