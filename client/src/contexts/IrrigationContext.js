@@ -465,6 +465,32 @@ export const IrrigationProvider = ({ children }) => {
       Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation failed.');
     };
 
+    const handleIrrigatePlantSkipped = (data) => {
+      // Smart irrigation was skipped (not necessary)
+      console.log('🔄 Irrigation skipped:', data);
+      
+      // Find the plant by name in the watering plants
+      let targetPlantId = null;
+      wateringPlantsRef.current.forEach((state, plantId) => {
+        if (state.pendingIrrigationRequest || state.isSmartMode) {
+          targetPlantId = plantId;
+        }
+      });
+      
+      if (targetPlantId) {
+        console.log('🔄 Clearing irrigation state for skipped irrigation, plant ID:', targetPlantId);
+        updatePlantWateringState(targetPlantId, {
+          isSmartMode: false,
+          isWateringActive: false,
+          pendingIrrigationRequest: false,
+          currentPlant: null
+        });
+      }
+      
+      // Show alert for user feedback
+      Alert.alert('Smart Irrigation', data?.message || 'Irrigation was skipped - not necessary at this time.');
+    };
+
     const handleIrrigationComplete = (data) => {
       // Smart irrigation completed
       
@@ -524,6 +550,7 @@ export const IrrigationProvider = ({ children }) => {
     websocketService.onMessage('IRRIGATION_STARTED', handleIrrigationStarted);
     websocketService.onMessage('IRRIGATE_SUCCESS', handleIrrigatePlantSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleIrrigatePlantFail);
+    websocketService.onMessage('IRRIGATE_SKIPPED', handleIrrigatePlantSkipped);
     websocketService.onMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
     websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
     websocketService.onMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
@@ -536,6 +563,7 @@ export const IrrigationProvider = ({ children }) => {
       websocketService.offMessage('IRRIGATION_STARTED', handleIrrigationStarted);
       websocketService.offMessage('IRRIGATE_SUCCESS', handleIrrigatePlantSuccess);
       websocketService.offMessage('IRRIGATE_FAIL', handleIrrigatePlantFail);
+      websocketService.offMessage('IRRIGATE_SKIPPED', handleIrrigatePlantSkipped);
       websocketService.offMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
       websocketService.offMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
       websocketService.offMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
