@@ -191,29 +191,42 @@ export const IrrigationProvider = ({ children }) => {
   };
 
   // Start smart irrigation
-  const startSmartIrrigation = (plant) => {
-    console.log('🚰 startSmartIrrigation called for plant:', plant?.name, 'ID:', plant?.id);
-    
-    if (!plant?.name) {
-      Alert.alert('Error', 'Plant name is missing.');
-      return;
-    }
+      const startSmartIrrigation = (plant) => {
+      console.log('🚰 startSmartIrrigation called for plant:', plant?.name, 'ID:', plant?.id);
+      
+      if (!plant?.name) {
+        Alert.alert('Error', 'Plant name is missing.');
+        return;
+      }
 
-    if (!websocketService.isConnected()) {
-      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
-      return;
-    }
+      if (!websocketService.isConnected()) {
+        Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
+        return;
+      }
 
-    const plantId = plant.id;
-    console.log('🚰 Setting watering state for plant ID:', plantId);
-    
-    updatePlantWateringState(plantId, {
-      isManualMode: false,
-      isSmartMode: true,
-      pendingIrrigationRequest: true,
-      currentPlant: plant,
-      isWateringActive: false  // Don't show overlay until we know irrigation is needed
-    });
+      const plantId = plant.id;
+      console.log('🚰 Setting watering state for plant ID:', plantId);
+      
+      // First clear any existing state
+      updatePlantWateringState(plantId, {
+        isManualMode: false,
+        isSmartMode: false,
+        isWateringActive: false,
+        wateringTimeLeft: 0,
+        timerStartTime: null,
+        timerEndTime: null,
+        timerInterval: null,
+        currentPlant: null
+      });
+      
+      // Then set the pending state
+      setTimeout(() => {
+        updatePlantWateringState(plantId, {
+          isSmartMode: true,
+          pendingIrrigationRequest: true,
+          currentPlant: plant
+        });
+      }, 0);
 
     const message = {
       type: 'IRRIGATE_PLANT',
@@ -497,19 +510,29 @@ export const IrrigationProvider = ({ children }) => {
       
       if (targetPlantId) {
         console.log('🔄 IrrigationContext: Clearing irrigation state for skipped irrigation, plant ID:', targetPlantId);
+        
+        // Clear all irrigation states immediately
         updatePlantWateringState(targetPlantId, {
+          isManualMode: false,
           isSmartMode: false,
           isWateringActive: false,
           pendingIrrigationRequest: false,
+          wateringTimeLeft: 0,
+          timerStartTime: null,
+          timerEndTime: null,
+          timerInterval: null,
           currentPlant: null
         });
+        
         console.log('🔄 IrrigationContext: State cleared - overlay should disappear');
+        
+        // Show alert for user feedback after a short delay to ensure UI has updated
+        setTimeout(() => {
+          Alert.alert('Smart Irrigation', data?.message || 'Irrigation was skipped - not necessary at this time.');
+        }, 100);
       } else {
         console.log('🔄 IrrigationContext: No target plant found for skipped irrigation');
       }
-      
-      // Show alert for user feedback
-      Alert.alert('Smart Irrigation', data?.message || 'Irrigation was skipped - not necessary at this time.');
     };
 
     const handleIrrigationComplete = (data) => {

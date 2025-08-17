@@ -603,7 +603,7 @@ const PlantDetail = () => {
 
       {/* 8. Irrigation Overlay */}
       <IrrigationOverlay 
-        isActive={(isWateringActive && (isManualMode || isSmartMode))}
+        isActive={isWateringActive && !pendingIrrigationRequest && (isManualMode || isSmartMode)}
         timeLeft={wateringTimeLeft}
         onStop={() => {
           console.log('🛑 Stop called from PlantDetail, plant.id:', plant.id, 'plant.name:', plant.name);

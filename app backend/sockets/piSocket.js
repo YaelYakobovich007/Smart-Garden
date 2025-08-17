@@ -294,7 +294,7 @@ function handlePiSocket(ws) {
           }
         }
 
-      } else if (responseData.status === 'skipped') {
+      } else       if (responseData.status === 'skipped') {
         console.log(`Plant ${plantId} irrigation skipped: ${responseData.reason}`);
 
         // Save skipped result to database
@@ -314,11 +314,27 @@ function handlePiSocket(ws) {
 
           // Notify client that irrigation was skipped
           if (pendingInfo && pendingInfo.ws) {
-            sendSuccess(pendingInfo.ws, 'IRRIGATE_SKIPPED', {
-              message: `Plant "${pendingInfo.plantData.plant_name}" irrigation skipped: ${responseData.reason}`,
-              result: irrigationResult,
+            // First send IRRIGATION_DECISION to clear the checking screen
+            sendSuccess(pendingInfo.ws, 'IRRIGATION_DECISION', {
+              plant_id: plantId,
+              current_moisture: responseData.moisture,
+              target_moisture: pendingInfo.plantData.ideal_moisture,
+              moisture_gap: pendingInfo.plantData.ideal_moisture - responseData.moisture,
+              will_irrigate: false,
               reason: responseData.reason
             });
+
+            // Then send IRRIGATE_SKIPPED for the final status
+            setTimeout(() => {
+              sendSuccess(pendingInfo.ws, 'IRRIGATE_SKIPPED', {
+                message: `Plant "${pendingInfo.plantData.plant_name}" irrigation skipped: ${responseData.reason}`,
+                result: irrigationResult,
+                reason: responseData.reason,
+                plantName: pendingInfo.plantData.plant_name,
+                plantId: plantId
+              });
+            }, 500);
+            
             console.log(`ℹ️ Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation skipped`);
           }
 

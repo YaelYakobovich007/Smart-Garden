@@ -195,6 +195,9 @@ class IrrigationAlgorithm:
                 "reason": "moisture_below_target"
             })
         
+        # Calculate moisture gap
+        moisture_gap = plant.desired_moisture - current_moisture if current_moisture is not None else 0
+        
         print(f"\n🚰 Starting irrigation cycle for plant {plant.plant_id}")
         print(f"   Target: {plant.desired_moisture}%, Current: {current_moisture}%, Water needed: {moisture_gap:.1f}%")
         return await self.perform_irrigation(plant, current_moisture)
