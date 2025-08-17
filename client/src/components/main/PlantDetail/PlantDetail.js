@@ -185,7 +185,11 @@ const PlantDetail = () => {
 
     const handleSkipped = (data) => {
       // This is now handled by IrrigationContext, but keep local handler for any additional PlantDetail-specific logic
+      Alert.alert('Irrigation', data?.message || 'Irrigation was skipped');
       console.log('🔄 PlantDetail: Irrigation skipped for', plant.name);
+      if (plant?.id ){
+        handleStopWatering(plant.id);
+      }
     };
 
     const handleDeleteSuccess = (data) => {

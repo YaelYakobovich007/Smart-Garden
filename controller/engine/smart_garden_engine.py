@@ -216,27 +216,28 @@ class SmartGardenEngine:
         task = self.irrigation_tasks.get(plant_id)
         if task:
             if not task.done():
-                print(f"Cancelling irrigation task for plant {plant_id}")
+                print(f"🛑 Cancelling irrigation task for plant {plant_id}")
                 task.cancel()
                 try:
-                    await asyncio.wait_for(task, timeout=1.0)
-                    print(f"Successfully cancelled irrigation for plant {plant_id}")
+                    # Increased timeout to 3s to allow for child task cleanup
+                    await asyncio.wait_for(task, timeout=3.0)
+                    print(f"✅ Successfully cancelled irrigation for plant {plant_id}")
                 except (asyncio.TimeoutError, asyncio.CancelledError):
-                    print(f"Irrigation task cancelled for plant {plant_id}")
+                    print(f"⚠️ Cancellation wait timed out or raised; proceeding to safety close")
             # Clean up task reference
             del self.irrigation_tasks[plant_id]
         else:
-            print(f"No irrigation task found for plant {plant_id}")
+            print(f"ℹ️ No irrigation task found for plant {plant_id}")
             
-        # Always try to close the valve for safety
-        if plant.valve.is_open:
-            try:
-                plant.valve.request_close()
-                print(f"Closed valve for plant {plant_id}")
-                return True
-            except Exception as e:
-                print(f"Failed to close valve for plant {plant_id}: {e}")
-                return False
+        # Always try to close the valve regardless of is_open state
+        try:
+            print(f"🔒 Forcing valve close for plant {plant_id} (safety measure)")
+            plant.valve.request_close()
+            print(f"✅ Valve close command sent for plant {plant_id}")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to close valve for plant {plant_id}: {e}")
+            return False
                 
         return True
 

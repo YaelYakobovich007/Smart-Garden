@@ -263,13 +263,13 @@ class IrrigationAlgorithm:
             return False
 
     async def _ensure_valve_closed(self, plant: "Plant") -> None:
-        """Ensure valve is safely closed"""
-        if plant.valve.is_open:
-            try:
-                plant.valve.request_close()
-                print(f"Valve closed for plant {plant.plant_id}")
-            except Exception as e:
-                print(f"Failed to close valve: {e}")
+        """Ensure valve is safely closed regardless of is_open state"""
+        try:
+            print(f"🔒 Forcing valve close for plant {plant.plant_id} (safety measure)")
+            plant.valve.request_close()
+            print(f"✅ Valve close command sent")
+        except Exception as e:
+            print(f"❌ Failed to close valve: {e}")
 
     async def _server_update_monitor(self, plant: "Plant", start_time: datetime, 
                                     max_duration: int, stop_event: asyncio.Event) -> None:
@@ -368,9 +368,20 @@ class IrrigationAlgorithm:
             return water_used
             
         except asyncio.CancelledError:
-            print(f"Watering cycle cancelled - closing valve")
+            print(f"🛑 Watering cycle cancelled - cleaning up tasks")
+            # Cancel child tasks first
+            for t in (server_update_task, time_task):
+                if t and not t.done():
+                    print(f"  Cancelling child task: {t.get_name()}")
+                    t.cancel()
+                    try:
+                        await t
+                    except asyncio.CancelledError:
+                        pass
+            
+            print(f"🔒 Closing valve after cancellation")
             await self._ensure_valve_closed(plant)
-            raise
+            raise  # Re-raise to propagate cancellation
         except RuntimeError as e:
             print(f"VALVE ERROR: {e}")
             await self._ensure_valve_closed(plant)
