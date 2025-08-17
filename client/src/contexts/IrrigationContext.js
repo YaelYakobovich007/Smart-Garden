@@ -208,7 +208,7 @@ export const IrrigationProvider = ({ children }) => {
       isSmartMode: true,
       pendingIrrigationRequest: true,
       currentPlant: plant,
-      isWateringActive: true  // Set this immediately to show indicator
+      isWateringActive: false  // Don't show overlay until irrigation actually starts
     });
 
     const message = {
@@ -400,7 +400,8 @@ export const IrrigationProvider = ({ children }) => {
     };
 
     const handleIrrigationStarted = (data) => {
-      // Smart irrigation started
+      // Smart irrigation actually started (backend now only sends this when irrigation really begins)
+      console.log('🚰 IrrigationContext: IRRIGATION_STARTED received (irrigation actually began):', data);
       
       // Find the plant by name in the watering plants
       let targetPlantId = null;
@@ -411,11 +412,15 @@ export const IrrigationProvider = ({ children }) => {
       });
       
       if (targetPlantId) {
+        console.log('🚰 IrrigationContext: Setting isWateringActive: true for plant ID:', targetPlantId);
         updatePlantWateringState(targetPlantId, {
           pendingIrrigationRequest: false,
           isSmartMode: true,
-          isWateringActive: true
+          isWateringActive: true  // Show overlay - irrigation is actually running
         });
+        console.log('🚰 IrrigationContext: Overlay should now appear for active irrigation');
+      } else {
+        console.log('🚰 IrrigationContext: No target plant found for IRRIGATION_STARTED');
       }
     };
 
@@ -467,7 +472,7 @@ export const IrrigationProvider = ({ children }) => {
 
     const handleIrrigatePlantSkipped = (data) => {
       // Smart irrigation was skipped (not necessary)
-      console.log('🔄 Irrigation skipped:', data);
+      console.log('🔄 IrrigationContext: Irrigation skipped:', data);
       
       // Find the plant by name in the watering plants
       let targetPlantId = null;
@@ -478,13 +483,16 @@ export const IrrigationProvider = ({ children }) => {
       });
       
       if (targetPlantId) {
-        console.log('🔄 Clearing irrigation state for skipped irrigation, plant ID:', targetPlantId);
+        console.log('🔄 IrrigationContext: Clearing irrigation state for skipped irrigation, plant ID:', targetPlantId);
         updatePlantWateringState(targetPlantId, {
           isSmartMode: false,
           isWateringActive: false,
           pendingIrrigationRequest: false,
           currentPlant: null
         });
+        console.log('🔄 IrrigationContext: State cleared - overlay should disappear');
+      } else {
+        console.log('🔄 IrrigationContext: No target plant found for skipped irrigation');
       }
       
       // Show alert for user feedback
@@ -551,6 +559,7 @@ export const IrrigationProvider = ({ children }) => {
     websocketService.onMessage('IRRIGATE_SUCCESS', handleIrrigatePlantSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleIrrigatePlantFail);
     websocketService.onMessage('IRRIGATE_SKIPPED', handleIrrigatePlantSkipped);
+    websocketService.onMessage('IRRIGATION_SKIPPED', handleIrrigatePlantSkipped);  // Handle both message types
     websocketService.onMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
     websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
     websocketService.onMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
@@ -564,6 +573,7 @@ export const IrrigationProvider = ({ children }) => {
       websocketService.offMessage('IRRIGATE_SUCCESS', handleIrrigatePlantSuccess);
       websocketService.offMessage('IRRIGATE_FAIL', handleIrrigatePlantFail);
       websocketService.offMessage('IRRIGATE_SKIPPED', handleIrrigatePlantSkipped);
+      websocketService.offMessage('IRRIGATION_SKIPPED', handleIrrigatePlantSkipped);  // Handle both message types
       websocketService.offMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
       websocketService.offMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
       websocketService.offMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);

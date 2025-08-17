@@ -239,6 +239,7 @@ const PlantDetail = () => {
     websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleFail);
     websocketService.onMessage('IRRIGATE_SKIPPED', handleSkipped);
+    websocketService.onMessage('IRRIGATION_SKIPPED', handleSkipped);  // Handle both message types
     websocketService.onMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
     websocketService.onMessage('DELETE_PLANT_FAIL', handleDeleteFail);
     websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
@@ -253,6 +254,7 @@ const PlantDetail = () => {
       websocketService.offMessage('IRRIGATE_SUCCESS', handleSuccess);
       websocketService.offMessage('IRRIGATE_FAIL', handleFail);
       websocketService.offMessage('IRRIGATE_SKIPPED', handleSkipped);
+      websocketService.offMessage('IRRIGATION_SKIPPED', handleSkipped);  // Handle both message types
       websocketService.offMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
       websocketService.offMessage('DELETE_PLANT_FAIL', handleDeleteFail);
       websocketService.offMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
@@ -594,7 +596,7 @@ const PlantDetail = () => {
 
       {/* 7. Irrigation Overlay */}
       <IrrigationOverlay 
-        isActive={isWateringActive || isManualMode || isSmartMode}
+        isActive={isWateringActive || isManualMode}
         timeLeft={wateringTimeLeft}
         onStop={() => {
           console.log('🛑 Stop called from PlantDetail, plant.id:', plant.id, 'plant.name:', plant.name);

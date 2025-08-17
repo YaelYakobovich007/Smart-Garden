@@ -143,8 +143,28 @@ function handlePiSocket(ws) {
         });
       }
       
-      // You could also broadcast this to connected clients if needed
-      // For now, just log to server console
+      // Check if this is the first pulse (irrigation actually starting)
+      if (stage === 'pulse' && progressData.pulse_number === 1) {
+        console.log(`🚀 First pulse detected - irrigation actually started for plant ${plantId}`);
+        
+        // Get pending irrigation info to send notification
+        const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
+        const pendingInfo = getPendingIrrigation(plantId);
+        
+        if (pendingInfo && pendingInfo.email) {
+          const { notifyUserOfIrrigationStart } = require('../services/userNotifier');
+          notifyUserOfIrrigationStart({
+            plantName: pendingInfo.plantData.plant_name,
+            email: pendingInfo.email,
+            initialMoisture: progressData.current_moisture || 0,
+            targetMoisture: progressData.target_moisture || pendingInfo.plantData.ideal_moisture
+          });
+          console.log(`📱 Sent irrigation start notification to user ${pendingInfo.email} for plant ${pendingInfo.plantData.plant_name}`);
+        } else {
+          console.log(`⚠️ No pending irrigation found for plant ${plantId} - cannot send start notification`);
+        }
+      }
+      
       return;
     }
 

@@ -25,6 +25,19 @@ function addPendingIrrigation(plantId, ws, email, plantData) {
 }
 
 /**
+ * Get pending irrigation info without removing from pending list
+ * @param {number} plantId - The plant ID
+ * @returns {Object|null} Pending irrigation info or null if not found
+ */
+function getPendingIrrigation(plantId) {
+    const pendingInfo = pendingIrrigations.get(plantId);
+    if (pendingInfo) {
+        return pendingInfo;
+    }
+    return null;
+}
+
+/**
  * Get pending irrigation info and remove from pending list
  * @param {number} plantId - The plant ID
  * @returns {Object|null} Pending irrigation info or null if not found
@@ -85,6 +98,7 @@ setInterval(cleanupOldPendingIrrigations, 60 * 1000);
 
 module.exports = {
     addPendingIrrigation,
+    getPendingIrrigation,
     completePendingIrrigation,
     isPendingIrrigation,
     getPendingIrrigationIds

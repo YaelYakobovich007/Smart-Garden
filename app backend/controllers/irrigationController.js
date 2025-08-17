@@ -72,18 +72,9 @@ async function handleIrrigatePlant(data, ws, email) {
       ideal_moisture: parseFloat(plant.ideal_moisture)
     });
 
-    // Send irrigation start notification to user
-    const { notifyUserOfIrrigationStart } = require('../services/userNotifier');
-    notifyUserOfIrrigationStart({
-      plantName: plant.name,
-      email: email,
-      initialMoisture: plant.current_moisture || 0,
-      targetMoisture: parseFloat(plant.ideal_moisture)
-    });
-
     console.log(`⏳ Irrigation request for plant ${plant.plant_id} (${plant.name}) sent to Pi controller...`);
-    console.log(`📱 Sent irrigation start notification to user ${email}`);
-    // No immediate response - client will get success/failure when Pi responds with irrigation result
+    console.log(`📱 Will send irrigation start notification when Pi actually begins irrigation...`);
+    // No immediate response - client will get IRRIGATION_STARTED when Pi actually starts irrigating
   } else {
     // Pi not connected - return error 
     return sendError(ws, 'IRRIGATE_FAIL',
