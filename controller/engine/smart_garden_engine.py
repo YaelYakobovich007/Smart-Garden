@@ -205,16 +205,26 @@ class SmartGardenEngine:
         Returns:
             bool: True if irrigation was stopped or valve was closed, False if plant not found
         """
+        print(f"\n🛑 === STOP IRRIGATION REQUESTED ===")
+        print(f"Plant ID: {plant_id}")
+        print(f"Active tasks: {list(self.irrigation_tasks.keys())}")
+        
         # Check if plant exists
         if plant_id not in self.plants:
-            print(f"No plant found with ID {plant_id}")
+            print(f"❌ No plant found with ID {plant_id}")
             return False
             
         plant = self.plants[plant_id]
+        print(f"Found plant: {plant_id}")
+        print(f"Valve ID: {plant.valve.valve_id}")
+        print(f"Valve state: {'OPEN' if plant.valve.is_open else 'CLOSED'}")
         
         # Try to cancel irrigation task if it exists
         task = self.irrigation_tasks.get(plant_id)
         if task:
+            print(f"Found irrigation task: {task.get_name()}")
+            print(f"Task state: {'DONE' if task.done() else 'RUNNING'}")
+            
             if not task.done():
                 print(f"🛑 Cancelling irrigation task for plant {plant_id}")
                 task.cancel()
@@ -222,21 +232,37 @@ class SmartGardenEngine:
                     # Increased timeout to 3s to allow for child task cleanup
                     await asyncio.wait_for(task, timeout=3.0)
                     print(f"✅ Successfully cancelled irrigation for plant {plant_id}")
-                except (asyncio.TimeoutError, asyncio.CancelledError):
-                    print(f"⚠️ Cancellation wait timed out or raised; proceeding to safety close")
+                except asyncio.TimeoutError:
+                    print(f"⚠️ Task cancellation timed out after 3s")
+                except asyncio.CancelledError:
+                    print(f"✅ Task cancelled successfully")
+                except Exception as e:
+                    print(f"❌ Error during task cancellation: {e}")
+            else:
+                print(f"Task was already completed")
+            
             # Clean up task reference
             del self.irrigation_tasks[plant_id]
+            print(f"Removed task from tracking")
         else:
             print(f"ℹ️ No irrigation task found for plant {plant_id}")
             
         # Always try to close the valve regardless of is_open state
         try:
-            print(f"🔒 Forcing valve close for plant {plant_id} (safety measure)")
+            print(f"\n🔒 === CLOSING VALVE ===")
+            print(f"Plant: {plant_id}")
+            print(f"Valve: {plant.valve.valve_id}")
+            print(f"Current state: {'OPEN' if plant.valve.is_open else 'CLOSED'}")
+            
             plant.valve.request_close()
-            print(f"✅ Valve close command sent for plant {plant_id}")
+            print(f"✅ Valve close command sent")
+            
+            # Double check valve state
+            print(f"Final valve state: {'OPEN' if plant.valve.is_open else 'CLOSED'}")
             return True
+            
         except Exception as e:
-            print(f"❌ Failed to close valve for plant {plant_id}: {e}")
+            print(f"❌ Failed to close valve: {e}")
             return False
                 
         return True

@@ -224,7 +224,7 @@ export const IrrigationProvider = ({ children }) => {
         updatePlantWateringState(plantId, {
           isSmartMode: true,
           pendingIrrigationRequest: true,
-          currentPlant: plant
+          currentPlant: plant.name  // Store just the plant name string
         });
       }, 0);
 
@@ -246,28 +246,24 @@ export const IrrigationProvider = ({ children }) => {
     console.log('🛑 isSmartMode before clearing:', state.isSmartMode);
     console.log('🛑 isManualMode before clearing:', state.isManualMode);
     
-    // IMPORTANT: Check irrigation mode BEFORE clearing the state
+    // Get plant name from state before clearing
     const isSmartIrrigation = state.isSmartMode;
-    const plantName = state.currentPlant?.name;
+    const plantName = state.currentPlant;  // currentPlant is the plant name string
     
-    // First clear active states to stop UI updates
+    console.log('🛑 Stopping irrigation:', { plantId, plantName, state });
+    
+    // Clear all states immediately
     updatePlantWateringState(plantId, {
       isWateringActive: false,
-      pendingIrrigationRequest: false
+      isManualMode: false,
+      isSmartMode: false,
+      wateringTimeLeft: 0,
+      timerStartTime: null,
+      timerEndTime: null,
+      timerInterval: null,
+      pendingIrrigationRequest: false,
+      currentPlant: null
     });
-    
-    // Then clear all other states in the next tick
-    setTimeout(() => {
-      updatePlantWateringState(plantId, {
-        isManualMode: false,
-        isSmartMode: false,
-        wateringTimeLeft: 0,
-        timerStartTime: null,
-        timerEndTime: null,
-        timerInterval: null,
-        currentPlant: null
-      });
-    }, 0);
     
     // Send appropriate stop message based on irrigation type
     if (plantName) {
@@ -276,13 +272,6 @@ export const IrrigationProvider = ({ children }) => {
         console.log('🛑 Stopping smart irrigation for plant:', plantName);
         websocketService.sendMessage({
           type: 'STOP_IRRIGATION',
-          plantName: plantName
-        });
-        
-        // SAFETY: Also send CLOSE_VALVE as a fallback to ensure valve closure
-        console.log('🛑 Safety: Also sending CLOSE_VALVE to ensure valve closes');
-        websocketService.sendMessage({
-          type: 'CLOSE_VALVE',
           plantName: plantName
         });
       } else {
@@ -447,7 +436,7 @@ export const IrrigationProvider = ({ children }) => {
           updatePlantWateringState(targetPlantId, {
             isSmartMode: true,               // Keep smart mode
             isWateringActive: true,          // Show irrigation overlay
-            currentPlant: data.plantName     // Update current plant
+            currentPlant: data.plantName     // Store plant name string
           });
         }, 0);
         
