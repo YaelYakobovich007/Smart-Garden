@@ -254,6 +254,13 @@ export const IrrigationProvider = ({ children }) => {
           type: 'STOP_IRRIGATION',
           plantName: plantName
         });
+        
+        // SAFETY: Also send CLOSE_VALVE as a fallback to ensure valve closure
+        console.log('🛑 Safety: Also sending CLOSE_VALVE to ensure valve closes');
+        websocketService.sendMessage({
+          type: 'CLOSE_VALVE',
+          plantName: plantName
+        });
       } else {
         // For manual irrigation, send CLOSE_VALVE message
         console.log('🛑 Stopping manual irrigation (closing valve) for plant:', plantName);
@@ -264,6 +271,7 @@ export const IrrigationProvider = ({ children }) => {
       }
     } else {
       console.log('🛑 No plant name available, only updating local state');
+      console.log('🛑 ERROR: Cannot send stop message without plant name!');
     }
   };
 

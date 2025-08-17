@@ -596,8 +596,19 @@ const PlantDetail = () => {
         isActive={isWateringActive || isManualMode || isSmartMode}
         timeLeft={wateringTimeLeft}
         onStop={() => {
-          console.log('🛑 Stop called from PlantDetail, plant.id:', plant.id);
+          console.log('🛑 Stop called from PlantDetail, plant.id:', plant.id, 'plant.name:', plant.name);
           console.log('🛑 Irrigation state:', { isWateringActive, isManualMode, isSmartMode });
+          
+          // For smart irrigation, we need to send STOP_IRRIGATION directly with plant name
+          if (isSmartMode) {
+            console.log('🛑 Smart mode detected - sending STOP_IRRIGATION directly');
+            websocketService.sendMessage({
+              type: 'STOP_IRRIGATION',
+              plantName: plant.name
+            });
+          }
+          
+          // Also call the context function to update local state
           handleStopWatering(plant.id);
         }}
       />
