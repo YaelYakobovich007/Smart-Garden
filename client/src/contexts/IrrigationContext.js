@@ -250,17 +250,24 @@ export const IrrigationProvider = ({ children }) => {
     const isSmartIrrigation = state.isSmartMode;
     const plantName = state.currentPlant?.name;
     
-    // Clear the watering state
+    // First clear active states to stop UI updates
     updatePlantWateringState(plantId, {
       isWateringActive: false,
-      isManualMode: false,
-      isSmartMode: false,
-      wateringTimeLeft: 0,
-      timerStartTime: null,
-      timerEndTime: null,
-      timerInterval: null,
       pendingIrrigationRequest: false
     });
+    
+    // Then clear all other states in the next tick
+    setTimeout(() => {
+      updatePlantWateringState(plantId, {
+        isManualMode: false,
+        isSmartMode: false,
+        wateringTimeLeft: 0,
+        timerStartTime: null,
+        timerEndTime: null,
+        timerInterval: null,
+        currentPlant: null
+      });
+    }, 0);
     
     // Send appropriate stop message based on irrigation type
     if (plantName) {
