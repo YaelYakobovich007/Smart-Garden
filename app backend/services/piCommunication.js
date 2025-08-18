@@ -194,7 +194,8 @@ class PiCommunication {
             const request = {
                 type: 'STOP_IRRIGATION',
                 data: {
-                    plant_id: plantId
+                    plant_id: plantId,
+                    plant_name: plantId.toString()  // Pi's DTO expects this
                 }
             };
 

@@ -9,6 +9,7 @@ from controller.services.weather_service import WeatherService
 class IrrigationAlgorithm:
     """
     This class encapsulates the core irrigation algorithm for a plant.
+    Uses a single session-level updater task and proper cancellation handling.
     """
 
     def __init__(self, websocket_client=None):
@@ -45,162 +46,272 @@ class IrrigationAlgorithm:
             except Exception as e:
                 print(f"Failed to send progress update to server: {e}")
 
+    async def _session_updater(self, plant: "Plant"):
+        """Single task to handle progress updates for entire session"""
+        print(f"\n=== Starting session updater for plant {plant.plant_id} ===")
+        try:
+            while True:
+                # Use single reading for updates to reduce sensor load
+                try:
+                    current_moisture = await plant.get_moisture()  # Single read
+                    print(f"Updater: Got moisture reading: {current_moisture:.1f}%")
+                except Exception as e:
+                    print(f"Updater: Error getting moisture: {e}")
+                    current_moisture = None
+                    
+                if current_moisture is not None:
+                    progress = IrrigationProgress(
+                        plant_id=plant.plant_id,
+                        current_moisture=current_moisture,
+                        target_moisture=plant.desired_moisture
+                    )
+                    print(f"Updater: Sending progress update - moisture: {current_moisture:.1f}%")
+                    await self.send_progress_update(progress)
+                    
+                await asyncio.sleep(10)  # Update every 10 seconds
+                
+        except asyncio.CancelledError:
+            print(f"\n=== Session updater cancelled for plant {plant.plant_id} ===")
+            raise
+            
     async def irrigate(self, plant: "Plant") -> IrrigationResult:
         """
-        Main function that decides whether to irrigate a plant and performs the process.
+        Main entry point for smart irrigation with proper cancellation handling.
+        Performs initial checks and then runs irrigation with a session-level updater task.
+        
+        Args:
+            plant (Plant): The plant to irrigate
+            
+        Returns:
+            IrrigationResult: The result of the irrigation operation
         """
-        # Log irrigation start locally (not sent to server)
-        print(f"\n🌱 === IRRIGATION ALGORITHM START ===")
-        print(f"📊 Plant ID: {plant.plant_id}")
-        print(f"📍 Location: ({plant.lat}, {plant.lon})")
-        print(f"💧 Desired Moisture: {plant.desired_moisture}%")
-        print(f"🚰 Valve ID: {plant.valve.valve_id}")
-        print(f"📡 Sensor Port: {plant.sensor.port}")
-        print(f"⏰ Last Irrigation: {plant.last_irrigation_time}")
+        # Initialize values before any await to avoid UnboundLocalError on cancel
+        initial_moisture = None
+        current_moisture = None
+        total_water = 0.0
+        cycle_count = 0
+        update_task = None  # For cleanup in case of early cancellation
         
-        # Get current moisture
-        current_moisture = await plant.get_moisture()
+        print(f"\n=== Starting irrigation process for plant {plant.plant_id} ===")
+        print(f"Target moisture: {plant.desired_moisture}%")
+        print(f"Water limit: {plant.valve.water_limit}L")
         
-        # Ensure current_moisture is float (safety check)
-        if current_moisture is not None:
-            current_moisture = float(current_moisture)
-        
-        # Send initial moisture check progress update
-        progress = IrrigationProgress.initial_check(plant.plant_id, current_moisture, plant.desired_moisture)
-        await self.send_progress_update(progress)
-
-        # Case 1: Skip irrigation if rain is expected
-        if self.weather_service.will_rain_today(plant.lat, plant.lon):
-            print(f"Skipping irrigation for {plant.plant_id} — rain expected today.")
+        try:
+            # PHASE 1: Initial Checks
+            print("\n=== PHASE 1: Initial Checks ===")
             
-            # Send decision that irrigation will be skipped
-            from controller.dto.irrigation_decision import IrrigationDecision
-            decision = IrrigationDecision.will_skip(
-                plant_id=plant.plant_id,
-                current_moisture=current_moisture,
-                target_moisture=plant.desired_moisture,
-                reason="rain_expected"
-            )
-            if self.websocket_client:
-                await self.websocket_client.send_message("IRRIGATION_DECISION", {
-                    "plant_id": plant.plant_id,
-                    "current_moisture": current_moisture,
-                    "target_moisture": plant.desired_moisture,
-                    "moisture_gap": plant.desired_moisture - current_moisture if current_moisture is not None else 0,
-                    "will_irrigate": False,
-                    "reason": "rain_expected"
-                })
+            try:
+                print("Getting current moisture...")
+                current_moisture = await plant.get_moisture()
+                initial_moisture = current_moisture
+                print(f"Current moisture: {current_moisture:.1f}%")
+                
+                # Send initial check progress
+                progress = IrrigationProgress.initial_check(
+                    plant.plant_id, current_moisture, plant.desired_moisture
+                )
+                await self.send_progress_update(progress)
+                
+                # Check for rain
+                print("Checking weather forecast...")
+                if self.weather_service.will_rain_today(plant.lat, plant.lon):
+                    print("Rain is expected today - skipping irrigation")
+                    return IrrigationResult.skipped(
+                        plant_id=plant.plant_id,
+                        moisture=current_moisture,
+                        reason="rain_expected"
+                    )
+                
+                # Check for overwatering
+                print("Checking for overwatering...")
+                is_overwatered = await self.is_overwatered(plant, current_moisture)
+                if is_overwatered:
+                    print("Plant is overwatered - blocking valve")
+                    plant.valve.block()
+                    return IrrigationResult.error(
+                        plant_id=plant.plant_id,
+                        error_message="Plant is overwatered. Irrigation blocked to prevent damage.",
+                        moisture=current_moisture
+                    )
+                
+                # Check if already moist enough
+                print("Checking if irrigation is needed...")
+                if not await self.should_irrigate(plant, current_moisture):
+                    print("Soil moisture is adequate - skipping irrigation")
+                    return IrrigationResult.skipped(
+                        plant_id=plant.plant_id,
+                        moisture=current_moisture,
+                        reason="already_moist"
+                    )
+                
+                # Check if valve is blocked
+                print("Checking valve status...")
+                if plant.valve.is_blocked:
+                    print("Valve is blocked - cannot irrigate")
+                    return IrrigationResult.error(
+                        plant_id=plant.plant_id,
+                        error_message="Valve is blocked. Please check and unblock manually.",
+                        moisture=current_moisture
+                    )
+                
+                # All checks passed - notify that irrigation will start
+                print("\nAll checks passed - proceeding with irrigation")
+                
+                # Send decision that irrigation will start
+                from controller.dto.irrigation_decision import IrrigationDecision
+                decision = IrrigationDecision.will_start(
+                    plant_id=plant.plant_id,
+                    current_moisture=current_moisture,
+                    target_moisture=plant.desired_moisture
+                )
+                
+                if self.websocket_client:
+                    await self.websocket_client.send_message("IRRIGATION_DECISION", {
+                        "plant_id": plant.plant_id,
+                        "current_moisture": current_moisture,
+                        "target_moisture": plant.desired_moisture,
+                        "moisture_gap": plant.desired_moisture - current_moisture if current_moisture is not None else 0,
+                        "will_irrigate": True,
+                        "reason": "moisture_below_target"
+                    })
+                
+                # PHASE 2: Irrigation Cycle
+                print("\n=== PHASE 2: Irrigation Cycle ===")
+                
+                # Create single session-level updater task
+                print("Starting session updater...")
+                update_task = asyncio.create_task(
+                    self._session_updater(plant),
+                    name=f"updater_plant_{plant.plant_id}"
+                )
+                
+                try:
+                    while True:
+                        # Check moisture and target
+                        print("\nChecking current moisture...")
+                        current_moisture = await self._get_averaged_moisture(plant, 5)
+                        print(f"Current moisture: {current_moisture:.1f}%")
+                        
+                        if plant.is_target_reached(current_moisture):
+                            print(f"Target moisture reached: {current_moisture:.1f}%")
+                            break
+                        
+                        # Pre-check water limit before starting cycle
+                        expected_water = plant.dripper_type.calculate_water_amount(
+                            self.watering_duration_seconds
+                        )
+                        if total_water + expected_water > plant.valve.water_limit:
+                            print(f"Water limit would be exceeded - stopping")
+                            print(f"Current: {total_water:.2f}L, Next cycle: {expected_water:.2f}L, Limit: {plant.valve.water_limit:.2f}L")
+                            break
+                            
+                        # Simple watering cycle
+                        cycle_count += 1
+                        print(f"\n=== Starting cycle {cycle_count} ===")
+                        
+                        # Open valve and wait
+                        print("Opening valve...")
+                        plant.valve.request_open()
+                        try:
+                            print(f"Watering for {self.watering_duration_seconds}s...")
+                            await asyncio.sleep(self.watering_duration_seconds)
+                            # Add water only if full cycle completes
+                            total_water += expected_water
+                            print(f"Cycle complete. Total water used: {total_water:.2f}L")
+                        except asyncio.CancelledError:
+                            print("Watering cycle cancelled!")
+                            raise
+                        finally:
+                            # Always close valve
+                            print("Closing valve...")
+                            plant.valve.request_close()
+                            print("Valve closed.")
+                        
+                        # Break between cycles
+                        try:
+                            print(f"\nWaiting {self.break_duration_seconds}s before next cycle...")
+                            await asyncio.sleep(self.break_duration_seconds)
+                        except asyncio.CancelledError:
+                            print("Break cycle cancelled!")
+                            raise
+                            
+                finally:
+                    # Clean up updater task
+                    if update_task:
+                        print("\nCleaning up session updater...")
+                        update_task.cancel()
+                        try:
+                            await update_task
+                        except asyncio.CancelledError:
+                            pass
+                        print("Session updater cleaned up.")
+                        
+                # Get final moisture reading after loop ends
+                print("\nGetting final moisture reading...")
+                try:
+                    final_moisture = await self._get_averaged_moisture(plant, 5)
+                    print(f"Final moisture: {final_moisture:.1f}%")
+                except asyncio.CancelledError:
+                    # If cancelled during final reading, use last known moisture
+                    print("Cancelled during final reading - using last known moisture")
+                    final_moisture = current_moisture
+                    raise
+                
+                print("\n=== Irrigation completed successfully ===")
+                print(f"Total cycles: {cycle_count}")
+                print(f"Total water used: {total_water:.2f}L")
+                print(f"Moisture change: {initial_moisture:.1f}% → {final_moisture:.1f}%")
+                
+                return IrrigationResult.success(
+                    plant_id=plant.plant_id,
+                    moisture=initial_moisture,
+                    final_moisture=final_moisture,
+                    water_added_liters=total_water
+                )
+                
+            except asyncio.CancelledError:
+                print(f"\n=== Initial checks cancelled for plant {plant.plant_id} ===")
+                raise
+                
+        except asyncio.CancelledError:
+            print(f"\n=== Irrigation cancelled for plant {plant.plant_id} ===")
             
-            return IrrigationResult.skipped(
-                plant_id=plant.plant_id,
-                moisture=current_moisture,
-                reason="rain_expected"
-            )
-
-        # Case 2: Overwatered — block and stop
-        is_overwatered = await self.is_overwatered(plant, current_moisture)
-        
-        # Send overwatering check progress update
-        progress = IrrigationProgress.overwatering_check(plant.plant_id, current_moisture, plant.desired_moisture, is_overwatered)
-        await self.send_progress_update(progress)
-        
-        if is_overwatered:
-            plant.valve.block()
-            return IrrigationResult.error(
-                plant_id=plant.plant_id,
-                error_message="Plant is overwatered. The soil moisture is too high and irrigation has been blocked to prevent further damage. Please allow the soil to dry out before attempting irrigation again.",
-                moisture=current_moisture
-            )
-
-        # Case 3: If soil is already moist enough, skip irrigation
-        if not await self.should_irrigate(plant, current_moisture):
-            # Send decision that irrigation will be skipped
-            from controller.dto.irrigation_decision import IrrigationDecision
-            decision = IrrigationDecision.will_skip(
-                plant_id=plant.plant_id,
-                current_moisture=current_moisture,
-                target_moisture=plant.desired_moisture,
-                reason="already_moist"
-            )
-            if self.websocket_client:
-                await self.websocket_client.send_message("IRRIGATION_DECISION", {
-                    "plant_id": plant.plant_id,
-                    "current_moisture": current_moisture,
-                    "target_moisture": plant.desired_moisture,
-                    "moisture_gap": plant.desired_moisture - current_moisture,
-                    "will_irrigate": False,
-                    "reason": "already_moist"
-                })
+            # Belt-and-suspenders: ensure valve is closed on any cancellation
+            print("Double-checking valve is closed...")
+            plant.valve.request_close()
             
-            return IrrigationResult.skipped(
-                plant_id=plant.plant_id,
-                moisture=current_moisture,
-                reason="already moist"
-            )
-
-        # Case 4: Check if valve is blocked before starting irrigation
-        if plant.valve.is_blocked:
-            print(f"❌ VALVE BLOCKED: Cannot irrigate plant {plant.plant_id} - valve is blocked")
+            # Clean up updater task if it exists
+            if update_task:
+                print("Cleaning up session updater...")
+                update_task.cancel()
+                try:
+                    await update_task
+                except asyncio.CancelledError:
+                    pass
+                print("Session updater cleaned up.")
             
-            # Send decision that irrigation will be skipped
-            from controller.dto.irrigation_decision import IrrigationDecision
-            decision = IrrigationDecision.will_skip(
+            # Use last known moisture if we can't get a new reading
+            print("Getting final moisture after cancellation...")
+            try:
+                final_moisture = await self._get_averaged_moisture(plant, 3)
+                print(f"Final moisture after cancel: {final_moisture:.1f}%")
+            except asyncio.CancelledError:
+                print("Cancelled during final reading - using last known moisture")
+                final_moisture = current_moisture
+                
+            print(f"\n=== Final state after cancellation ===")
+            print(f"Cycles completed: {cycle_count}")
+            print(f"Water used before cancel: {total_water:.2f}L")
+            print(f"Initial moisture: {initial_moisture or 0:.1f}%")
+            print(f"Final moisture: {final_moisture or 0:.1f}%")
+                
+            return IrrigationResult.success(
                 plant_id=plant.plant_id,
-                current_moisture=current_moisture,
-                target_moisture=plant.desired_moisture,
-                reason="valve_blocked"
+                reason="Cancelled by user",
+                moisture=initial_moisture or 0,  # Handle early cancellation
+                final_moisture=final_moisture or 0,  # Handle early cancellation
+                water_added_liters=total_water
             )
-            if self.websocket_client:
-                await self.websocket_client.send_message("IRRIGATION_DECISION", {
-                    "plant_id": plant.plant_id,
-                    "current_moisture": current_moisture,
-                    "target_moisture": plant.desired_moisture,
-                    "moisture_gap": plant.desired_moisture - current_moisture if current_moisture is not None else 0,
-                    "will_irrigate": False,
-                    "reason": "valve_blocked"
-                })
-            
-            # Send blocked valve progress update
-            progress = IrrigationProgress.fault_detected(
-                plant.plant_id,
-                current_moisture,
-                plant.desired_moisture,
-                0.0,  # No water used
-                plant.valve.water_limit
-            )
-            await self.send_progress_update(progress)
-            return IrrigationResult.error(
-                plant_id=plant.plant_id,
-                error_message="Valve is blocked and cannot be opened. Please check the valve manually and unblock it if needed.",
-                moisture=current_moisture,
-                final_moisture=current_moisture,
-                water_added_liters=0.0
-            )
-
-        # Case 5: Otherwise, notify that irrigation will start
-        from controller.dto.irrigation_decision import IrrigationDecision
-        decision = IrrigationDecision.will_start(
-            plant_id=plant.plant_id,
-            current_moisture=current_moisture,
-            target_moisture=plant.desired_moisture
-        )
-        
-        if self.websocket_client:
-            await self.websocket_client.send_message("IRRIGATION_DECISION", {
-                "plant_id": plant.plant_id,
-                "current_moisture": current_moisture,
-                "target_moisture": plant.desired_moisture,
-                "moisture_gap": plant.desired_moisture - current_moisture if current_moisture is not None else 0,
-                "will_irrigate": True,
-                "reason": "moisture_below_target"
-            })
-        
-        # Calculate moisture gap
-        moisture_gap = plant.desired_moisture - current_moisture if current_moisture is not None else 0
-        
-        print(f"\n🚰 Starting irrigation cycle for plant {plant.plant_id}")
-        print(f"   Target: {plant.desired_moisture}%, Current: {current_moisture}%, Water needed: {moisture_gap:.1f}%")
-        return await self.perform_irrigation(plant, current_moisture)
 
     async def is_overwatered(self, plant: "Plant", moisture: float) -> bool:
         """

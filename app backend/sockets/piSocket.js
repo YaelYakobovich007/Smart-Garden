@@ -459,17 +459,17 @@ function handlePiSocket(ws) {
           console.log(`Stop irrigation result saved to database for plant ${plantId}`);
 
           // Notify client of successful irrigation stop
-          if (pendingInfo && pendingInfo.ws) {
+          if (pendingInfo?.ws) {
             sendSuccess(pendingInfo.ws, 'STOP_IRRIGATION_SUCCESS', {
-              message: `Plant "${pendingInfo.plantData.plant_name}" irrigation stopped successfully!`,
-              result: irrigationResult,
-              irrigation_data: {
-                water_added_liters: responseData.water_added_liters || 0,
-                final_moisture: responseData.final_moisture || responseData.moisture,
-                initial_moisture: responseData.moisture
-              }
+              plantId: plantId,
+              plantName: pendingInfo?.plantData?.plant_name,
+              moisture: responseData.moisture,
+              final_moisture: responseData.final_moisture,
+              water_added_liters: responseData.water_added_liters,
+              message: `Plant "${pendingInfo?.plantData?.plant_name || plantId}" irrigation stopped successfully!`,
+              result: irrigationResult
             });
-            console.log(`🛑 Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation stopped!`);
+            console.log(`🛑 Notified client: Plant ${pendingInfo?.plantData?.plant_name || plantId} irrigation stopped!`);
           } else {
             console.log(`No pending client found for plant ${plantId} stop irrigation - result saved but client not notified`);
           }
