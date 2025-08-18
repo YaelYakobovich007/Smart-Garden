@@ -40,7 +40,8 @@ class StopIrrigationHandler:
             print(f"Valve ID: {plant.valve.valve_id}")
             print(f"Valve state: {'OPEN' if plant.valve.is_open else 'CLOSED'}")
             
-            current_moisture = plant.sensor.current_reading if plant.sensor else 0
+            current_moisture = await plant.get_moisture() if plant.sensor else 0
+            current_moisture = current_moisture if current_moisture is not None else 0
             print(f"Current moisture: {current_moisture}%")
             
             # Use the engine's stop_irrigation method to properly cancel the task

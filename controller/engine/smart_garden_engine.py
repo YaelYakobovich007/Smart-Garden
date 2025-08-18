@@ -208,7 +208,11 @@ class SmartGardenEngine:
         except asyncio.CancelledError:
             print(f"🛑 Irrigation task for plant {plant_id} was cancelled")
             # Return a stopped result
-            current_moisture = plant.sensor.current_reading if plant.sensor else 0
+            try:
+                current_moisture = await plant.get_moisture() if plant.sensor else 0
+            except Exception:
+                current_moisture = 0
+            current_moisture = current_moisture if current_moisture is not None else 0
             return IrrigationResult.success(
                 plant_id=plant_id,
                 reason="Irrigation stopped by user request",
