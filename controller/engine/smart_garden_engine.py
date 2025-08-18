@@ -117,6 +117,38 @@ class SmartGardenEngine:
         self.plants[plant_id] = plant
         print(f"Plant {plant_id} added with valve {valve.valve_id} and sensor {sensor.port}")
 
+    def start_irrigation(self, plant_id: int) -> Optional[asyncio.Task]:
+        """Start irrigation as a background task.
+        
+        Returns:
+            Optional[asyncio.Task]: The created task, or None if plant doesn't exist or is already irrigating
+        """
+        print(f"\n=== STARTING IRRIGATION FOR PLANT {plant_id} ===")
+        
+        plant = self.plants.get(plant_id)
+        if not plant:
+            print(f"Plant {plant_id} not found")
+            return None
+            
+        # Check if already irrigating
+        existing = self.irrigation_tasks.get(plant_id)
+        if existing and not existing.done():
+            print(f"Plant {plant_id} is already being irrigated")
+            return None
+            
+        # Create the irrigation task
+        task = asyncio.create_task(
+            self.irrigation_algorithm.irrigate(plant),
+            name=f"irrigation_plant_{plant_id}"
+        )
+        
+        # Store in irrigation_tasks and set up automatic cleanup
+        self.irrigation_tasks[plant_id] = task
+        task.add_done_callback(lambda t: self.irrigation_tasks.pop(plant_id, None))
+        
+        print(f"Created irrigation task: {task.get_name()}")
+        return task
+
     async def water_plant(self, plant_id: int) -> IrrigationResult:
         """
         Water a specific plant by delegating to irrigate_plant to ensure proper task management.
@@ -190,12 +222,7 @@ class SmartGardenEngine:
                 plant_id=plant_id,
                 error_message=f"Irrigation failed: {str(e)}"
             )
-        finally:
-            # Clean up the task reference under lock
-            async with self._lock:
-                if plant_id in self.irrigation_tasks:
-                    del self.irrigation_tasks[plant_id]
-                    print(f"🧹 Cleaned up irrigation task for plant {plant_id}")
+
 
     async def stop_irrigation(self, plant_id: int) -> bool:
         """
@@ -211,10 +238,6 @@ class SmartGardenEngine:
         print("\n=== STOP IRRIGATION REQUESTED ===")
         print(f"Plant ID: {plant_id}")
         
-        async with self._lock:
-            print(f"Active tasks: {list(self.irrigation_tasks.keys())}")
-        
-        # Check if plant exists
         if plant_id not in self.plants:
             print(f"ERROR: No plant found with ID {plant_id}")
             return False
@@ -224,34 +247,26 @@ class SmartGardenEngine:
         print(f"Valve ID: {plant.valve.valve_id}")
         print(f"Valve state: {'OPEN' if plant.valve.is_open else 'CLOSED'}")
         
-        # Try to cancel irrigation task if it exists under lock
+        # Get task reference under short lock
         async with self._lock:
+            print(f"Active tasks: {list(self.irrigation_tasks.keys())}")
             task = self.irrigation_tasks.get(plant_id)
-            if task:
-                print(f"\nFound irrigation task: {task.get_name()}")
-                print(f"Task state: {'DONE' if task.done() else 'RUNNING'}")
-                
-                if not task.done():
-                    print(f"\nCancelling irrigation task...")
-                    task.cancel()
-                    try:
-                        print("Waiting for task to cancel (3s timeout)...")
-                        await asyncio.wait_for(task, timeout=3.0)
-                        print("Task cancelled successfully")
-                    except asyncio.TimeoutError:
-                        print("WARNING: Task cancellation timed out after 3s")
-                    except asyncio.CancelledError:
-                        print("Task cancelled successfully")
-                    except Exception as e:
-                        print(f"ERROR during task cancellation: {e}")
-                
-                # Clean up task reference
-                del self.irrigation_tasks[plant_id]
-                print("Removed task from tracking")
-            else:
-                print("No active irrigation task found")
+            print(f"Found task: {task.get_name() if task else 'None'}")
         
-        # Always try to close the valve regardless of is_open state
+        # Cancel task if it exists (outside lock)
+        if task and not task.done():
+            print(f"\nCancelling irrigation task...")
+            task.cancel()
+            try:
+                print("Waiting for task to cancel (3s timeout)...")
+                await asyncio.wait_for(task, timeout=3.0)
+                print("Task cancelled successfully")
+            except (asyncio.TimeoutError, asyncio.CancelledError):
+                print("Task cancellation completed (timeout or cancelled)")
+            except Exception as e:
+                print(f"ERROR during task cancellation: {e}")
+        
+        # Always try to close the valve
         try:
             print("\n=== CLOSING VALVE ===")
             print(f"Plant: {plant_id}")
