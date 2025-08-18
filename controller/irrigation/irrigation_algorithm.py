@@ -114,7 +114,9 @@ class IrrigationAlgorithm:
                 
                 # Check for rain
                 print("Checking weather forecast...")
-                if self.weather_service.will_rain_today(plant.lat, plant.lon):
+                # Call potentially blocking HTTP in a thread to avoid blocking event loop
+                will_rain = await asyncio.to_thread(self.weather_service.will_rain_today, plant.lat, plant.lon)
+                if will_rain:
                     print("Rain is expected today - skipping irrigation")
                     return IrrigationResult.skipped(
                         plant_id=plant.plant_id,
