@@ -6,6 +6,7 @@ const { removeUserSession } = require('../models/userSessions');
 const { handleIrrigationMessage } = require('../controllers/irrigationController');
 const { handleUserMessage } = require('../controllers/userController');
 const { handlePlantIdentify } = require('../controllers/plantIdentificationController');
+const { handleGardenMessage } = require('../controllers/gardenController');
 
 
 function handleUserSocket(ws) {
@@ -37,6 +38,8 @@ function handleUserSocket(ws) {
       handleUserMessage(data, ws);
     } else if (['ADD_PLANT', 'GET_MY_PLANTS', 'GET_PLANT_DETAILS', 'DELETE_PLANT', 'UPDATE_PLANT_DETAILS', 'GET_PLANT_MOISTURE', 'GET_ALL_PLANTS_MOISTURE'].includes(data.type)) {
       handlePlantMessage(data, ws);
+    } else if (['CREATE_GARDEN', 'GET_USER_GARDENS', 'GET_GARDEN_DETAILS', 'SEARCH_GARDEN_BY_CODE', 'JOIN_GARDEN'].includes(data.type)) {
+      handleGardenMessage(data, ws);
     } else {
       sendError(ws, 'UNKNOWN_TYPE', `Unknown message type: ${data.type}`);
     }
