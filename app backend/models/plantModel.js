@@ -113,40 +113,48 @@ async function updatePlantSchedule(plantId, days, time) {
   );
 }
 
-// Update plant details - now checks garden membership
+// Update plant details with optimistic locking
 async function updatePlantDetails(userId, plantId, updateData) {
+  const client = await pool.connect();
+
   try {
+    await client.query('BEGIN');
+
     // Get user's garden ID
     const gardenId = await getUserGardenId(userId);
     if (!gardenId) {
+      await client.query('ROLLBACK');
       return { error: 'NO_GARDEN_MEMBERSHIP' };
     }
 
-    // Verify the plant belongs to the user's garden
-    const plantCheck = await pool.query(
-      'SELECT * FROM plants WHERE plant_id = $1 AND garden_id = $2',
+    // Get current plant with version for optimistic locking
+    const plantCheck = await client.query(
+      'SELECT *, version FROM plants WHERE plant_id = $1 AND garden_id = $2 FOR UPDATE',
       [plantId, gardenId]
     );
 
     if (plantCheck.rows.length === 0) {
-      return { error: 'PLANT_NOT_FOUND' }; // Plant not found or doesn't belong to user's garden
+      await client.query('ROLLBACK');
+      return { error: 'PLANT_NOT_FOUND' };
     }
 
     const plant = plantCheck.rows[0];
+    const currentVersion = plant.version;
 
     // Check for duplicate name within the garden if name is being updated
     if (updateData.plantName && updateData.plantName !== plant.name) {
-      const duplicateCheck = await pool.query(
+      const duplicateCheck = await client.query(
         'SELECT plant_id FROM plants WHERE garden_id = $1 AND name = $2 AND plant_id != $3',
         [gardenId, updateData.plantName, plantId]
       );
 
       if (duplicateCheck.rows.length > 0) {
+        await client.query('ROLLBACK');
         return { error: 'DUPLICATE_NAME' };
       }
     }
 
-    // Build update query dynamically
+    // Build update query with version increment
     const updateFields = [];
     const updateValues = [];
     let paramIndex = 1;
@@ -171,30 +179,37 @@ async function updatePlantDetails(userId, plantId, updateData) {
       updateValues.push(updateData.imageUrl);
     }
 
-    // Add updated_at timestamp
+    // Add version increment and updated_at timestamp
+    updateFields.push(`version = version + 1`);
     updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
 
-    // Add plant_id to values
+    // Add plant_id and current version to values for WHERE clause
     updateValues.push(plantId);
-
-    if (updateFields.length === 1) {
-      // Only updated_at was added, no actual changes
-      return plant;
-    }
+    updateValues.push(currentVersion);
 
     const updateQuery = `
       UPDATE plants 
       SET ${updateFields.join(', ')}
-      WHERE plant_id = $${paramIndex}
+      WHERE plant_id = $${paramIndex} AND version = $${paramIndex + 1}
       RETURNING *
     `;
 
-    const result = await pool.query(updateQuery, updateValues);
+    const result = await client.query(updateQuery, updateValues);
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { error: 'CONCURRENT_MODIFICATION' };
+    }
+
+    await client.query('COMMIT');
     return result.rows[0];
 
   } catch (error) {
-    console.error('Error updating plant details:', error);
+    await client.query('ROLLBACK');
+    console.error('Error updating plant details with optimistic locking:', error);
     return { error: 'DATABASE_ERROR' };
+  } finally {
+    client.release();
   }
 }
 
@@ -212,26 +227,54 @@ async function irrigatePlant(plantId) {
   // TODO: integrate with actual hardware/logic
 }
 
-// Delete a plant by id - now checks garden membership
+// Delete a plant by id with optimistic locking
 async function deletePlantById(plantId, userId) {
-  // Get user's garden ID
-  const gardenId = await getUserGardenId(userId);
-  if (!gardenId) {
-    return { error: 'NO_GARDEN_MEMBERSHIP' };
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Get user's garden ID
+    const gardenId = await getUserGardenId(userId);
+    if (!gardenId) {
+      await client.query('ROLLBACK');
+      return { error: 'NO_GARDEN_MEMBERSHIP' };
+    }
+
+    // Check if plant exists and belongs to user's garden with version
+    const plantCheck = await client.query(
+      'SELECT plant_id, version FROM plants WHERE plant_id = $1 AND garden_id = $2 FOR UPDATE',
+      [plantId, gardenId]
+    );
+
+    if (plantCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { error: 'PLANT_NOT_FOUND' };
+    }
+
+    const currentVersion = plantCheck.rows[0].version;
+
+    // Delete the plant with version check for optimistic locking
+    const deleteResult = await client.query(
+      'DELETE FROM plants WHERE plant_id = $1 AND garden_id = $2 AND version = $3 RETURNING *',
+      [plantId, gardenId, currentVersion]
+    );
+
+    if (deleteResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { error: 'CONCURRENT_MODIFICATION' };
+    }
+
+    await client.query('COMMIT');
+    return { success: true, plant: deleteResult.rows[0] };
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting plant with optimistic locking:', error);
+    return { error: 'DATABASE_ERROR' };
+  } finally {
+    client.release();
   }
-
-  // Verify the plant belongs to the user's garden
-  const plantCheck = await pool.query(
-    'SELECT plant_id FROM plants WHERE plant_id = $1 AND garden_id = $2',
-    [plantId, gardenId]
-  );
-
-  if (plantCheck.rows.length === 0) {
-    return { error: 'PLANT_NOT_FOUND' };
-  }
-
-  await pool.query('DELETE FROM plants WHERE plant_id = $1', [plantId]);
-  return { success: true };
 }
 
 // Update plant with hardware IDs from Pi

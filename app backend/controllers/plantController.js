@@ -108,6 +108,7 @@ async function handleAddPlant(data, ws, email) {
 
   if (result.error === 'NO_GARDEN_MEMBERSHIP') {
     return sendError(ws, 'ADD_PLANT_FAIL', 'You must join a garden before adding plants. Please create or join a garden first.');
+
   }
 
   if (result.error === 'DUPLICATE_NAME') {
@@ -200,15 +201,19 @@ async function handleDeletePlant(data, ws, email) {
   // Delete irrigation events first
   await require('../models/irrigationModel').deleteIrrigationResultsByPlantId(plant.plant_id);
 
-  // Delete the plant
+  // Delete the plant with optimistic locking
   const deleteResult = await deletePlantById(plant.plant_id, user.id);
-
-  if (deleteResult.error === 'NO_GARDEN_MEMBERSHIP') {
-    return sendError(ws, 'DELETE_PLANT_FAIL', 'You must be a member of a garden to delete plants');
-  }
 
   if (deleteResult.error === 'PLANT_NOT_FOUND') {
     return sendError(ws, 'DELETE_PLANT_FAIL', 'Plant not found in your garden');
+  }
+
+  if (deleteResult.error === 'CONCURRENT_MODIFICATION') {
+    return sendError(ws, 'DELETE_PLANT_FAIL', 'Plant was modified by another user. Please refresh and try again.');
+  }
+
+  if (deleteResult.error) {
+    return sendError(ws, 'DELETE_PLANT_FAIL', 'Failed to delete plant. Please try again.');
   }
 
   sendSuccess(ws, 'DELETE_PLANT_SUCCESS', { message: 'Plant and its irrigation events deleted' });
@@ -292,6 +297,10 @@ async function handleUpdatePlantDetails(data, ws, email) {
 
     if (updatedPlant.error === 'DUPLICATE_NAME') {
       return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'A plant with this name already exists in your garden');
+    }
+
+    if (updatedPlant.error === 'CONCURRENT_MODIFICATION') {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Plant was updated by another user. Please refresh and try again.');
     }
 
     if (updatedPlant.error === 'DATABASE_ERROR') {
