@@ -10,8 +10,19 @@ import { Alert } from 'react-native';
 
 
 // Configuration for WebSocket connection
+//const CONFIG = {
+//  SERVER_URL: BACKEND_URL ? BACKEND_URL.replace(/^http/, 'ws') : 'ws://localhost:8080',
+//};
+
+// Configuration for WebSocket connection
 const CONFIG = {
-  SERVER_URL: BACKEND_URL ? BACKEND_URL.replace(/^http/, 'ws') : 'ws://localhost:8080',
+  // For local development, use 'localhost'
+  // For network access, use your computer's IP address
+  SERVER_URL: 'ws://192.168.68.104:8080',
+
+  // Alternative configurations
+  // LOCAL: 'ws://localhost:8080'
+  // NETWORK: 'ws://192.168.68.68:8080'
 };
 
 class WebSocketService {

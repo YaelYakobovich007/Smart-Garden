@@ -40,6 +40,11 @@ import ArticlesList from './src/components/main/Articles/ArticlesList/ArticlesLi
 import OnboardingScreen from './src/components/onboarding/OnboardingScreen';
 import ForecastScreen from './src/components/ForecastScreen/ForecastScreen';
 
+// Import garden screens
+import CreateOrJoinGardenScreen from './src/components/garden/CreateOrJoinGarden/CreateOrJoinGardenScreen';
+import GardenScreen from './src/components/garden/GardenScreen/GardenScreen';
+import GardenSettingsScreen from './src/components/garden/GardenSettings/GardenSettingsScreen';
+
 // Import services
 import websocketService from './src/services/websocketService';
 import sessionService from './src/services/sessionService';
@@ -270,6 +275,11 @@ export default function App() {
             <Stack.Screen name="ArticleDetails" component={ArticleDetails} />
             <Stack.Screen name="ArticlesList" component={ArticlesList} />
             <Stack.Screen name="ForecastScreen" component={ForecastScreen} />
+
+            {/* Garden Screens */}
+            <Stack.Screen name="CreateOrJoinGarden" component={CreateOrJoinGardenScreen} />
+            <Stack.Screen name="Garden" component={GardenScreen} />
+            <Stack.Screen name="GardenSettings" component={GardenSettingsScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </IrrigationProvider>

@@ -6,32 +6,57 @@ const { pool } = require('../config/database');
 // const plantStorage = new Map(); // Map<email, Array<Plant>>
 // const plantIdIndex = new Map(); // Map<plantId, { plant, email }>
 
-// Check for duplicate plant name (separate function for pre-validation)
+// Get user's garden ID
+async function getUserGardenId(userId) {
+  const result = await pool.query(
+    'SELECT garden_id FROM user_gardens WHERE user_id = $1 AND is_active = true',
+    [userId]
+  );
+  return result.rows[0]?.garden_id || null;
+}
+
+// Check for duplicate plant name within a garden
+async function checkDuplicatePlantNameInGarden(gardenId, plantName) {
+  const existing = await pool.query(
+    'SELECT plant_id FROM plants WHERE garden_id = $1 AND name = $2',
+    [gardenId, plantName]
+  );
+  return existing.rows.length > 0;
+}
+
+// Check for duplicate plant name (separate function for pre-validation) - DEPRECATED
 async function checkDuplicatePlantName(userId, plantName) {
   const existing = await pool.query('SELECT plant_id FROM plants WHERE user_id = $1 AND name = $2', [userId, plantName]);
   return existing.rows.length > 0;
 }
 
 async function addPlant(userId, plantData) {
-  // Enforce max 2 plants per user (due to 2 sensors limitation)
-  const countRes = await pool.query('SELECT COUNT(*)::int AS count FROM plants WHERE user_id = $1', [userId]);
+  // Get user's garden ID
+  const gardenId = await getUserGardenId(userId);
+  if (!gardenId) {
+    return { error: 'NO_GARDEN_MEMBERSHIP' };
+  }
+
+  // Enforce max 2 plants per garden (due to 2 sensors limitation)
+  const countRes = await pool.query('SELECT COUNT(*)::int AS count FROM plants WHERE garden_id = $1', [gardenId]);
   const existingCount = countRes.rows[0]?.count || 0;
   if (existingCount >= 2) {
     return { error: 'MAX_PLANTS_REACHED' };
   }
 
-  // Check for duplicate plant name for this user
-  const isDuplicate = await checkDuplicatePlantName(userId, plantData.name);
+  // Check for duplicate plant name within the garden
+  const isDuplicate = await checkDuplicatePlantNameInGarden(gardenId, plantData.name);
   if (isDuplicate) {
     return { error: 'DUPLICATE_NAME' };
   }
 
   // Insert plant into DB without hardware IDs (will be assigned by Pi)
   const result = await pool.query(
-    `INSERT INTO plants (user_id, name, ideal_moisture, water_limit, irrigation_days, irrigation_time, plant_type, image_url, sensor_port, valve_id, last_watered)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+    `INSERT INTO plants (user_id, garden_id, name, ideal_moisture, water_limit, irrigation_days, irrigation_time, plant_type, image_url, sensor_port, valve_id, last_watered)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
     [
       userId,
+      gardenId,
       plantData.name,
       plantData.desiredMoisture,
       plantData.waterLimit,
@@ -52,13 +77,31 @@ async function getPlantById(plantId) {
   return result.rows[0] || null;
 }
 
+// Get plant by name within user's garden
 async function getPlantByName(userId, plantName) {
-  const result = await pool.query('SELECT * FROM plants WHERE user_id = $1 AND name = $2', [userId, plantName]);
+  const gardenId = await getUserGardenId(userId);
+  if (!gardenId) {
+    return null;
+  }
+
+  const result = await pool.query(
+    'SELECT * FROM plants WHERE garden_id = $1 AND name = $2',
+    [gardenId, plantName]
+  );
   return result.rows[0] || null;
 }
 
+// Get all plants in user's garden
 async function getPlants(userId) {
-  const result = await pool.query('SELECT * FROM plants WHERE user_id = $1', [userId]);
+  const gardenId = await getUserGardenId(userId);
+  if (!gardenId) {
+    return [];
+  }
+
+  const result = await pool.query(
+    'SELECT * FROM plants WHERE garden_id = $1 ORDER BY created_at DESC',
+    [gardenId]
+  );
   return result.rows;
 }
 
@@ -70,26 +113,32 @@ async function updatePlantSchedule(plantId, days, time) {
   );
 }
 
-// Update plant details
+// Update plant details - now checks garden membership
 async function updatePlantDetails(userId, plantId, updateData) {
   try {
-    // First, verify the plant belongs to the user
+    // Get user's garden ID
+    const gardenId = await getUserGardenId(userId);
+    if (!gardenId) {
+      return { error: 'NO_GARDEN_MEMBERSHIP' };
+    }
+
+    // Verify the plant belongs to the user's garden
     const plantCheck = await pool.query(
-      'SELECT * FROM plants WHERE plant_id = $1 AND user_id = $2',
-      [plantId, userId]
+      'SELECT * FROM plants WHERE plant_id = $1 AND garden_id = $2',
+      [plantId, gardenId]
     );
 
     if (plantCheck.rows.length === 0) {
-      return null; // Plant not found or doesn't belong to user
+      return { error: 'PLANT_NOT_FOUND' }; // Plant not found or doesn't belong to user's garden
     }
 
     const plant = plantCheck.rows[0];
 
-    // Check for duplicate name if name is being updated
+    // Check for duplicate name within the garden if name is being updated
     if (updateData.plantName && updateData.plantName !== plant.name) {
       const duplicateCheck = await pool.query(
-        'SELECT plant_id FROM plants WHERE user_id = $1 AND name = $2 AND plant_id != $3',
-        [userId, updateData.plantName, plantId]
+        'SELECT plant_id FROM plants WHERE garden_id = $1 AND name = $2 AND plant_id != $3',
+        [gardenId, updateData.plantName, plantId]
       );
 
       if (duplicateCheck.rows.length > 0) {
@@ -145,7 +194,7 @@ async function updatePlantDetails(userId, plantId, updateData) {
 
   } catch (error) {
     console.error('Error updating plant details:', error);
-    return null;
+    return { error: 'DATABASE_ERROR' };
   }
 }
 
@@ -163,9 +212,26 @@ async function irrigatePlant(plantId) {
   // TODO: integrate with actual hardware/logic
 }
 
-// Delete a plant by id
-async function deletePlantById(plantId) {
+// Delete a plant by id - now checks garden membership
+async function deletePlantById(plantId, userId) {
+  // Get user's garden ID
+  const gardenId = await getUserGardenId(userId);
+  if (!gardenId) {
+    return { error: 'NO_GARDEN_MEMBERSHIP' };
+  }
+
+  // Verify the plant belongs to the user's garden
+  const plantCheck = await pool.query(
+    'SELECT plant_id FROM plants WHERE plant_id = $1 AND garden_id = $2',
+    [plantId, gardenId]
+  );
+
+  if (plantCheck.rows.length === 0) {
+    return { error: 'PLANT_NOT_FOUND' };
+  }
+
   await pool.query('DELETE FROM plants WHERE plant_id = $1', [plantId]);
+  return { success: true };
 }
 
 // Update plant with hardware IDs from Pi
@@ -176,10 +242,11 @@ async function updatePlantHardware(plantId, sensorPort, valveId) {
   );
 }
 
-
 module.exports = {
   addPlant,
   checkDuplicatePlantName,
+  checkDuplicatePlantNameInGarden,
+  getUserGardenId,
   getPlants,
   getPlantById,
   getPlantByName,

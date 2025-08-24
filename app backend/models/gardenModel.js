@@ -155,7 +155,7 @@ async function joinGardenByInviteCode(userId, inviteCode) {
             return { error: 'GARDEN_NOT_FOUND' };
         }
 
-        // Check if user is already a member of this specific garden
+        // Check if user is already a member of this specific garden (active)
         const existingInGarden = await pool.query(
             'SELECT garden_id FROM user_gardens WHERE user_id = $1 AND garden_id = $2 AND is_active = true',
             [userId, garden.id]
@@ -165,11 +165,25 @@ async function joinGardenByInviteCode(userId, inviteCode) {
             return { error: 'ALREADY_IN_GARDEN' };
         }
 
-        // Add user to garden as member
-        await pool.query(`
-            INSERT INTO user_gardens (user_id, garden_id, role, is_active)
-            VALUES ($1, $2, 'member', true)
-        `, [userId, garden.id]);
+        // Check if user previously left this garden (inactive record exists)
+        const previousMembership = await pool.query(
+            'SELECT garden_id FROM user_gardens WHERE user_id = $1 AND garden_id = $2 AND is_active = false',
+            [userId, garden.id]
+        );
+
+        if (previousMembership.rows.length > 0) {
+            // Reactivate the previous membership
+            await pool.query(
+                'UPDATE user_gardens SET is_active = true WHERE user_id = $1 AND garden_id = $2',
+                [userId, garden.id]
+            );
+        } else {
+            // Add new user to garden as member
+            await pool.query(`
+                INSERT INTO user_gardens (user_id, garden_id, role, is_active)
+                VALUES ($1, $2, 'member', true)
+            `, [userId, garden.id]);
+        }
 
         return { success: true, garden };
     } catch (error) {
@@ -196,6 +210,82 @@ async function getGardenMembers(gardenId) {
     }
 }
 
+// Leave a garden
+async function leaveGarden(userId, gardenId) {
+    try {
+        // Check if user is a member of this garden
+        const membership = await pool.query(
+            'SELECT role FROM user_gardens WHERE user_id = $1 AND garden_id = $2 AND is_active = true',
+            [userId, gardenId]
+        );
+
+        if (membership.rows.length === 0) {
+            return { error: 'NOT_MEMBER' };
+        }
+
+        // Check if user is admin (admin cannot leave, must transfer ownership first)
+        if (membership.rows[0].role === 'admin') {
+            return { error: 'ADMIN_CANNOT_LEAVE' };
+        }
+
+        // Remove user from garden
+        await pool.query(
+            'UPDATE user_gardens SET is_active = false WHERE user_id = $1 AND garden_id = $2',
+            [userId, gardenId]
+        );
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error leaving garden:', error);
+        return { error: 'DATABASE_ERROR' };
+    }
+}
+
+// Update garden details (admin only)
+async function updateGarden(gardenId, updates) {
+    try {
+        const { name, max_members } = updates;
+        const updateFields = [];
+        const values = [];
+        let paramCount = 1;
+
+        if (name !== undefined) {
+            updateFields.push(`name = $${paramCount}`);
+            values.push(name);
+            paramCount++;
+        }
+
+        if (max_members !== undefined) {
+            updateFields.push(`max_members = $${paramCount}`);
+            values.push(max_members);
+            paramCount++;
+        }
+
+        if (updateFields.length === 0) {
+            return { error: 'NO_UPDATES' };
+        }
+
+        values.push(gardenId);
+        const query = `
+            UPDATE gardens 
+            SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $${paramCount} AND is_active = true
+            RETURNING *
+        `;
+
+        const result = await pool.query(query, values);
+
+        if (result.rows.length === 0) {
+            return { error: 'GARDEN_NOT_FOUND' };
+        }
+
+        return { success: true, garden: result.rows[0] };
+    } catch (error) {
+        console.error('Error updating garden:', error);
+        return { error: 'DATABASE_ERROR' };
+    }
+}
+
 module.exports = {
     createGarden,
     getGardenById,
@@ -204,5 +294,7 @@ module.exports = {
     isUserMemberOfGarden,
     getGardenMembers,
     joinGardenByInviteCode,
-    generateUniqueInviteCode
+    generateUniqueInviteCode,
+    leaveGarden,
+    updateGarden
 };

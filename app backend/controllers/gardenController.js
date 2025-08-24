@@ -1,4 +1,4 @@
-const { createGarden, getUserGardens, getGardenById, getGardenByInviteCode, joinGardenByInviteCode } = require('../models/gardenModel');
+const { createGarden, getUserGardens, getGardenById, getGardenByInviteCode, joinGardenByInviteCode, getGardenMembers, leaveGarden, updateGarden, isUserMemberOfGarden } = require('../models/gardenModel');
 const { getUser } = require('../models/userModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getEmailBySocket } = require('../models/userSessions');
@@ -8,7 +8,10 @@ const gardenHandlers = {
     GET_USER_GARDENS: handleGetUserGardens,
     GET_GARDEN_DETAILS: handleGetGardenDetails,
     SEARCH_GARDEN_BY_CODE: handleSearchGardenByCode,
-    JOIN_GARDEN: handleJoinGarden
+    JOIN_GARDEN: handleJoinGarden,
+    GET_GARDEN_MEMBERS: handleGetGardenMembers,
+    LEAVE_GARDEN: handleLeaveGarden,
+    UPDATE_GARDEN: handleUpdateGarden
 };
 
 async function handleGardenMessage(data, ws) {
@@ -65,7 +68,7 @@ async function handleCreateGarden(data, ws, email) {
         }
 
         // Success - garden created
-        sendSuccess(ws, 'GARDEN_CREATED', {
+        sendSuccess(ws, 'CREATE_GARDEN_SUCCESS', {
             garden: {
                 id: result.garden.id,
                 name: result.garden.name,
@@ -97,13 +100,14 @@ async function handleGetUserGardens(data, ws, email) {
 
         if (gardens.length === 0) {
             // User has no gardens - show create garden option
-            sendSuccess(ws, 'NO_GARDENS', {
+            sendSuccess(ws, 'GET_USER_GARDENS_SUCCESS', {
+                gardens: [],
                 message: 'You don\'t have any gardens yet. Create your first garden to start managing plants!',
                 showCreateGarden: true
             });
         } else {
             // User has gardens
-            sendSuccess(ws, 'USER_GARDENS', {
+            sendSuccess(ws, 'GET_USER_GARDENS_SUCCESS', {
                 gardens: gardens.map(garden => ({
                     id: garden.id,
                     name: garden.name,
@@ -143,7 +147,7 @@ async function handleGetGardenDetails(data, ws, email) {
             return sendError(ws, 'GET_GARDEN_DETAILS_FAIL', 'Garden not found');
         }
 
-        sendSuccess(ws, 'GARDEN_DETAILS', {
+        sendSuccess(ws, 'GET_GARDEN_DETAILS_SUCCESS', {
             garden: {
                 id: garden.id,
                 name: garden.name,
@@ -180,7 +184,7 @@ async function handleSearchGardenByCode(data, ws, email) {
             return sendError(ws, 'SEARCH_GARDEN_FAIL', 'Invalid invite code. Please check and try again.');
         }
 
-        sendSuccess(ws, 'GARDEN_FOUND', {
+        sendSuccess(ws, 'SEARCH_GARDEN_SUCCESS', {
             garden: {
                 id: garden.id,
                 name: garden.name,
@@ -231,7 +235,7 @@ async function handleJoinGarden(data, ws, email) {
         }
 
         // Success - user joined garden
-        sendSuccess(ws, 'GARDEN_JOINED', {
+        sendSuccess(ws, 'JOIN_GARDEN_SUCCESS', {
             garden: {
                 id: result.garden.id,
                 name: result.garden.name,
@@ -247,6 +251,132 @@ async function handleJoinGarden(data, ws, email) {
     } catch (error) {
         console.error('Error in handleJoinGarden:', error);
         sendError(ws, 'JOIN_GARDEN_FAIL', 'Internal server error while joining garden');
+    }
+}
+
+// Get garden members
+async function handleGetGardenMembers(data, ws, email) {
+    const { gardenId } = data;
+
+    if (!gardenId) {
+        return sendError(ws, 'GET_GARDEN_MEMBERS_FAIL', 'Garden ID is required');
+    }
+
+    try {
+        const user = await getUser(email);
+        if (!user) {
+            return sendError(ws, 'GET_GARDEN_MEMBERS_FAIL', 'User not found');
+        }
+
+        // Check if user is a member of this garden
+        const membership = await isUserMemberOfGarden(user.id, gardenId);
+        if (!membership) {
+            return sendError(ws, 'GET_GARDEN_MEMBERS_FAIL', 'You are not a member of this garden');
+        }
+
+        const members = await getGardenMembers(gardenId);
+
+        sendSuccess(ws, 'GET_GARDEN_MEMBERS_SUCCESS', {
+            members: members,
+            message: `Found ${members.length} member(s) in the garden`
+        });
+
+    } catch (error) {
+        console.error('Error in handleGetGardenMembers:', error);
+        sendError(ws, 'GET_GARDEN_MEMBERS_FAIL', 'Internal server error while fetching garden members');
+    }
+}
+
+// Leave a garden
+async function handleLeaveGarden(data, ws, email) {
+    const { gardenId } = data;
+
+    if (!gardenId) {
+        return sendError(ws, 'LEAVE_GARDEN_FAIL', 'Garden ID is required');
+    }
+
+    try {
+        const user = await getUser(email);
+        if (!user) {
+            return sendError(ws, 'LEAVE_GARDEN_FAIL', 'User not found');
+        }
+
+        const result = await leaveGarden(user.id, gardenId);
+
+        if (result.error === 'NOT_MEMBER') {
+            return sendError(ws, 'LEAVE_GARDEN_FAIL', 'You are not a member of this garden');
+        }
+
+        if (result.error === 'ADMIN_CANNOT_LEAVE') {
+            return sendError(ws, 'LEAVE_GARDEN_FAIL', 'Garden admin cannot leave. Please transfer ownership first.');
+        }
+
+        if (result.error === 'DATABASE_ERROR') {
+            return sendError(ws, 'LEAVE_GARDEN_FAIL', 'Failed to leave garden. Please try again.');
+        }
+
+        // Success - user left garden
+        sendSuccess(ws, 'LEAVE_GARDEN_SUCCESS', {
+            message: 'Successfully left the garden'
+        });
+
+        console.log(`👤 User ${user.full_name} (${email}) left garden ${gardenId}`);
+
+    } catch (error) {
+        console.error('Error in handleLeaveGarden:', error);
+        sendError(ws, 'LEAVE_GARDEN_FAIL', 'Internal server error while leaving garden');
+    }
+}
+
+// Update garden details (admin only)
+async function handleUpdateGarden(data, ws, email) {
+    const { gardenId, name, max_members } = data;
+
+    if (!gardenId) {
+        return sendError(ws, 'UPDATE_GARDEN_FAIL', 'Garden ID is required');
+    }
+
+    try {
+        const user = await getUser(email);
+        if (!user) {
+            return sendError(ws, 'UPDATE_GARDEN_FAIL', 'User not found');
+        }
+
+        // Check if user is admin of this garden
+        const membership = await isUserMemberOfGarden(user.id, gardenId);
+        if (!membership || membership.role !== 'admin') {
+            return sendError(ws, 'UPDATE_GARDEN_FAIL', 'Only garden admin can update garden details');
+        }
+
+        const updates = {};
+        if (name !== undefined) updates.name = name;
+        if (max_members !== undefined) updates.max_members = max_members;
+
+        if (Object.keys(updates).length === 0) {
+            return sendError(ws, 'UPDATE_GARDEN_FAIL', 'No updates provided');
+        }
+
+        const result = await updateGarden(gardenId, updates);
+
+        if (result.error === 'GARDEN_NOT_FOUND') {
+            return sendError(ws, 'UPDATE_GARDEN_FAIL', 'Garden not found');
+        }
+
+        if (result.error === 'DATABASE_ERROR') {
+            return sendError(ws, 'UPDATE_GARDEN_FAIL', 'Failed to update garden. Please try again.');
+        }
+
+        // Success - garden updated
+        sendSuccess(ws, 'UPDATE_GARDEN_SUCCESS', {
+            garden: result.garden,
+            message: 'Garden updated successfully'
+        });
+
+        console.log(`🏡 Garden ${gardenId} updated by ${user.full_name} (${email})`);
+
+    } catch (error) {
+        console.error('Error in handleUpdateGarden:', error);
+        sendError(ws, 'UPDATE_GARDEN_FAIL', 'Internal server error while updating garden');
     }
 }
 
