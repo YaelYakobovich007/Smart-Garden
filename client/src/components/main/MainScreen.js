@@ -74,6 +74,25 @@ const MainScreen = () => {
   };
 
   /**
+   * Handle plant added to garden (broadcast from other users)
+   * Refreshes the plant list to show the new plant
+   * @param {Object} data - Broadcast data
+   */
+  const handlePlantAddedToGarden = (data) => {
+    console.log('Plant added to garden by another user:', data);
+
+    // Show notification to user
+    if (data.message) {
+      Alert.alert('Garden Update', data.message, [{ text: 'OK' }]);
+    }
+
+    // Refresh plant list to show the new plant
+    if (websocketService.isConnected()) {
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+    }
+  };
+
+  /**
    * Handle successful plant deletion from server
    * Refreshes the plant list to remove the deleted plant
    * @param {Object} data - Server response data
@@ -84,6 +103,44 @@ const MainScreen = () => {
       websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
     } else {
       console.log('MainScreen: WebSocket not connected, cannot refresh plants');
+    }
+  };
+
+  /**
+   * Handle plant deleted from garden (broadcast from other users)
+   * Refreshes the plant list to remove the deleted plant
+   * @param {Object} data - Broadcast data
+   */
+  const handlePlantDeletedFromGarden = (data) => {
+    console.log('Plant deleted from garden by another user:', data);
+
+    // Show notification to user
+    if (data.message) {
+      Alert.alert('Garden Update', data.message, [{ text: 'OK' }]);
+    }
+
+    // Refresh plant list to remove the deleted plant
+    if (websocketService.isConnected()) {
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+    }
+  };
+
+  /**
+   * Handle plant updated in garden (broadcast from other users)
+   * Refreshes the plant list to show the updated plant
+   * @param {Object} data - Broadcast data
+   */
+  const handlePlantUpdatedInGarden = (data) => {
+    console.log('Plant updated in garden by another user:', data);
+
+    // Show notification to user
+    if (data.message) {
+      Alert.alert('Garden Update', data.message, [{ text: 'OK' }]);
+    }
+
+    // Refresh plant list to show the updated plant
+    if (websocketService.isConnected()) {
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
     }
   };
 
@@ -147,6 +204,24 @@ const MainScreen = () => {
         })
       );
       console.log('Updated moisture for all plants');
+    }
+  };
+
+  /**
+   * Handle garden moisture update (broadcast from other users)
+   * Updates plant moisture when another user requests moisture data
+   * @param {Object} data - Broadcast moisture data
+   */
+  const handleGardenMoistureUpdate = (data) => {
+    console.log('Garden moisture update from another user:', data);
+    if (data.moistureData && data.moistureData.plant_id) {
+      setPlants(prevPlants =>
+        prevPlants.map(plant =>
+          plant.id === data.moistureData.plant_id
+            ? { ...plant, moisture: data.moistureData.moisture }
+            : plant
+        )
+      );
     }
   };
 
@@ -280,6 +355,10 @@ const MainScreen = () => {
     console.log('MainScreen: Setting up WebSocket handlers...');
     websocketService.onMessage('ADD_PLANT_SUCCESS', handlePlantAdded);
     websocketService.onMessage('DELETE_PLANT_SUCCESS', handlePlantDeleted);
+    websocketService.onMessage('PLANT_ADDED_TO_GARDEN', handlePlantAddedToGarden);
+    websocketService.onMessage('PLANT_DELETED_FROM_GARDEN', handlePlantDeletedFromGarden);
+    websocketService.onMessage('PLANT_UPDATED_IN_GARDEN', handlePlantUpdatedInGarden);
+    websocketService.onMessage('GARDEN_MOISTURE_UPDATE', handleGardenMoistureUpdate);
     websocketService.onMessage('GET_MY_PLANTS_RESPONSE', handlePlantsReceived);
     websocketService.onMessage('GET_MY_PLANTS_FAIL', handlePlantsError);
     websocketService.onMessage('GET_USER_DETAILS_SUCCESS', handleUserNameReceived);
@@ -331,6 +410,10 @@ const MainScreen = () => {
       clearTimeout(connectionTimer);
       websocketService.offMessage('ADD_PLANT_SUCCESS', handlePlantAdded);
       websocketService.offMessage('DELETE_PLANT_SUCCESS', handlePlantDeleted);
+      websocketService.offMessage('PLANT_ADDED_TO_GARDEN', handlePlantAddedToGarden);
+      websocketService.offMessage('PLANT_DELETED_FROM_GARDEN', handlePlantDeletedFromGarden);
+      websocketService.offMessage('PLANT_UPDATED_IN_GARDEN', handlePlantUpdatedInGarden);
+      websocketService.offMessage('GARDEN_MOISTURE_UPDATE', handleGardenMoistureUpdate);
       websocketService.offMessage('GET_MY_PLANTS_RESPONSE', handlePlantsReceived);
       websocketService.offMessage('GET_MY_PLANTS_FAIL', handlePlantsError);
       websocketService.offMessage('GET_USER_DETAILS_SUCCESS', handleUserNameReceived);

@@ -3,6 +3,7 @@ const { handleSensorAssigned, handleValveAssigned } = require('../controllers/pl
 const { completePendingPlant } = require('../services/pendingPlantsTracker');
 const { completePendingIrrigation } = require('../services/pendingIrrigationTracker');
 const { completePendingMoistureRequest } = require('../services/pendingMoistureTracker');
+const { broadcastPlantAdded } = require('../services/gardenBroadcaster');
 
 let piSocket = null;
 
@@ -51,19 +52,28 @@ function handlePiSocket(ws) {
 
           // Notify client of successful plant creation with hardware assignment
           if (pendingInfo && pendingInfo.ws) {
+            const plantWithHardware = {
+              ...pendingInfo,
+              sensor_port: responseData.sensor_port,
+              valve_id: responseData.assigned_valve
+            };
+
             sendSuccess(pendingInfo.ws, 'ADD_PLANT_SUCCESS', {
               message: `Plant "${pendingInfo.name}" added successfully! Assigned to sensor ${responseData.sensor_port} and valve ${responseData.assigned_valve}`,
-              plant: {
-                ...pendingInfo,
-                sensor_port: responseData.sensor_port,
-                valve_id: responseData.assigned_valve
-              },
+              plant: plantWithHardware,
               hardware: {
                 sensor_port: responseData.sensor_port,
                 valve_id: responseData.assigned_valve
               }
             });
             console.log(`Notified client: Plant ${pendingInfo.name} successfully added with hardware!`);
+
+            // Broadcast plant addition to other garden members
+            try {
+              await broadcastPlantAdded(pendingInfo.garden_id, plantWithHardware, pendingInfo.email);
+            } catch (broadcastError) {
+              console.error('Error broadcasting plant addition:', broadcastError);
+            }
           } else {
             console.log(`No pending client found for plant ${plantId} - hardware assigned but client not notified`);
           }
@@ -89,7 +99,7 @@ function handlePiSocket(ws) {
         // Delete the plant from database since hardware assignment failed
         const { deletePlantById } = require('../models/plantModel');
         await deletePlantById(plantId);
-                  console.log(`Deleted plant ${plantId} from database (hardware assignment failed)`);
+        console.log(`Deleted plant ${plantId} from database (hardware assignment failed)`);
 
         // Notify client of hardware assignment failure
         if (pendingInfo && pendingInfo.ws) {
@@ -223,7 +233,7 @@ function handlePiSocket(ws) {
     if (data.type === 'OPEN_VALVE_RESPONSE') {
       console.log('🔍 DEBUG - Received OPEN_VALVE_RESPONSE from Pi:');
       console.log('   - Full data:', JSON.stringify(data));
-      
+
       const responseData = data.data || {};
       const plantId = responseData.plant_id;
       const timeMinutes = responseData.time_minutes;
@@ -328,7 +338,7 @@ function handlePiSocket(ws) {
     if (data.type === 'CLOSE_VALVE_RESPONSE') {
       console.log('🔍 DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
       console.log('   - Full data:', JSON.stringify(data));
-      
+
       const responseData = data.data || {};
       const plantId = responseData.plant_id;
 
@@ -429,10 +439,10 @@ function handlePiSocket(ws) {
 
       if (responseData.status === 'success') {
         console.log(`🌿 Plant ${responseData.plant_id}: moisture=${responseData.moisture}%, temperature=${responseData.temperature}°C`);
-        
+
         // Get pending moisture request info
         const pendingInfo = completePendingMoistureRequest(responseData.plant_id);
-        
+
         if (pendingInfo && pendingInfo.ws) {
           // Send moisture data to requesting client
           sendSuccess(pendingInfo.ws, 'PLANT_MOISTURE_RESPONSE', {
@@ -448,10 +458,10 @@ function handlePiSocket(ws) {
         }
       } else {
         console.error(`❌ Plant ${responseData.plant_id} moisture read failed: ${responseData.error_message}`);
-        
+
         // Get pending moisture request info
         const pendingInfo = completePendingMoistureRequest(responseData.plant_id);
-        
+
         if (pendingInfo && pendingInfo.ws) {
           // Send error to requesting client
           sendError(pendingInfo.ws, 'PLANT_MOISTURE_FAIL', {
@@ -473,7 +483,7 @@ function handlePiSocket(ws) {
         responseData.plants?.forEach(plant => {
           console.log(`   Plant ${plant.plant_id}: moisture=${plant.moisture}%, temperature=${plant.temperature}°C`);
         });
-        
+
         // Broadcast to all connected clients (for now, we'll implement this later)
         // For now, just log that we received the data
         console.log(`📊 Received all plants moisture data - ${responseData.total_plants} plants`);

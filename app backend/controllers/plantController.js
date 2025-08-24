@@ -6,6 +6,7 @@ const googleCloudStorage = require('../services/googleCloudStorage');
 const piCommunication = require('../services/piCommunication');
 const { addPendingPlant } = require('../services/pendingPlantsTracker');
 const { addPendingMoistureRequest } = require('../services/pendingMoistureTracker');
+const { broadcastPlantAdded, broadcastPlantDeleted, broadcastPlantUpdated } = require('../services/gardenBroadcaster');
 
 // Test mode flag - set to true to allow plant creation without Pi
 const TEST_MODE = process.env.TEST_MODE === 'true' || process.env.NODE_ENV === 'development';
@@ -125,14 +126,23 @@ async function handleAddPlant(data, ws, email) {
     console.log(`🧪 TEST MODE: Plant "${plantName}" created successfully without Pi connection`);
     console.log(`🧪 TODO: Delete this test mode when Pi is connected`);
 
+    const plantWithImage = {
+      ...result.plant,
+      image_url: imageUrl
+    };
+
     sendSuccess(ws, 'ADD_PLANT_SUCCESS', {
-      plant: {
-        ...result.plant,
-        image_url: imageUrl
-      },
+      plant: plantWithImage,
       message: `Plant "${plantName}" created successfully in test mode (no hardware assignment)`,
       testMode: true
     });
+
+    // Broadcast plant addition to other garden members
+    try {
+      await broadcastPlantAdded(result.plant.garden_id, plantWithImage, email);
+    } catch (broadcastError) {
+      console.error('Error broadcasting plant addition:', broadcastError);
+    }
   } else {
     // Production mode: Require Pi connection
     const piResult = piCommunication.addPlant(result.plant);
@@ -202,6 +212,16 @@ async function handleDeletePlant(data, ws, email) {
   }
 
   sendSuccess(ws, 'DELETE_PLANT_SUCCESS', { message: 'Plant and its irrigation events deleted' });
+
+  // Broadcast plant deletion to other garden members
+  try {
+    const gardenId = await require('../models/plantModel').getUserGardenId(user.id);
+    if (gardenId) {
+      await broadcastPlantDeleted(gardenId, plant, email);
+    }
+  } catch (broadcastError) {
+    console.error('Error broadcasting plant deletion:', broadcastError);
+  }
 }
 
 async function handleUpdatePlantDetails(data, ws, email) {
@@ -286,6 +306,16 @@ async function handleUpdatePlantDetails(data, ws, email) {
       plant: updatedPlant,
       message: 'Plant details updated successfully'
     });
+
+    // Broadcast plant update to other garden members
+    try {
+      const gardenId = await require('../models/plantModel').getUserGardenId(user.id);
+      if (gardenId) {
+        await broadcastPlantUpdated(gardenId, updatedPlant, email);
+      }
+    } catch (broadcastError) {
+      console.error('Error broadcasting plant update:', broadcastError);
+    }
 
   } catch (err) {
     console.error('Update plant details error:', err);
