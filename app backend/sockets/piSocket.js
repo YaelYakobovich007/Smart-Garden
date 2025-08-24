@@ -3,7 +3,7 @@ const { handleSensorAssigned, handleValveAssigned } = require('../controllers/pl
 const { completePendingPlant } = require('../services/pendingPlantsTracker');
 const { completePendingIrrigation } = require('../services/pendingIrrigationTracker');
 const { completePendingMoistureRequest } = require('../services/pendingMoistureTracker');
-const { broadcastPlantAdded } = require('../services/gardenBroadcaster');
+const { broadcastPlantAdded, broadcastMoistureUpdate } = require('../services/gardenBroadcaster');
 
 let piSocket = null;
 
@@ -444,15 +444,28 @@ function handlePiSocket(ws) {
         const pendingInfo = completePendingMoistureRequest(responseData.plant_id);
 
         if (pendingInfo && pendingInfo.ws) {
-          // Send moisture data to requesting client
-          sendSuccess(pendingInfo.ws, 'PLANT_MOISTURE_RESPONSE', {
+          const moistureData = {
             plant_id: responseData.plant_id,
             moisture: responseData.moisture,
             temperature: responseData.temperature,
             status: 'success',
             message: `Moisture data received for plant ${responseData.plant_id}`
-          });
+          };
+
+          // Send moisture data to requesting client
+          sendSuccess(pendingInfo.ws, 'PLANT_MOISTURE_RESPONSE', moistureData);
           console.log(`📊 Sent moisture data to client for plant ${responseData.plant_id}`);
+
+          // Broadcast moisture update to other garden members
+          try {
+            const { getPlantById } = require('../models/plantModel');
+            const plant = await getPlantById(responseData.plant_id);
+            if (plant && plant.garden_id) {
+              await broadcastMoistureUpdate(plant.garden_id, moistureData, pendingInfo.email);
+            }
+          } catch (broadcastError) {
+            console.error('Error broadcasting moisture update:', broadcastError);
+          }
         } else {
           console.log(`⚠️ No pending client found for plant ${responseData.plant_id} moisture request`);
         }
