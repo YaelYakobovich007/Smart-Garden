@@ -12,10 +12,13 @@ const irrigationHandlers = {
   UPDATE_PLANT_SCHEDULE: handleUpdatePlantSchedule,
   IRRIGATE_PLANT: handleIrrigatePlant,
   STOP_IRRIGATION: handleStopIrrigation,
+  STOP_IRRIGATION: handleStopIrrigation,
   OPEN_VALVE: handleOpenValve,
   CLOSE_VALVE: handleCloseValve,
   GET_IRRIGATION_RESULT: handleGetIrrigationResult,
   GET_VALVE_STATUS: handleGetValveStatus,
+  UNBLOCK_VALVE: handleUnblockValve,
+  TEST_VALVE_BLOCK: handleTestValveBlock,
   UNBLOCK_VALVE: handleUnblockValve,
   TEST_VALVE_BLOCK: handleTestValveBlock
 };
@@ -85,48 +88,48 @@ async function handleIrrigatePlant(data, ws, email) {
 // Stop smart irrigation for a specific plant
 async function handleStopIrrigation(data, ws, email) {
   console.log('🛑 DEBUG - handleStopIrrigation received:', JSON.stringify(data));
-
+  
   const { plantName } = data;
-
+  
   if (!plantName) {
     console.log('❌ ERROR - Missing plantName');
     return sendError(ws, 'STOP_IRRIGATION_FAIL', 'Missing plantName');
   }
-
+  
   console.log('🛑 DEBUG - Looking up user by email:', email);
-
+  
   const user = await getUser(email);
   if (!user) {
     console.log('❌ ERROR - User not found for email:', email);
     return sendError(ws, 'STOP_IRRIGATION_FAIL', 'User not found');
   }
-
+  
   console.log('🛑 DEBUG - Looking up plant by name:', plantName, 'for user:', user.id);
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) {
     console.log('❌ ERROR - Plant not found:', plantName, 'for user:', user.id);
-    return sendError(ws, 'STOP_IRRIGATION_FAIL', 'Plant not found in your garden');
+    return sendError(ws, 'STOP_IRRIGATION_FAIL', 'Plant not found');
   }
 
   console.log('🛑 DEBUG - Plant found:', plant.plant_id, plant.name);
   console.log('🛑 DEBUG - Calling piCommunication.stopIrrigation');
-
+  
   // Send stop irrigation request to Pi controller
   const piResult = piCommunication.stopIrrigation(plant.plant_id);
-
+  
   console.log('🛑 DEBUG - piCommunication.stopIrrigation result:', piResult);
-
+  
   if (piResult.success) {
     console.log('✅ Stop irrigation request sent to Pi');
     sendSuccess(ws, 'STOP_IRRIGATION_SUCCESS', {
-      plantName: plantName,
-      message: 'Stop request sent successfully'
+        plantName: plantName,
+        message: 'Stop request sent successfully'
     });
   } else {
     console.log('❌ Failed to send stop irrigation request:', piResult.error);
     sendError(ws, 'STOP_IRRIGATION_FAIL', piResult.error || 'Failed to stop irrigation');
   }
-
+  
   // Add to pending list to handle response
   addPendingIrrigation(plant.plant_id, ws, email, {
     plant_id: plant.plant_id,
@@ -337,25 +340,25 @@ async function handleGetValveStatus(data, ws, email) {
 async function handleUnblockValve(data, ws, email) {
   const { plantName } = data;
   if (!plantName) return sendError(ws, 'UNBLOCK_VALVE_FAIL', 'Missing plantName');
-
+  
   const user = await getUser(email);
   if (!user) return sendError(ws, 'UNBLOCK_VALVE_FAIL', 'User not found');
-
+  
   const plant = await getPlantByName(user.id, plantName);
-  if (!plant) return sendError(ws, 'UNBLOCK_VALVE_FAIL', 'Plant not found in your garden');
+  if (!plant) return sendError(ws, 'UNBLOCK_VALVE_FAIL', 'Plant not found');
 
   try {
     // Update valve status in database
     const { updateValveStatus } = require('../models/plantModel');
     await updateValveStatus(plant.plant_id, false);
-
+    
     console.log(`✅ Valve unblocked for plant ${plant.plant_id} (${plant.name})`);
-
+    
     sendSuccess(ws, 'UNBLOCK_VALVE_SUCCESS', {
       message: `Valve for "${plant.name}" has been unblocked successfully!`,
       plantName: plant.name
     });
-
+    
   } catch (err) {
     console.error(`Failed to unblock valve for plant ${plant.plant_id}:`, err);
     sendError(ws, 'UNBLOCK_VALVE_FAIL', 'Failed to unblock valve. Please try again.');
@@ -366,25 +369,25 @@ async function handleUnblockValve(data, ws, email) {
 async function handleTestValveBlock(data, ws, email) {
   const { plantName } = data;
   if (!plantName) return sendError(ws, 'TEST_VALVE_BLOCK_FAIL', 'Missing plantName');
-
+  
   const user = await getUser(email);
   if (!user) return sendError(ws, 'TEST_VALVE_BLOCK_FAIL', 'User not found');
-
+  
   const plant = await getPlantByName(user.id, plantName);
-  if (!plant) return sendError(ws, 'TEST_VALVE_BLOCK_FAIL', 'Plant not found in your garden');
+  if (!plant) return sendError(ws, 'TEST_VALVE_BLOCK_FAIL', 'Plant not found');
 
   try {
     // Update valve status in database to blocked (for testing)
     const { updateValveStatus } = require('../models/plantModel');
     await updateValveStatus(plant.plant_id, true);
-
+    
     console.log(`✅ Valve blocked for testing - plant ${plant.plant_id} (${plant.name})`);
-
+    
     sendSuccess(ws, 'TEST_VALVE_BLOCK_SUCCESS', {
       message: `Valve for "${plant.name}" has been blocked for testing. Refresh the plant list to see the changes.`,
       plantName: plant.name
     });
-
+    
   } catch (err) {
     console.error(`Failed to test valve block for plant ${plant.plant_id}:`, err);
     sendError(ws, 'TEST_VALVE_BLOCK_FAIL', 'Failed to test valve block. Please try again.');

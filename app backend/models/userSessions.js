@@ -26,10 +26,15 @@ function getAllSessions() {
   return [...socketToEmail.entries()];
 }
 
+function getAllUserSockets() {
+  return [...socketToEmail.keys()];
+}
+
 module.exports = {
   addUserSession,
   removeUserSession,
   getEmailBySocket,
-  getSocketByEmail,
-  getAllSessions
+  getSocketByEmail,      
+  getAllSessions,
+  getAllUserSockets
 };

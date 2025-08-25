@@ -90,6 +90,7 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: '#E74C3C',
   },
+
   numberInput: {
     borderWidth: 1,
     borderColor: '#ECF0F1',
@@ -125,6 +126,13 @@ const styles = StyleSheet.create({
     color: '#E74C3C',
     fontSize: 14,
     fontFamily: 'Nunito_400Regular',
+  },
+  hintText: {
+    color: '#7F8C8D',
+    fontSize: 12,
+    fontFamily: 'Nunito_400Regular',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   imageContainer: {
     borderRadius: 16,
@@ -289,6 +297,54 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#E74C3C',
     textAlign: 'center',
+    fontFamily: 'Nunito_500Medium',
+  },
+
+  // Dripper Type Selection Styles
+  dripperOptionsContainer: {
+    gap: 12,
+  },
+  dripperOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#ECF0F1',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    gap: 12,
+  },
+  dripperOptionSelected: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#F0F9F0',
+  },
+  dripperRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dripperRadioSelected: {
+    borderColor: '#4CAF50',
+  },
+  dripperRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#4CAF50',
+  },
+  dripperOptionText: {
+    fontSize: 16,
+    color: '#2C3E50',
+    fontFamily: 'Nunito_400Regular',
+    flex: 1,
+  },
+  dripperOptionTextSelected: {
+    color: '#4CAF50',
     fontFamily: 'Nunito_500Medium',
   },
 }); 

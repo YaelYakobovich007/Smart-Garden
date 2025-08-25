@@ -145,6 +145,19 @@ const MainScreen = () => {
   };
 
   /**
+   * Handle valve blocking - refresh plant list to show updated valve status
+   * @param {Object} data - Valve blocking data
+   */
+  const handleValveBlocked = (data) => {
+    console.log('MainScreen: Valve blocked, refreshing plant list...');
+    console.log('MainScreen: Valve blocked data:', data);
+    // Refresh plant list to show updated valve_blocked status
+    if (websocketService.isConnected()) {
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+    }
+  };
+
+  /**
    * Handle plant data received from server
    * Transforms server data to match local plant format
    * @param {Object} data - Server plant data
@@ -152,21 +165,28 @@ const MainScreen = () => {
   const handlePlantsReceived = (data) => {
     if (data.plants) {
       // Transform server data to match our plant format
-      const transformedPlants = data.plants.map(plant => {
-        const transformed = {
-          id: plant.plant_id,
-          name: plant.name,
-          type: plant.plant_type || 'Unknown',
-          image_url: plant.image_url, // Add image_url from server
-          location: 'Garden', // Default location
-          moisture: 0, // Will be updated with real data from Pi
-          temperature: 0, // Will be updated with real data from Pi
-          lightLevel: 0, // Will be updated with real data from Pi
-          isHealthy: true, // Default to healthy
-        };
-        return transformed;
+      // Preserve existing sensor data to prevent flicker
+      setPlants(prevPlants => {
+        const transformedPlants = data.plants.map(plant => {
+          // Find existing plant data to preserve sensor values
+          const existingPlant = prevPlants.find(p => p.id === plant.plant_id);
+          
+          const transformed = {
+            id: plant.plant_id,
+            name: plant.name,
+            type: plant.plant_type || 'Unknown',
+            image_url: plant.image_url, // Add image_url from server
+            location: 'Garden', // Default location
+            moisture: existingPlant?.moisture ?? null, // Preserve existing moisture or use null
+            temperature: existingPlant?.temperature ?? null, // Preserve existing temperature or use null
+            lightLevel: existingPlant?.lightLevel ?? 0, // Preserve existing light level or use 0
+            isHealthy: true, // Default to healthy
+            valve_blocked: plant.valve_blocked || false, // Include valve blocked status
+          };
+          return transformed;
+        });
+        return transformedPlants;
       });
-      setPlants(transformedPlants);
     }
   };
 
@@ -190,20 +210,34 @@ const MainScreen = () => {
 
   /**
    * Handle moisture response for all plants
-   * Updates all plants' moisture values with real data from server
+   * Updates all plants' moisture and temperature values with real data from server
    * @param {Object} data - Server moisture response data
    */
   const handleAllPlantsMoistureResponse = (data) => {
+    console.log('📊 MainScreen: Received ALL_PLANTS_MOISTURE_RESPONSE:', data);
     if (data.plants && Array.isArray(data.plants)) {
+      console.log(`📊 MainScreen: Processing ${data.plants.length} plants with sensor data`);
       setPlants(prevPlants =>
         prevPlants.map(plant => {
-          const moistureData = data.plants.find(p => p.plant_id === plant.id);
-          return moistureData && moistureData.moisture !== undefined
-            ? { ...plant, moisture: moistureData.moisture }
-            : plant;
+          const sensorData = data.plants.find(p => p.plant_id === plant.id);
+          if (sensorData) {
+            const updatedPlant = { ...plant };
+            if (sensorData.moisture !== undefined) {
+              updatedPlant.moisture = sensorData.moisture;
+              console.log(`💧 Plant ${plant.name}: moisture updated to ${sensorData.moisture}%`);
+            }
+            if (sensorData.temperature !== undefined) {
+              updatedPlant.temperature = sensorData.temperature;
+              console.log(`🌡️ Plant ${plant.name}: temperature updated to ${sensorData.temperature}°C`);
+            }
+            return updatedPlant;
+          }
+          return plant;
         })
       );
-      console.log('Updated moisture for all plants');
+      console.log('✅ MainScreen: Updated moisture and temperature for all plants');
+    } else {
+      console.log('MainScreen: No plants data in response or invalid format');
     }
   };
 
@@ -366,12 +400,15 @@ const MainScreen = () => {
     websocketService.onMessage('UNAUTHORIZED', handleUnauthorized);
     websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handlePlantMoistureResponse);
     websocketService.onMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
+    websocketService.onMessage('ALL_PLANTS_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
     websocketService.onMessage('PLANT_IDENTIFY_RESULT', handlePlantIdentified);
     websocketService.onMessage('PLANT_IDENTIFY_FAIL', handlePlantIdentified);
     websocketService.onMessage('GET_USER_GARDENS_SUCCESS', handleGardenReceived);
     websocketService.onMessage('CREATE_GARDEN_SUCCESS', handleGardenCreated);
     websocketService.onMessage('JOIN_GARDEN_SUCCESS', handleGardenJoined);
     websocketService.onMessage('LEAVE_GARDEN_SUCCESS', handleGardenLeft);
+    websocketService.onMessage('VALVE_BLOCKED', handleValveBlocked);
+
 
     /**
      * Handle WebSocket connection status changes
@@ -421,12 +458,14 @@ const MainScreen = () => {
       websocketService.offMessage('UNAUTHORIZED', handleUnauthorized);
       websocketService.offMessage('PLANT_MOISTURE_RESPONSE', handlePlantMoistureResponse);
       websocketService.offMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
+      websocketService.offMessage('ALL_PLANTS_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
       websocketService.offMessage('PLANT_IDENTIFY_RESULT', handlePlantIdentified);
       websocketService.offMessage('PLANT_IDENTIFY_FAIL', handlePlantIdentified);
       websocketService.offMessage('GET_USER_GARDENS_SUCCESS', handleGardenReceived);
       websocketService.offMessage('CREATE_GARDEN_SUCCESS', handleGardenCreated);
       websocketService.offMessage('JOIN_GARDEN_SUCCESS', handleGardenJoined);
       websocketService.offMessage('LEAVE_GARDEN_SUCCESS', handleGardenLeft);
+      websocketService.offMessage('VALVE_BLOCKED', handleValveBlocked);
       websocketService.offConnectionChange(handleConnectionChange);
     };
   }, []);
@@ -480,9 +519,15 @@ const MainScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       if (websocketService.isConnected()) {
+        console.log('🔄 MainScreen: Screen focused, requesting data...');
         websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+        // Request moisture and temperature data for all plants
+        console.log('🌡️ MainScreen: Requesting moisture and temperature for all plants...');
+        websocketService.sendMessage({ type: 'GET_ALL_PLANTS_MOISTURE' });
         // Refresh session when user is active
         sessionService.refreshSession();
+      } else {
+        console.log('❌ MainScreen: WebSocket not connected, cannot request data');
       }
     }, [])
   );

@@ -49,6 +49,7 @@ export default function AddPlantScreen() {
     plantType: '',
     humidity: 60,
     waterLimit: 1.0,
+    dripperType: '2L/h', // Default dripper type
     image: null,
     useSchedule: false,
     schedule: {
@@ -133,6 +134,12 @@ export default function AddPlantScreen() {
     // Validate water limit (must be positive)
     if (formData.waterLimit <= 0) {
       newErrors.waterLimit = 'Water limit must be greater than 0';
+    }
+
+    // Validate dripper type (must be one of the allowed values)
+    const allowedDripperTypes = ['1L/h', '2L/h', '4L/h', '8L/h'];
+    if (!allowedDripperTypes.includes(formData.dripperType)) {
+      newErrors.dripperType = 'Please select a valid dripper type';
     }
 
     setErrors(newErrors);
@@ -221,6 +228,7 @@ export default function AddPlantScreen() {
             plantType: formData.plantType,
             desiredMoisture: formData.humidity,
             waterLimit: formData.waterLimit,
+            dripperType: formData.dripperType,
             irrigationDays,
             irrigationTime
           },
@@ -437,18 +445,95 @@ export default function AddPlantScreen() {
                 style={[styles.numberInput, errors.waterLimit && styles.inputError]}
                 value={formData.waterLimit.toString()}
                 onChangeText={(text) => {
-                  const value = parseFloat(text) || 0;
+                  // More permissive input handling for decimal values
+                  // Allow typing decimal point even if it results in incomplete number
+                  if (text === '' || text === '.') {
+                    updateFormData('waterLimit', text === '.' ? 0 : 0);
+                    return;
+                  }
+                  
+                  // Allow decimal numbers with proper validation
+                  const cleanText = text.replace(/[^0-9.]/g, '');
+                  
+                  // Handle multiple decimal points - keep only the first one
+                  const parts = cleanText.split('.');
+                  if (parts.length > 2) {
+                    const firstPart = parts[0];
+                    const secondPart = parts[1];
+                    const validText = firstPart + '.' + secondPart;
+                    const value = parseFloat(validText) || 0;
+                    updateFormData('waterLimit', Math.max(0, value));
+                    return;
+                  }
+                  
+                  // Handle single decimal point
+                  if (parts.length === 2) {
+                    // Allow typing like "0." or "1.5"
+                    const value = parseFloat(cleanText) || 0;
+                    updateFormData('waterLimit', Math.max(0, value));
+                    return;
+                  }
+                  
+                  // Handle whole numbers
+                  const value = parseInt(cleanText) || 0;
                   updateFormData('waterLimit', Math.max(0, value));
                 }}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
                 placeholder="0.0"
+                returnKeyType="done"
+                maxLength={10}
               />
               <Text style={styles.unit}>L</Text>
             </View>
+            <Text style={styles.hintText}>Enter value in liters (e.g., 0.5 for half a liter)</Text>
             {errors.waterLimit && (
               <View style={styles.errorContainer}>
                 <Feather name="alert-circle" size={16} color="#EF4444" />
                 <Text style={styles.errorText}>{errors.waterLimit}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Dripper Type Section */}
+          <View style={styles.inputContainer}>
+            <View style={styles.labelContainer}>
+              <Feather name="droplet" size={20} color="#4CAF50" />
+              <Text style={styles.label}>
+                Dripper Type <Text style={styles.required}>*</Text>
+              </Text>
+            </View>
+            <View style={styles.dripperOptionsContainer}>
+              {['1L/h', '2L/h', '4L/h', '8L/h'].map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.dripperOption,
+                    formData.dripperType === option && styles.dripperOptionSelected
+                  ]}
+                  onPress={() => updateFormData('dripperType', option)}
+                >
+                  <View style={[
+                    styles.dripperRadio,
+                    formData.dripperType === option && styles.dripperRadioSelected
+                  ]}>
+                    {formData.dripperType === option && (
+                      <View style={styles.dripperRadioDot} />
+                    )}
+                  </View>
+                  <Text style={[
+                    styles.dripperOptionText,
+                    formData.dripperType === option && styles.dripperOptionTextSelected
+                  ]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.hintText}>Select the flow rate of your dripper system</Text>
+            {errors.dripperType && (
+              <View style={styles.errorContainer}>
+                <Feather name="alert-circle" size={16} color="#EF4444" />
+                <Text style={styles.errorText}>{errors.dripperType}</Text>
               </View>
             )}
           </View>

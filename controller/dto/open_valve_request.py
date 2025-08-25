@@ -127,6 +127,7 @@ class OpenValveResponse:
         status: str = "pending",
         message: Optional[str] = None,
         error_message: Optional[str] = None,
+        reason: Optional[str] = None,
         timestamp: Optional[float] = None
     ):
         self.plant_id = plant_id
@@ -134,6 +135,7 @@ class OpenValveResponse:
         self.status = status
         self.message = message
         self.error_message = error_message
+        self.reason = reason or message  # Use message as reason if reason not provided
         self.timestamp = timestamp or __import__('time').time()
     
     @classmethod
@@ -153,7 +155,7 @@ class OpenValveResponse:
             plant_id=plant_id,
             time_minutes=time_minutes,
             status=result.status,
-            message=result.message,
+            message=result.reason,  # Use reason instead of message
             error_message=result.error_message,
             timestamp=result.timestamp
         )
@@ -213,6 +215,9 @@ class OpenValveResponse:
         
         if self.message:
             data["message"] = self.message
+        
+        if self.reason:
+            data["reason"] = self.reason
         
         if self.error_message:
             data["error_message"] = self.error_message

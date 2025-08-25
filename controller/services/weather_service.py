@@ -26,7 +26,7 @@ class WeatherService:
         if not self.api_key:
             raise ValueError("API key for OpenWeather is not set. Please set the OPEN_WEATHER_API_KEY environment variable.")
         
-    def will_rain_today(self, lat, lon):
+    def will_rain_today(self, lat, lon, timeout_seconds: float = 3.0):
         """
         Checks if rain is expected today at the given location.
 
@@ -46,7 +46,8 @@ class WeatherService:
         }
 
         try:
-            response = requests.get(self.api_url, params=params)             # Make the API request
+            # Use a short timeout to avoid blocking the event loop for long periods
+            response = requests.get(self.api_url, params=params, timeout=timeout_seconds)             # Make the API request
             response.raise_for_status()                                      # Raise an error for bad responses 
             data = response.json()
     

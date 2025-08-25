@@ -38,7 +38,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class PiClientRunner:
-    def __init__(self, server_url: str = "ws://192.168.68.71:8080", total_valves: int = 2, total_sensors: int = 2):
+    def __init__(self, server_url: str = "ws://192.168.68.61:8080", total_valves: int = 2, total_sensors: int = 2):
         self.server_url = server_url
         self.total_valves = total_valves
         self.total_sensors = total_sensors
@@ -62,6 +62,12 @@ class PiClientRunner:
                 
                 # Create WebSocket client with the SAME engine instance (no recreation)
                 self.client = SmartGardenPiClient(self.server_url, self.engine)
+                
+                # Update the engine's websocket client reference for logging
+                if hasattr(self.engine, 'websocket_client'):
+                    self.engine.websocket_client = self.client
+                if hasattr(self.engine.irrigation_algorithm, 'websocket_client'):
+                    self.engine.irrigation_algorithm.websocket_client = self.client
                 
                 # Run the client (includes connection, hello, assignments, and message listening)
                 await self.client.run()
@@ -133,7 +139,7 @@ async def main():
     signal.signal(signal.SIGTERM, signal_handler)
     
     # Configuration
-    server_url = "ws://192.168.68.71:8080"
+    server_url = "ws://192.168.68.61:8080"
     
     # Override with environment variable if set
     server_url = os.getenv('SMART_GARDEN_SERVER_URL', server_url)

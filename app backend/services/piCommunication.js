@@ -25,9 +25,10 @@ class PiCommunication {
             const request = {
                 type: 'ADD_PLANT',
                 data: {
-                    plantId: plantData.plant_id,
-                    desiredMoisture: plantData.ideal_moisture,
-                    waterLimit: plantData.water_limit,
+                    plant_id: plantData.plant_id,
+                    desiredMoisture: parseFloat(plantData.ideal_moisture),
+                    waterLimit: parseFloat(plantData.water_limit),
+                    dripperType: plantData.dripper_type || '2L/h',
                     scheduleData: {
                         irrigation_days: plantData.irrigation_days || null,
                         irrigation_time: plantData.irrigation_time || null
@@ -36,10 +37,11 @@ class PiCommunication {
             };
 
             console.log('Sending ADD_PLANT to Pi:');
-            console.log(`   - Plant ID: ${request.data.plantId} (type: ${typeof request.data.plantId})`);
+            console.log(`   - Plant ID: ${request.data.plant_id} (type: ${typeof request.data.plant_id})`);
             console.log(`   - Plant Name: ${plantData.name}`);
             console.log(`   - Desired Moisture: ${request.data.desiredMoisture} (type: ${typeof request.data.desiredMoisture})`);
             console.log(`   - Water Limit: ${request.data.waterLimit} (type: ${typeof request.data.waterLimit})`);
+            console.log(`   - Dripper Type: ${request.data.dripperType} (type: ${typeof request.data.dripperType})`);
             console.log(`   - Schedule Data: ${JSON.stringify(request.data.scheduleData)} (type: ${typeof request.data.scheduleData})`);
             console.log(`   - Full JSON: ${JSON.stringify(request)}`);
 
@@ -123,7 +125,7 @@ class PiCommunication {
             const request = {
                 type: 'IRRIGATE_PLANT',
                 data: {
-                    plantId: plantId
+                    plant_id: plantId
                 }
             };
 
@@ -136,6 +138,59 @@ class PiCommunication {
 
         } catch (error) {
             console.error('Error sending IRRIGATE_PLANT to Pi:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+
+
+    /**
+     * Send STOP_IRRIGATION request to Pi (no waiting)
+     */
+    stopIrrigation(plantId) {
+        console.log('🛑 DEBUG - piCommunication.stopIrrigation called:');
+        console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
+        
+        console.log('🛑 DEBUG - Getting Pi socket...');
+        const piSocket = getPiSocket();
+        console.log('🛑 DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
+        
+        if (!piSocket) {
+            console.log('❌ Pi not connected - cannot stop irrigation');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        console.log('✅ DEBUG - Pi socket found, creating request...');
+        
+        try {
+            const request = {
+                type: 'STOP_IRRIGATION',
+                data: {
+                    plant_id: plantId,
+                    plant_name: plantId.toString()  // Pi just needs something for logging
+                }
+            };
+
+            console.log('📤 DEBUG - Created request object:');
+            console.log('   - type:', request.type);
+            console.log('   - data.plant_id:', request.data.plant_id, '(type:', typeof request.data.plant_id, ')');
+            console.log('   - Full JSON:', JSON.stringify(request));
+
+            console.log('🛑 DEBUG - Converting to JSON string...');
+            const jsonString = JSON.stringify(request);
+            console.log('✅ DEBUG - JSON string created, length:', jsonString.length);
+
+            console.log('🛑 DEBUG - Sending to Pi socket...');
+            piSocket.send(jsonString);
+            console.log('✅ DEBUG - STOP_IRRIGATION message sent to Pi successfully');
+            
+            console.log('🛑 DEBUG - Returning success result');
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ ERROR - Error sending STOP_IRRIGATION to Pi:');
+            console.error('   - Error message:', error.message);
+            console.error('   - Error stack:', error.stack);
             return { success: false, error: error.message };
         }
     }

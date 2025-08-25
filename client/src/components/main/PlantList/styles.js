@@ -79,6 +79,14 @@ export const styles = StyleSheet.create({
     borderColor: '#3B82F6',
     zIndex: -1,
   },
+  smartWateringDot: {
+    backgroundColor: '#8B5CF6', // Purple for smart irrigation
+    shadowColor: '#8B5CF6',
+  },
+  smartRippleCircle: {
+    backgroundColor: '#8B5CF6', // Purple for smart irrigation
+    borderColor: '#8B5CF6',
+  },
   plantContent: {
     alignItems: 'flex-start',
     justifyContent: 'center',
@@ -98,6 +106,23 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     fontStyle: 'italic',
+  },
+  valveBlockedWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 8,
+  },
+  valveBlockedText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#F59E0B',
+    marginLeft: 4,
   },
   separator: {
     height: 1,

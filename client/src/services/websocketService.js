@@ -4,25 +4,16 @@ const BACKEND_URL = Constants.expoConfig.extra.BACKEND_URL;
  * WebSocket Service for Smart Garden Client
  * Handles real-time communication with the Smart Garden server
  */
-
-
-import { Alert } from 'react-native';
-
-
 // Configuration for WebSocket connection
-//const CONFIG = {
-//  SERVER_URL: BACKEND_URL ? BACKEND_URL.replace(/^http/, 'ws') : 'ws://localhost:8080',
-//};
 
-// Configuration for WebSocket connection
 const CONFIG = {
   // For local development, use 'localhost'
   // For network access, use your computer's IP address
-  SERVER_URL: 'ws://192.168.68.104:8080',
-
+  SERVER_URL: 'ws://192.168.68.61:8080',
+  
   // Alternative configurations
   // LOCAL: 'ws://localhost:8080'
-  // NETWORK: 'ws://192.168.68.68:8080'
+  // NETWORK: 'ws://192.168.68.61:8080'
 };
 
 class WebSocketService {

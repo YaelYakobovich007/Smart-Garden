@@ -4,8 +4,9 @@ import json
 import logging
 from typing import Optional, Dict, Any
 from controller.engine.smart_garden_engine import SmartGardenEngine
+from controller.dto.irrigation_result import IrrigationResult
 
-#my ip is 192.168.68.71
+#my ip is 192.168.68.61
 class SmartGardenPiClient:
     """
     Simplified WebSocket client for Raspberry Pi to connect to the main Smart Garden server.
@@ -13,12 +14,13 @@ class SmartGardenPiClient:
     """
 
 
-    #my ip is 192.168.68.71
-    def __init__(self, server_url: str = "ws://192.168.68.71:8080", engine: SmartGardenEngine = None):
+    #my ip is 192.168.68.61
+    def __init__(self, server_url: str = "ws://192.168.68.61:8080", engine: SmartGardenEngine = None):
         self.server_url = server_url
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
         self.device_id = "raspberrypi_main_controller"
         self.is_running = False
+        self.active_irrigations = {}
         
         # Setup logging first
         logging.basicConfig(
@@ -32,6 +34,12 @@ class SmartGardenPiClient:
         if engine is None:
             raise ValueError("SmartGardenEngine instance is required")
         self.engine = engine
+        
+        # Update the engine's websocket client reference for logging
+        if hasattr(self.engine, 'websocket_client'):
+            self.engine.websocket_client = self
+        if hasattr(self.engine.irrigation_algorithm, 'websocket_client'):
+            self.engine.irrigation_algorithm.websocket_client = self
         
         # No plant_id mapping needed - use server plant_id directly
     
@@ -98,7 +106,7 @@ class SmartGardenPiClient:
             self.logger.info(f"Received ADD_PLANT command from server")
             self.logger.info(f"Full message: {data}")
             self.logger.info(f"Parsed data: {data}")
-            self.logger.info(f"Plant ID: {data.get('plantId')}")
+            self.logger.info(f"Plant ID: {data.get('plant_id')}")
             self.logger.info(f"Desired Moisture: {data.get('desiredMoisture')}")
             self.logger.info(f"Water Limit: {data.get('waterLimit')}")
             
@@ -110,7 +118,7 @@ class SmartGardenPiClient:
             response_data = response.to_websocket_data()
             
             # Use server's plant_id as the main plant_id in response
-            response_data["plant_id"] = data.get("plantId")  # Use server's plant ID
+            response_data["plant_id"] = data.get("plant_id")  # Use server's plant ID
             
             # Log the response message details
             self.logger.info("=== ADD_PLANT RESPONSE DEBUG ===")
@@ -132,7 +140,7 @@ class SmartGardenPiClient:
             # Create error DTO for unexpected exceptions
             from controller.dto.add_plant_request import AddPlantRequest
             error_result = AddPlantRequest.error(
-                plant_id=data.get("plantId", 0),
+                plant_id=data.get("plant_id", 0),
                 error_message=str(e)
             )
             await self.send_message("ADD_PLANT_RESPONSE", error_result.to_websocket_data())
@@ -185,33 +193,117 @@ class SmartGardenPiClient:
             
             self.logger.info(f"Received IRRIGATE_PLANT request for plant {plant_id}")
             
-            # Call the irrigation algorithm
-            from controller.handlers.irrigate_plant_handler import handle
-            result = await handle(self.engine, plant_id)
+            # Start irrigation as a background task
+            task = self.engine.start_irrigation(plant_id)
+            if not task:
+                error_result = IrrigationResult.error(
+                    plant_id=plant_id,
+                    error_message="Already irrigating or unknown plant"
+                )
+                await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
+                return
             
-            # Send response back to server
-            response_data = result.to_websocket_data()
+            # Store the task for tracking
+            self.active_irrigations[plant_id] = task
             
-            self.logger.info(f"=== IRRIGATION RESPONSE DEBUG ===")
-            self.logger.info(f"Result status: {result.status}")
-            self.logger.info(f"Result message: {result.message}")
-            self.logger.info(f"Response data keys: {list(response_data.keys())}")
-            self.logger.info(f"Response data values: {response_data}")
-            self.logger.info("====================================")
-                
-            await self.send_message("IRRIGATE_PLANT_RESPONSE", response_data)
+            # Send immediate acceptance to free up the handler
+            await self.send_message("IRRIGATE_PLANT_ACCEPTED", {"plant_id": plant_id})
             
-            self.logger.info(f"Irrigation request completed for plant {plant_id}: {result.status}")
+            # Set up callback for when irrigation completes
+            task.add_done_callback(
+                lambda t: asyncio.create_task(self._send_irrigation_result(plant_id, t))
+            )
+            
+            self.logger.info(f"Started background irrigation task for plant {plant_id}")
             
         except Exception as e:
-            self.logger.error(f"Error during irrigation: {e}")
-            # Create error DTO for unexpected exceptions
-            from controller.dto.irrigation_result import IrrigationResult
+            self.logger.error(f"Error starting irrigation: {e}")
+            error_result = IrrigationResult.error(
+                plant_id=plant_id if 'plant_id' in locals() else 0,
+                error_message=str(e)
+            )
+            await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
+
+    async def _send_irrigation_result(self, plant_id: int, task: asyncio.Task):
+        """Send the result of a completed irrigation task to the server."""
+        try:
+            result = task.result()
+            await self.send_message("IRRIGATE_PLANT_RESPONSE", result.to_websocket_data())
+            self.logger.info(f"Sent irrigation result for plant {plant_id}: {result.status}")
+        except Exception as e:
+            self.logger.error(f"Error processing irrigation result for plant {plant_id}: {e}")
             error_result = IrrigationResult.error(
                 plant_id=plant_id,
                 error_message=str(e)
             )
             await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
+        finally:
+            # Clean up the task reference
+            self.active_irrigations.pop(plant_id, None)
+
+    async def handle_stop_irrigation_request(self, data):
+        """Handle stop irrigation request from server."""
+        try:
+            print("\n=== HANDLING STOP IRRIGATION REQUEST ===")
+            print("Step 1: Parsing request data...")
+            
+            # Parse request using DTO
+            from controller.dto.stop_irrigation import StopIrrigation
+            from controller.dto.stop_irrigation_response import StopIrrigationResponse
+            
+            request = StopIrrigation.from_websocket_data(data)
+            plant_id = request.plant_id
+            
+            if not plant_id:
+                print("ERROR: No plant_id provided in stop irrigation request")
+                return
+            
+            print("\nStep 2: Checking current state...")
+            print(f"Plant ID: {plant_id}")
+            print(f"Active irrigation tasks: {list(self.engine.irrigation_tasks.keys())}")
+            print(f"Is this plant being irrigated? {'Yes' if plant_id in self.engine.irrigation_tasks else 'No'}")
+            
+            print("\nStep 3: Creating stop irrigation handler...")
+            from controller.handlers.stop_irrigation_handler import StopIrrigationHandler
+            handler = StopIrrigationHandler(self.engine)
+            
+            print("\nStep 4: Calling handler to stop irrigation...")
+            result = await handler.handle(plant_id)
+            
+            print("\nStep 5: Processing result...")
+            response_data = result.to_websocket_data()
+            print(f"Response data: {response_data}")
+            
+            print("\nStep 6: Sending response to server...")
+            await self.send_message("STOP_IRRIGATION_RESPONSE", response_data)
+            
+            if result.status == "success":
+                print("\nSTOP IRRIGATION SUCCESSFUL:")
+                print(f"- Plant ID: {plant_id}")
+                print(f"- Final moisture: {result.final_moisture}%")
+                print(f"- Water added before stop: {result.water_added_liters}L")
+                print(f"- Active tasks after stop: {list(self.engine.irrigation_tasks.keys())}")
+            else:
+                print("\nSTOP IRRIGATION FAILED:")
+                print(f"- Plant ID: {plant_id}")
+                print(f"- Error: {result.error_message}")
+            
+            print("=========================================\n")
+            
+        except Exception as e:
+            print("\n=== ERROR DURING STOP IRRIGATION ===")
+            print(f"Error message: {str(e)}")
+            print("Creating error response...")
+            
+            # Create error DTO for unexpected exceptions
+            error_response = StopIrrigationResponse.error(
+                plant_id=plant_id if 'plant_id' in locals() else 0,
+                error_message=str(e)
+            )
+            
+            print("Sending error response to server...")
+            await self.send_message("STOP_IRRIGATION_RESPONSE", error_response.to_websocket_data())
+            print("=========================================\n")
 
     async def handle_open_valve_request(self, data):
         """Handle open valve request from server."""
@@ -239,7 +331,8 @@ class SmartGardenPiClient:
             
             self.logger.info(f"=== OPEN_VALVE RESPONSE DEBUG ===")
             self.logger.info(f"Result status: {result.status}")
-            self.logger.info(f"Result message: {result.message}")
+            self.logger.info(f"Result reason: {result.reason}")
+            self.logger.info(f"Result error_message: {result.error_message}")
             self.logger.info(f"Response data keys: {list(response_data.keys())}")
             self.logger.info(f"Response data values: {response_data}")
             self.logger.info("====================================")
@@ -327,6 +420,51 @@ class SmartGardenPiClient:
             )
             await self.send_message("VALVE_STATUS_RESPONSE", error_result.to_websocket_data())
     
+    async def handle_valve_status_request(self, data):
+        """Handle valve status request from server."""
+        try:
+            plant_id = data.get("plant_id")
+            if not plant_id:
+                self.logger.error("No plant_id provided in valve status request")
+                return
+            
+            self.logger.info(f"Received VALVE_STATUS request for plant {plant_id}")
+            
+            # Get plant from engine
+            if plant_id not in self.engine.plants:
+                self.logger.error(f"Plant {plant_id} not found in engine")
+                return
+            
+            plant = self.engine.plants[plant_id]
+            valve = plant.valve
+            
+            # Get valve status
+            status = valve.get_status()
+            user_message = valve.get_user_friendly_status()
+            
+            # Create response data
+            response_data = {
+                "plant_id": plant_id,
+                "valve_id": valve.valve_id,
+                "is_blocked": valve.is_blocked,
+                "is_open": valve.is_open,
+                "status": status,
+                "user_message": user_message,
+                "can_irrigate": not valve.is_blocked
+            }
+            
+            await self.send_message("VALVE_STATUS_RESPONSE", response_data)
+            self.logger.info(f"Valve status sent for plant {plant_id}: {user_message}")
+            
+        except Exception as e:
+            self.logger.error(f"Error during valve status request: {e}")
+            error_response = {
+                "plant_id": plant_id,
+                "error": True,
+                "error_message": f"Failed to get valve status: {str(e)}"
+            }
+            await self.send_message("VALVE_STATUS_RESPONSE", error_response)
+    
     async def handle_message(self, message: str):
         """Process incoming messages from the server."""
         try:
@@ -355,6 +493,9 @@ class SmartGardenPiClient:
             elif message_type == "IRRIGATE_PLANT":
                 await self.handle_irrigate_plant_request(message_data)
             
+            elif message_type == "STOP_IRRIGATION":
+                await self.handle_stop_irrigation_request(message_data)
+            
             elif message_type == "OPEN_VALVE":
                 await self.handle_open_valve_request(message_data)
             
@@ -363,6 +504,9 @@ class SmartGardenPiClient:
             
             elif message_type == "GET_VALVE_STATUS":
                 await self.handle_get_valve_status_request(message_data)
+            
+            elif message_type == "VALVE_STATUS":
+                await self.handle_valve_status_request(message_data)
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")
@@ -405,6 +549,7 @@ class SmartGardenPiClient:
             self.logger.info("  - GET_PLANT_MOISTURE: Get moisture for a specific plant")
             self.logger.info("  - GET_ALL_MOISTURE: Get moisture for all plants")
             self.logger.info("  - IRRIGATE_PLANT: Smart irrigation for a specific plant")
+            self.logger.info("  - STOP_IRRIGATION: Stop smart irrigation for a specific plant")
             self.logger.info("  - OPEN_VALVE: Open valve for a specific plant for a given duration")
             self.logger.info("  - CLOSE_VALVE: Close valve for a specific plant")
             self.logger.info("  - GET_VALVE_STATUS: Get detailed valve status for a specific plant")

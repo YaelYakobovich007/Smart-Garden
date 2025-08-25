@@ -1,9 +1,9 @@
 /**
- * Tap Placement Screen Component - Flowerpot Positioning Guide
+ * Tap Placement Screen Component - Water Line Connection Guide
  * 
  * This component provides an interactive guide for users to properly place
  * their flowerpot under the correct watering valve. It includes:
- * - Animated flowerpot placement demonstration
+ * - Animated water manifold with active valve
  * - Visual representation of valve and flowerpot positioning
  * - Step-by-step instructions for proper placement
  * - Confirmation flow to complete the setup
@@ -11,12 +11,10 @@
  * This screen appears after the sensor placement is completed.
  */
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  Animated,
-  Easing,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
@@ -29,11 +27,11 @@ import Svg, { Defs, LinearGradient, Stop, Rect, Path, G, Circle } from 'react-na
 import styles from './styles';
 
 /**
- * Convert sensor port to sensor number
+ * Convert sensor port to valve number
  * @param {string|number} sensorPort - The sensor port (e.g., "/dev/ttyUSB0") or sensor ID
- * @returns {number} The sensor number (1 for ttyUSB0, 2 for ttyUSB1, etc.)
+ * @returns {number} The valve number (1 for ttyUSB0, 2 for ttyUSB1, etc.)
  */
-const getSensorNumber = (sensorPort) => {
+const getValveNumber = (sensorPort) => {
   if (typeof sensorPort === 'number') {
     return sensorPort;
   }
@@ -53,40 +51,11 @@ const getSensorNumber = (sensorPort) => {
   }
   
   // Default fallback
-  return 1;
+  return 2;
 };
 
-/** ===== Valve SVG Component ===== */
-function ValveSVG({ width = 120, height = 80, isActive = false }) {
-  return (
-    <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-      <Defs>
-        <LinearGradient id="valveBody" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#3B82F6" />
-          <Stop offset="1" stopColor="#1D4ED8" />
-        </LinearGradient>
-        <LinearGradient id="valveHandle" x1="0" y1="0" x2="1" y2="0">
-          <Stop offset="0" stopColor="#6B7280" />
-          <Stop offset="1" stopColor="#4B5563" />
-        </LinearGradient>
-      </Defs>
-
-      {/* Valve body */}
-      <Rect x={width * 0.3} y={height * 0.2} width={width * 0.4} height={height * 0.6} rx={8} fill="url(#valveBody)" stroke="#1E40AF" strokeWidth={2} />
-      
-      {/* Valve handle */}
-      <Rect x={width * 0.25} y={height * 0.35} width={width * 0.5} height={8} rx={4} fill="url(#valveHandle)" stroke="#374151" strokeWidth={1} />
-      
-      {/* Water droplet indicator */}
-      {isActive && (
-        <Circle cx={width * 0.5} cy={height * 0.8} r={4} fill="#10B981" />
-      )}
-    </Svg>
-  );
-}
-
 /** ===== Planter SVG Component ===== */
-function PlanterSVG({ width = 200, height = 120, soilHeight = 24, edgeToEdge = false }) {
+function PlanterSVG({ width = 320, height = 180, soilHeight = 36, edgeToEdge = false }) {
   const boxX = edgeToEdge ? 0 : width * 0.08;
   const boxW = edgeToEdge ? width : width * 0.84;
   const lipX = edgeToEdge ? 0 : width * 0.05;
@@ -129,103 +98,96 @@ function PlanterSVG({ width = 200, height = 120, soilHeight = 24, edgeToEdge = f
   );
 }
 
+/** ===== Water Manifold SVG Component ===== */
+function ManifoldSVG({ width = 320, activeIndex = 2 }) {
+  const height = 140;
+  const tapX = (i) => (width / 6) * (i * 2 - 1);
+  const ACCENT = "#42D39B";
+  
+  return (
+    <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+      <Defs>
+        <LinearGradient id="pipe" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#7c8a91" />
+          <Stop offset="1" stopColor="#a9b3b8" />
+        </LinearGradient>
+        <LinearGradient id="pipeShadow" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#5a6a71" />
+          <Stop offset="1" stopColor="#8a9aa1" />
+        </LinearGradient>
+      </Defs>
+      
+      {/* Main pipe with shadow */}
+      <Rect x={12} y={20} width={width - 24} height={20} rx={10} fill="url(#pipeShadow)" opacity={0.3} />
+      <Rect x={10} y={18} width={width - 20} height={18} rx={9} fill="url(#pipe)" stroke="#5a6a71" strokeWidth={1} />
+      
+      {/* Valve outlets */}
+      {[1, 2, 3].map((idx) => (
+        <G key={idx}>
+          {/* Valve body */}
+          <Rect x={tapX(idx) - 8} y={38} width={16} height={22} rx={4} fill="url(#pipe)" stroke="#5a6a71" strokeWidth={1} />
+          {/* Valve outlet */}
+          <Rect x={tapX(idx) - 12} y={60} width={24} height={12} rx={6} fill="url(#pipe)" stroke="#5a6a71" strokeWidth={1} />
+          
+          {/* Active valve indicator */}
+          {idx === activeIndex && (
+            <>
+              <Circle cx={tapX(idx)} cy={72} r={18} fill="none" stroke={ACCENT} strokeWidth={4} opacity={0.8} />
+              <Circle cx={tapX(idx)} cy={72} r={12} fill="none" stroke={ACCENT} strokeWidth={2} />
+              <Path d={`M ${tapX(idx)} 88 l -10 -12 h20 z`} fill={ACCENT} />
+              <Circle cx={tapX(idx)} cy={72} r={4} fill={ACCENT} />
+            </>
+          )}
+        </G>
+      ))}
+    </Svg>
+  );
+}
+
 /** ===== Tap Placement Animation Component ===== */
 function TapPlacementAnimation({ sensorPort, onConfirm }) {
-  const planterTranslateY = useRef(new Animated.Value(100)).current;
-  const planterOpacity = useRef(new Animated.Value(0)).current;
-  const valveGlow = useRef(new Animated.Value(0)).current;
   const [confirmed, setConfirmed] = useState(false);
+  const [stage, setStage] = useState({ w: 0, h: 0 });
+  const valveNumber = getValveNumber(sensorPort);
 
-  useEffect(() => {
-    // Start the animation sequence
-    const animationSequence = Animated.sequence([
-      // Fade in and slide up the planter
-      Animated.parallel([
-        Animated.timing(planterOpacity, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(planterTranslateY, {
-          toValue: 0,
-          duration: 1000,
-          easing: Easing.out(Easing.back(1.2)),
-          useNativeDriver: true,
-        }),
-      ]),
-      // Pulse the valve to indicate it's the correct one
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(valveGlow, {
-            toValue: 1,
-            duration: 1000,
-            easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(valveGlow, {
-            toValue: 0,
-            duration: 1000,
-            easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ])
-      ),
-    ]);
-
-    animationSequence.start();
-    return () => animationSequence.stop();
-  }, [planterTranslateY, planterOpacity, valveGlow]);
-
-  const handleConfirm = () => {
-    setConfirmed(true);
-    setTimeout(() => onConfirm?.(), 450);
+  const handleConfirm = () => { 
+    setConfirmed(true); 
+    setTimeout(() => onConfirm?.(), 450); 
   };
 
-  // Get sensor number from port
-  const sensorNumber = getSensorNumber(sensorPort);
-
-  const valveGlowOpacity = valveGlow.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 1],
-  });
+  // ---- Geometry ----
+  const PLANTER_H = 180;
+  const SOIL_H = 36;
+  const PLANTER_W = stage.w || 320;
+  const BOTTOM_OFFSET = -6;
 
   return (
     <View style={{ width: "100%" }}>
       {/* Animation Card */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { textAlign: 'center' }]}>Step 2: Place Plant Under Valve</Text>
-        <Text style={styles.subtitle}>Position your plant under valve #{sensorNumber} for automatic watering</Text>
+        <Text style={[styles.sectionTitle, { textAlign: 'center' }]}>Step 2: Connect to Water Line</Text>
+        <Text style={styles.subtitle}>Place the flowerpot under valve #{String(valveNumber).padStart(3, "0")} as shown</Text>
 
-        <View style={styles.animationContainer}>
-          {/* Valve section */}
-          <View style={styles.valveSection}>
-            <Animated.View style={[styles.valveContainer, { opacity: valveGlowOpacity }]}>
-              <ValveSVG width={120} height={80} isActive={true} />
-            </Animated.View>
-            <Text style={styles.valveLabel}>Valve #{sensorNumber}</Text>
-          </View>
-
-          {/* Connection line */}
-          <View style={styles.connectionLine} />
-
-          {/* Planter placement area */}
-          <View style={styles.planterSection}>
-            <Animated.View
-              style={[
-                styles.planterContainer,
-                {
-                  opacity: planterOpacity,
-                  transform: [{ translateY: planterTranslateY }],
-                },
-              ]}
-            >
-              <PlanterSVG width={200} height={120} soilHeight={24} />
-              <View style={styles.placementIndicator}>
-                <Text style={styles.placementText}>Place here</Text>
-              </View>
-            </Animated.View>
-          </View>
+        <View
+          style={styles.animationStage}
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            setStage({ w: width, h: height });
+          }}
+        >
+          {/* Water manifold at the top */}
+          {stage.w > 0 && (
+            <View style={{ position: "absolute", top: 20, left: 0, right: 0, zIndex: 3 }}>
+              <ManifoldSVG width={PLANTER_W} activeIndex={valveNumber} />
+            </View>
+          )}
+          
+          {/* Planter at the bottom */}
+          {stage.w > 0 && (
+            <View style={{ position: "absolute", bottom: BOTTOM_OFFSET, left: 0, right: 0, zIndex: 2 }}>
+              <PlanterSVG width={PLANTER_W} height={PLANTER_H} soilHeight={SOIL_H} edgeToEdge />
+            </View>
+          )}
         </View>
       </View>
 
@@ -233,10 +195,9 @@ function TapPlacementAnimation({ sensorPort, onConfirm }) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Instructions</Text>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionText}>1. Locate valve #{sensorNumber} in your garden.</Text>
-          <Text style={styles.instructionText}>2. Place the flowerpot directly under the valve.</Text>
-          <Text style={styles.instructionText}>3. Ensure the pot is centered and stable.</Text>
-          <Text style={styles.instructionText}>4. The valve will automatically water your plant.</Text>
+          <Text style={styles.instructionText}>1. Move the pot directly beneath valve #{valveNumber}.</Text>
+          <Text style={styles.instructionText}>2. Ensure there's a clear path for water to drip into the soil.</Text>
+          <Text style={styles.instructionText}>3. Keep at least 5 cm between the valve and the plant top.</Text>
         </View>
 
         <TouchableOpacity 
@@ -287,28 +248,28 @@ export default function TapPlacementScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                 {!done ? (
-           <TapPlacementAnimation sensorPort={sensorPort} onConfirm={handleConfirm} />
-         ) : (
-           <View style={[styles.section, { alignItems: "center" }]}>
-             <View style={styles.successIcon}>
-               <Feather name="check" size={32} color="#FFFFFF" />
-             </View>
-             <Text style={[styles.sectionTitle, { marginBottom: 8, textAlign: "center" }]}>
-               Setup completed successfully!
+        {!done ? (
+          <TapPlacementAnimation sensorPort={sensorPort} onConfirm={handleConfirm} />
+        ) : (
+          <View style={[styles.section, { alignItems: "center" }]}>
+            <View style={styles.successIcon}>
+              <Feather name="check" size={32} color="#FFFFFF" />
+            </View>
+                         <Text style={[styles.sectionTitle, { marginBottom: 8, textAlign: "center" }]}>
+               Plant added successfully!
              </Text>
-             <Text style={[styles.subtitle, { textAlign: "center", marginBottom: 20 }]}>
-               Your plant is now ready for automatic watering and monitoring.
-             </Text>
-             <TouchableOpacity 
-               onPress={handleContinue} 
-               style={styles.confirmButton}
-             >
-               <Feather name="check" size={20} color="#FFFFFF" />
-               <Text style={styles.confirmButtonText}>Continue to Garden</Text>
-             </TouchableOpacity>
-           </View>
-         )}
+            <Text style={[styles.subtitle, { textAlign: "center", marginBottom: 20 }]}>
+              You can go back to the main screen or add another plant.
+            </Text>
+            <TouchableOpacity 
+              onPress={handleContinue} 
+              style={styles.confirmButton}
+            >
+              <Feather name="check" size={20} color="#FFFFFF" />
+              <Text style={styles.confirmButtonText}>Continue to Garden</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

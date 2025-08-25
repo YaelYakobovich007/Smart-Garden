@@ -39,12 +39,13 @@ class CloseValveResponse:
     status: str  # "success" or "error"
     message: Optional[str] = None
     error_message: Optional[str] = None
+    reason: Optional[str] = None
     
     def to_websocket_data(self) -> Dict[str, Any]:
         """
         Convert to WebSocket message format.
         """
-        return {
+        data = {
             "type": "CLOSE_VALVE_RESPONSE",
             "data": {
                 "plant_id": self.plant_id,
@@ -53,6 +54,11 @@ class CloseValveResponse:
                 "error_message": self.error_message
             }
         }
+        
+        if self.reason:
+            data["data"]["reason"] = self.reason
+            
+        return data
     
     @classmethod
     def from_websocket_data(cls, data: Dict[str, Any]) -> 'CloseValveResponse':
@@ -63,7 +69,8 @@ class CloseValveResponse:
             plant_id=data.get("plant_id"),
             status=data.get("status"),
             message=data.get("message"),
-            error_message=data.get("error_message")
+            error_message=data.get("error_message"),
+            reason=data.get("reason")
         )
     
     @classmethod

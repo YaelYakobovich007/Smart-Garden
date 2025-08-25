@@ -39,6 +39,7 @@ import ArticleDetails from './src/components/main/Articles/ArticleDetails/Articl
 import ArticlesList from './src/components/main/Articles/ArticlesList/ArticlesList';
 import OnboardingScreen from './src/components/onboarding/OnboardingScreen';
 import ForecastScreen from './src/components/ForecastScreen/ForecastScreen';
+import ValveTroubleshootingScreen from './src/components/main/ValveTroubleshootingScreen/ValveTroubleshootingScreen';
 
 // Import garden screens
 import CreateOrJoinGardenScreen from './src/components/garden/CreateOrJoinGarden/CreateOrJoinGardenScreen';
@@ -275,12 +276,35 @@ export default function App() {
             <Stack.Screen name="ArticleDetails" component={ArticleDetails} />
             <Stack.Screen name="ArticlesList" component={ArticlesList} />
             <Stack.Screen name="ForecastScreen" component={ForecastScreen} />
-
+            <Stack.Screen name="ValveTroubleshooting" component={ValveTroubleshootingScreen} />
+            
             {/* Garden Screens */}
             <Stack.Screen name="CreateOrJoinGarden" component={CreateOrJoinGardenScreen} />
             <Stack.Screen name="Garden" component={GardenScreen} />
             <Stack.Screen name="GardenSettings" component={GardenSettingsScreen} />
           </Stack.Navigator>
+        <Stack.Navigator
+          screenOptions={{ headerShown: false }}
+          initialRouteName={initialRoute}
+        >
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="EnterCode" component={EnterCodeScreen} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Main" component={MainScreen} />
+          <Stack.Screen name="PlantDetail" component={PlantDetail} />
+          <Stack.Screen name="SensorPlacement" component={SensorPlacementScreen} />
+          <Stack.Screen name="TapPlacement" component={TapPlacementScreen} />
+          <Stack.Screen name="AddPlant" component={AddPlantScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="Notification" component={NotificationScreen} />
+          <Stack.Screen name="ArticleDetails" component={ArticleDetails} />
+          <Stack.Screen name="ArticlesList" component={ArticlesList} />
+          <Stack.Screen name="ForecastScreen" component={ForecastScreen} />
+          <Stack.Screen name="ValveTroubleshooting" component={ValveTroubleshootingScreen} />
+        </Stack.Navigator>
         </NavigationContainer>
       </IrrigationProvider>
     </SafeAreaProvider>

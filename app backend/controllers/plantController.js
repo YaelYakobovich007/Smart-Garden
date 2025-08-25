@@ -52,7 +52,7 @@ async function handleAddPlant(data, ws, email) {
     return sendError(ws, 'ADD_PLANT_FAIL', 'plantData must be an object');
   }
 
-  const { plantName, desiredMoisture, waterLimit, irrigationDays, irrigationTime, plantType } = plantData;
+  const { plantName, desiredMoisture, waterLimit, irrigationDays, irrigationTime, plantType, dripperType } = plantData;
 
   if (!plantName || desiredMoisture == null || waterLimit == null) {
     return sendError(ws, 'ADD_PLANT_FAIL', 'Missing required plant data: plantName, desiredMoisture, and waterLimit are required');
@@ -100,6 +100,7 @@ async function handleAddPlant(data, ws, email) {
     irrigation_days: irrigationDays || null,
     irrigation_time: irrigationTime || null,
     plantType: plantType || null,
+    dripper_type: dripperType || '2L/h', // Default to 2L/h if not provided
     image_url: imageUrl // Add image URL to plant data
   };
 

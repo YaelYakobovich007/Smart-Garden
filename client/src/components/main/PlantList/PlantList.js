@@ -77,7 +77,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
         animation.setValue(0);
       }
     });
-  }, [plants, wateringAnimations]); // Removed getPlantWateringState dependency
+  }, [plants, wateringAnimations, getPlantWateringState]); // Added getPlantWateringState dependency back
 
   /**
    * Get color for moisture level visualization
@@ -168,6 +168,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
    */
   const isPlantBeingWatered = (plant) => {
     const plantWateringState = getPlantWateringState(plant.id);
+    console.log(`💧 PlantList: Checking watering state for plant ${plant.name} (ID: ${plant.id}):`, plantWateringState);
     return plantWateringState.isWateringActive;
   };
 
@@ -300,14 +301,22 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
               {isPlantBeingWatered(plant) && (
                 <View style={styles.wateringIndicator}>
                   {/* Solid blue circle that stays visible */}
-                  <View style={styles.wateringDot}>
-                    <Feather name="droplet" size={12} color="#FFFFFF" />
+                  <View style={[
+                    styles.wateringDot,
+                    getPlantWateringState(plant.id).isSmartMode && styles.smartWateringDot
+                  ]}>
+                    <Feather 
+                      name={getPlantWateringState(plant.id).isSmartMode ? "zap" : "droplet"} 
+                      size={12} 
+                      color="#FFFFFF" 
+                    />
                   </View>
                   
                   {/* Multiple expanding ripple circles - only these animate */}
                   <Animated.View 
                     style={[
                       styles.rippleCircle,
+                      getPlantWateringState(plant.id).isSmartMode && styles.smartRippleCircle,
                       {
                         transform: [{
                           scale: wateringAnimations[plant.id]?.interpolate({
@@ -325,6 +334,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                   <Animated.View 
                     style={[
                       styles.rippleCircle,
+                      getPlantWateringState(plant.id).isSmartMode && styles.smartRippleCircle,
                       {
                         transform: [{
                           scale: wateringAnimations[plant.id]?.interpolate({
@@ -342,6 +352,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                   <Animated.View 
                     style={[
                       styles.rippleCircle,
+                      getPlantWateringState(plant.id).isSmartMode && styles.smartRippleCircle,
                       {
                         transform: [{
                           scale: wateringAnimations[plant.id]?.interpolate({
@@ -364,6 +375,16 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
             <View style={styles.plantContent}>
               <Text style={styles.plantName}>{plant.name}</Text>
               <Text style={styles.plantType}>{plant.type}</Text>
+              
+              {/* Valve Blocked Warning */}
+              {plant.valve_blocked && (
+                <View style={styles.valveBlockedWarning}>
+                  <Feather name="alert-triangle" size={14} color="#F59E0B" />
+                  <Text style={styles.valveBlockedText}>Tap Blocked</Text>
+                </View>
+              )}
+              
+
             </View>
 
             {/* Plant Status Indicators */}
