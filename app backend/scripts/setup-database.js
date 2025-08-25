@@ -55,6 +55,16 @@ async function setupDatabase() {
       console.log('Image URL column already exists or error adding it:', error.message);
     }
 
+    // Add dripper_type column if it doesn't exist (for new feature)
+    try {
+      await pool.query(`
+        ALTER TABLE plants ADD COLUMN IF NOT EXISTS dripper_type VARCHAR(10) DEFAULT '2L/h'
+      `);
+      console.log('Dripper type column added to plants table');
+    } catch (error) {
+      console.log('Dripper type column already exists or error adding it:', error.message);
+    }
+
     try {
       await pool.query(`
         ALTER TABLE plants 
@@ -96,6 +106,71 @@ async function setupDatabase() {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at)
     `);
+    // Gardens table
+    await pool.query(`
+           CREATE TABLE IF NOT EXISTS gardens (
+             id SERIAL PRIMARY KEY,
+             name VARCHAR(255) NOT NULL,
+             admin_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+             invite_code VARCHAR(20) UNIQUE,
+             pi_device_id VARCHAR(255),
+             is_active BOOLEAN DEFAULT true,
+             max_members INTEGER DEFAULT 5,
+             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+           );
+         `);
+    console.log('Gardens table created');
+
+    // User-Gardens join table
+    await pool.query(`
+           CREATE TABLE IF NOT EXISTS user_gardens (
+             user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+             garden_id INTEGER REFERENCES gardens(id) ON DELETE CASCADE,
+             role VARCHAR(10) DEFAULT 'member' CHECK (role IN ('admin', 'member')),
+             is_active BOOLEAN DEFAULT true,
+             joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+             PRIMARY KEY (user_id, garden_id)
+           );
+         `);
+    console.log('User-gardens relationship table created');
+
+    // Plants table (with garden_id)
+    await pool.query(`
+          ALTER TABLE plants 
+          ADD COLUMN IF NOT EXISTS garden_id INTEGER REFERENCES gardens(id) ON DELETE CASCADE;
+        `);
+
+    // Indexes for gardens system
+    await pool.query(`
+          CREATE INDEX IF NOT EXISTS idx_gardens_admin ON gardens(admin_user_id);
+        `);
+    await pool.query(`
+          CREATE INDEX IF NOT EXISTS idx_gardens_invite_code ON gardens(invite_code);
+        `);
+    await pool.query(`
+          CREATE INDEX IF NOT EXISTS idx_user_gardens_user ON user_gardens(user_id);
+        `);
+    await pool.query(`
+          CREATE INDEX IF NOT EXISTS idx_user_gardens_garden ON user_gardens(garden_id);
+        `);
+    await pool.query(`
+          CREATE INDEX IF NOT EXISTS idx_plants_garden_id ON plants(garden_id);
+        `);
+
+    // Create trigger for gardens updated_at
+    try {
+      await pool.query(`DROP TRIGGER IF EXISTS update_gardens_updated_at ON gardens`);
+    } catch (error) {
+      // Ignore errors if trigger doesn't exist
+    }
+
+    await pool.query(`
+          CREATE TRIGGER update_gardens_updated_at 
+            BEFORE UPDATE ON gardens 
+            FOR EACH ROW 
+            EXECUTE FUNCTION update_updated_at_column()
+        `);
 
     // Sensor readings table with JSONB for flexible data
     await pool.query(`
@@ -171,7 +246,7 @@ async function setupDatabase() {
     `);
 
     console.log('Database setup completed successfully!');
-    console.log('Tables created: users, plants, user_sessions, sensor_readings, irrigation_events');
+    console.log('Tables created: users, plants, user_sessions, sensor_readings, irrigation_events, gardens, user_gardens');
 
   } catch (error) {
     console.error('Database setup failed:', error);

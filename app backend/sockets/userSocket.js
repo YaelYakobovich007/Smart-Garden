@@ -6,6 +6,7 @@ const { removeUserSession } = require('../models/userSessions');
 const { handleIrrigationMessage } = require('../controllers/irrigationController');
 const { handleUserMessage } = require('../controllers/userController');
 const { handlePlantIdentify } = require('../controllers/plantIdentificationController');
+const { handleGardenMessage } = require('../controllers/gardenController');
 
 
 function handleUserSocket(ws) {
@@ -31,12 +32,14 @@ function handleUserSocket(ws) {
     } else if (data.type === 'PLANT_IDENTIFY') {
       console.log('🌱 Received PLANT_IDENTIFY message in userSocket');
       handlePlantIdentify(data, ws);
-    } else if (['UPDATE_PLANT_SCHEDULE', 'GET_IRRIGATION_RESULT', 'IRRIGATE_PLANT', 'OPEN_VALVE', 'CLOSE_VALVE'].includes(data.type)) {
+    } else if (['UPDATE_PLANT_SCHEDULE', 'GET_IRRIGATION_RESULT', 'IRRIGATE_PLANT', 'STOP_IRRIGATION', 'OPEN_VALVE', 'CLOSE_VALVE', 'GET_VALVE_STATUS', 'UNBLOCK_VALVE', 'TEST_VALVE_BLOCK'].includes(data.type)) {
       handleIrrigationMessage(data, ws);
     } else if (['GET_USER_DETAILS', 'GET_USER_NAME', 'UPDATE_USER_DETAILS', 'FORGOT_PASSWORD', 'RESET_PASSWORD', 'VALIDATE_RESET_TOKEN'].includes(data.type)) {
       handleUserMessage(data, ws);
     } else if (['ADD_PLANT', 'GET_MY_PLANTS', 'GET_PLANT_DETAILS', 'DELETE_PLANT', 'UPDATE_PLANT_DETAILS', 'GET_PLANT_MOISTURE', 'GET_ALL_PLANTS_MOISTURE'].includes(data.type)) {
       handlePlantMessage(data, ws);
+    } else if (['CREATE_GARDEN', 'GET_USER_GARDENS', 'GET_GARDEN_DETAILS', 'SEARCH_GARDEN_BY_CODE', 'JOIN_GARDEN', 'GET_GARDEN_MEMBERS', 'LEAVE_GARDEN', 'UPDATE_GARDEN'].includes(data.type)) {
+      handleGardenMessage(data, ws);
     } else {
       sendError(ws, 'UNKNOWN_TYPE', `Unknown message type: ${data.type}`);
     }

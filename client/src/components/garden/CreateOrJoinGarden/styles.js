@@ -1,0 +1,163 @@
+import { StyleSheet } from 'react-native';
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ECF0F1',
+    },
+    backButton: {
+        padding: 4,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#2C3E50',
+        fontFamily: 'Nunito_600SemiBold',
+    },
+    headerSpacer: {
+        width: 32,
+    },
+    content: {
+        flex: 1,
+        paddingHorizontal: 20,
+    },
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        padding: 4,
+        marginVertical: 20,
+    },
+    tab: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+    },
+    activeTab: {
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    tabText: {
+        marginLeft: 8,
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#7F8C8D',
+        fontFamily: 'Nunito_500Medium',
+    },
+    activeTabText: {
+        color: '#4CAF50',
+        fontWeight: '600',
+        fontFamily: 'Nunito_600SemiBold',
+    },
+    formContainer: {
+        paddingVertical: 20,
+    },
+    formHeader: {
+        alignItems: 'center',
+        marginBottom: 32,
+    },
+    formTitle: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: '#2C3E50',
+        marginTop: 16,
+        marginBottom: 8,
+        fontFamily: 'Nunito_700Bold',
+    },
+    formSubtitle: {
+        fontSize: 16,
+        color: '#7F8C8D',
+        textAlign: 'center',
+        lineHeight: 24,
+        fontFamily: 'Nunito_400Regular',
+    },
+    inputContainer: {
+        marginBottom: 24,
+    },
+    inputLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#2C3E50',
+        marginBottom: 8,
+        fontFamily: 'Nunito_600SemiBold',
+    },
+    textInput: {
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        fontSize: 16,
+        color: '#2C3E50',
+        backgroundColor: '#FFFFFF',
+        fontFamily: 'Nunito_400Regular',
+    },
+    inputHint: {
+        fontSize: 14,
+        color: '#95A5A6',
+        marginTop: 4,
+        fontFamily: 'Nunito_400Regular',
+    },
+    submitButton: {
+        backgroundColor: '#4CAF50',
+        borderRadius: 8,
+        paddingVertical: 16,
+        alignItems: 'center',
+        marginTop: 16,
+    },
+    submitButtonDisabled: {
+        backgroundColor: '#BDC3C7',
+    },
+    submitButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+        fontFamily: 'Nunito_600SemiBold',
+    },
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 24,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    loadingText: {
+        marginTop: 16,
+        fontSize: 16,
+        color: '#2C3E50',
+        fontFamily: 'Nunito_500Medium',
+    },
+});
+
+export default styles;

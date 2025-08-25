@@ -41,10 +41,10 @@ const PlantDetail = () => {
   // State for real-time sensor data
   const [currentMoisture, setCurrentMoisture] = useState(plant?.moisture || 0);
   const [currentTemperature, setCurrentTemperature] = useState(plant?.temperature || 0);
-  
+
   // Local state for UI
   const [showTimePicker, setShowTimePicker] = useState(false);
-  
+
   // Global irrigation state
   const {
     getPlantWateringState,
@@ -159,8 +159,8 @@ const PlantDetail = () => {
       `Are you sure you want to delete "${plant.name}"? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: () => {
             websocketService.sendMessage({
@@ -216,7 +216,12 @@ const PlantDetail = () => {
     };
 
     const handleDeleteFail = (data) => {
-      Alert.alert('Delete Plant', data?.message || 'Failed to delete plant.');
+      // Use data?.reason (backend error message) instead of data?.message
+      const errorMessage = data?.reason || 'Failed to delete plant.';
+
+      Alert.alert('Delete Plant', errorMessage, [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
     };
 
     const handleMoistureSuccess = (data) => {
@@ -224,7 +229,7 @@ const PlantDetail = () => {
         setCurrentMoisture(roundSensorValue(data.moisture));
         // Updated moisture
       }
-      
+
       if (data.temperature !== undefined) {
         setCurrentTemperature(roundSensorValue(data.temperature));
         // Updated temperature
@@ -232,7 +237,19 @@ const PlantDetail = () => {
     };
 
     const handleMoistureFail = (data) => {
-      Alert.alert('Sensor Error', data?.message || 'Failed to get sensor data.');
+      // Use data?.reason (backend error message) instead of data?.message
+      const errorMessage = data?.reason || 'Failed to get sensor data.';
+      Alert.alert('Sensor Error', errorMessage);
+    };
+
+    const handleUpdateSuccess = (data) => {
+      Alert.alert('Update Plant', data?.message || 'Plant details updated successfully!');
+    };
+
+    const handleUpdateFail = (data) => {
+      // Use data?.reason (backend error message) instead of data?.message
+      const errorMessage = data?.reason || 'Failed to update plant details.';
+      Alert.alert('Update Plant', errorMessage);
     };
 
     websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
@@ -366,8 +383,8 @@ const PlantDetail = () => {
           <Text style={styles.sectionDescription}>
             Smart irrigation automatically waters your plant based on soil moisture levels and optimal conditions.
           </Text>
-          <TouchableOpacity 
-            style={[styles.primaryButton, isWateringActive && styles.disabledButton]} 
+          <TouchableOpacity
+            style={[styles.primaryButton, isWateringActive && styles.disabledButton]}
             onPress={handleSmartIrrigation}
             disabled={isWateringActive}
           >
@@ -379,9 +396,9 @@ const PlantDetail = () => {
         {/* 3. Manual Controls Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Manual Controls</Text>
-          
-          <TouchableOpacity 
-            style={styles.secondaryButton} 
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
             onPress={handleGetCurrentHumidity}
           >
             <Feather name="thermometer" size={20} color="#4CAF50" />
@@ -389,10 +406,10 @@ const PlantDetail = () => {
           </TouchableOpacity>
 
           <View style={styles.valveButtonsContainer}>
-            <TouchableOpacity 
-              style={[styles.primaryButton, styles.halfButton, isWateringActive && styles.disabledButton]} 
+            <TouchableOpacity
+              style={[styles.primaryButton, styles.halfButton, isWateringActive && styles.disabledButton]}
               onPress={() => {
-                        // Open Valve button pressed
+                // Open Valve button pressed
                 handleManualIrrigation();
               }}
               disabled={isWateringActive}
@@ -403,10 +420,10 @@ const PlantDetail = () => {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.stopButton, styles.halfButton, !isManualMode && styles.disabledButton]} 
+            <TouchableOpacity
+              style={[styles.stopButton, styles.halfButton, !isManualMode && styles.disabledButton]}
               onPress={() => {
-                        // Close Valve button pressed
+                // Close Valve button pressed
                 handleStopWatering(plant.id);
               }}
               disabled={!isManualMode}
@@ -438,7 +455,7 @@ const PlantDetail = () => {
                 {isWateringActive ? 'Time remaining' : 'Timer finished'}
               </Text>
             </View>
-            
+
             {/* Progress Ring */}
             <View style={styles.progressRingContainer}>
               <View style={styles.progressRing}>
@@ -458,7 +475,7 @@ const PlantDetail = () => {
                 </View>
               </View>
             </View>
-            
+
             {/* Timer Controls */}
             <View style={styles.timerControls}>
               {isWateringActive ? (
@@ -478,7 +495,7 @@ const PlantDetail = () => {
                   <Text style={styles.resumeButtonText}>Resume</Text>
                 </TouchableOpacity>
               ) : null}
-              
+
               <TouchableOpacity
                 style={styles.resetButton}
                 onPress={() => resetTimer(plant.id)}
@@ -493,14 +510,14 @@ const PlantDetail = () => {
         {/* 5. Additional Actions */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Additional Actions</Text>
-          
+
           <TouchableOpacity style={styles.secondaryButton}>
             <Feather name="calendar" size={20} color="#4CAF50" />
             <Text style={styles.secondaryButtonText}>View Schedule</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.deleteButton} 
+          <TouchableOpacity
+            style={styles.deleteButton}
             onPress={handleDeletePlant}
           >
             <Feather name="trash-2" size={20} color="#FFFFFF" />
@@ -519,7 +536,7 @@ const PlantDetail = () => {
       />
 
       {/* 7. Irrigation Overlay */}
-      <IrrigationOverlay 
+      <IrrigationOverlay
         isActive={isWateringActive || isManualMode}
         timeLeft={wateringTimeLeft}
         onPause={() => pauseTimer(plant.id)}

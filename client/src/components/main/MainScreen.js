@@ -57,6 +57,10 @@ const MainScreen = () => {
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
 
+  // Garden state
+  const [garden, setGarden] = useState(null);
+  const [gardenLoading, setGardenLoading] = useState(true);
+
   /**
    * Handle successful plant addition from server
    * Refreshes the plant list to show the new plant
@@ -64,6 +68,25 @@ const MainScreen = () => {
    */
   const handlePlantAdded = (data) => {
     // Refresh plant list after adding a new plant
+    if (websocketService.isConnected()) {
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+    }
+  };
+
+  /**
+   * Handle plant added to garden (broadcast from other users)
+   * Refreshes the plant list to show the new plant
+   * @param {Object} data - Broadcast data
+   */
+  const handlePlantAddedToGarden = (data) => {
+    console.log('Plant added to garden by another user:', data);
+
+    // Show notification to user
+    if (data.message) {
+      Alert.alert('Garden Update', data.message, [{ text: 'OK' }]);
+    }
+
+    // Refresh plant list to show the new plant
     if (websocketService.isConnected()) {
       websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
     }
@@ -80,6 +103,44 @@ const MainScreen = () => {
       websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
     } else {
       console.log('MainScreen: WebSocket not connected, cannot refresh plants');
+    }
+  };
+
+  /**
+   * Handle plant deleted from garden (broadcast from other users)
+   * Refreshes the plant list to remove the deleted plant
+   * @param {Object} data - Broadcast data
+   */
+  const handlePlantDeletedFromGarden = (data) => {
+    console.log('Plant deleted from garden by another user:', data);
+
+    // Show notification to user
+    if (data.message) {
+      Alert.alert('Garden Update', data.message, [{ text: 'OK' }]);
+    }
+
+    // Refresh plant list to remove the deleted plant
+    if (websocketService.isConnected()) {
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+    }
+  };
+
+  /**
+   * Handle plant updated in garden (broadcast from other users)
+   * Refreshes the plant list to show the updated plant
+   * @param {Object} data - Broadcast data
+   */
+  const handlePlantUpdatedInGarden = (data) => {
+    console.log('Plant updated in garden by another user:', data);
+
+    // Show notification to user
+    if (data.message) {
+      Alert.alert('Garden Update', data.message, [{ text: 'OK' }]);
+    }
+
+    // Refresh plant list to show the updated plant
+    if (websocketService.isConnected()) {
+      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
     }
   };
 
@@ -146,6 +207,24 @@ const MainScreen = () => {
     }
   };
 
+  /**
+   * Handle garden moisture update (broadcast from other users)
+   * Updates plant moisture when another user requests moisture data
+   * @param {Object} data - Broadcast moisture data
+   */
+  const handleGardenMoistureUpdate = (data) => {
+    console.log('Garden moisture update from another user:', data);
+    if (data.moistureData && data.moistureData.plant_id) {
+      setPlants(prevPlants =>
+        prevPlants.map(plant =>
+          plant.id === data.moistureData.plant_id
+            ? { ...plant, moisture: data.moistureData.moisture }
+            : plant
+        )
+      );
+    }
+  };
+
 
   /**
    * Handle plant data fetch errors
@@ -178,8 +257,9 @@ const MainScreen = () => {
   const handleUserNameReceived = (data) => {
     if (data.fullName) {
       setUserName(data.fullName);
-      // Now that we're authenticated, request plants
+      // Now that we're authenticated, request plants and garden data
       websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+      websocketService.sendMessage({ type: 'GET_USER_GARDENS' });
     } else {
       console.log('No fullName in response data');
     }
@@ -197,6 +277,77 @@ const MainScreen = () => {
   };
 
   /**
+   * Handle garden data received from server
+   * Updates garden state with user's garden information
+   * @param {Object} data - Server garden data
+   */
+  const handleGardenReceived = (data) => {
+    console.log('Garden data received:', data);
+    if (data.gardens && data.gardens.length > 0) {
+      console.log('Setting garden from GET_USER_GARDENS_SUCCESS response:', data.gardens[0]);
+      setGarden(data.gardens[0]); // User can only be in one garden
+      setGardenLoading(false);
+    } else {
+      console.log('No gardens found for user');
+      setGarden(null);
+      setGardenLoading(false);
+    }
+  };
+
+  /**
+   * Handle garden creation success
+   * Updates garden state with newly created garden
+   * @param {Object} data - Garden creation response data
+   */
+  const handleGardenCreated = (data) => {
+    console.log('Garden created successfully:', data);
+    if (data.garden) {
+      setGarden(data.garden);
+    }
+    // Refresh garden data
+    websocketService.sendMessage({ type: 'GET_USER_GARDENS' });
+  };
+
+  /**
+   * Handle garden joining success
+   * Updates garden state with joined garden
+   * @param {Object} data - Garden joining response data
+   */
+  const handleGardenJoined = (data) => {
+    console.log('Garden joined successfully:', data);
+    if (data.garden) {
+      console.log('Setting garden state to:', data.garden);
+      setGarden(data.garden);
+    }
+    // Refresh garden data
+    websocketService.sendMessage({ type: 'GET_USER_GARDENS' });
+  };
+
+  /**
+   * Handle garden leaving success
+   * Clears garden state when user leaves garden
+   * @param {Object} data - Garden leaving response data
+   */
+  const handleGardenLeft = (data) => {
+    console.log('Garden left successfully:', data);
+    setGarden(null);
+    // Refresh garden data to confirm no gardens
+    websocketService.sendMessage({ type: 'GET_USER_GARDENS' });
+  };
+
+  /**
+   * Refresh garden data when screen comes into focus
+   * This ensures garden state is up-to-date when returning from other screens
+   */
+  useFocusEffect(
+    React.useCallback(() => {
+      if (websocketService.isConnected()) {
+        websocketService.sendMessage({ type: 'GET_USER_GARDENS' });
+      }
+    }, [])
+  );
+
+  /**
    * Set up WebSocket message handlers and connection management
    * Registers handlers for various server messages and manages connection state
    */
@@ -204,6 +355,10 @@ const MainScreen = () => {
     console.log('MainScreen: Setting up WebSocket handlers...');
     websocketService.onMessage('ADD_PLANT_SUCCESS', handlePlantAdded);
     websocketService.onMessage('DELETE_PLANT_SUCCESS', handlePlantDeleted);
+    websocketService.onMessage('PLANT_ADDED_TO_GARDEN', handlePlantAddedToGarden);
+    websocketService.onMessage('PLANT_DELETED_FROM_GARDEN', handlePlantDeletedFromGarden);
+    websocketService.onMessage('PLANT_UPDATED_IN_GARDEN', handlePlantUpdatedInGarden);
+    websocketService.onMessage('GARDEN_MOISTURE_UPDATE', handleGardenMoistureUpdate);
     websocketService.onMessage('GET_MY_PLANTS_RESPONSE', handlePlantsReceived);
     websocketService.onMessage('GET_MY_PLANTS_FAIL', handlePlantsError);
     websocketService.onMessage('GET_USER_DETAILS_SUCCESS', handleUserNameReceived);
@@ -213,6 +368,10 @@ const MainScreen = () => {
     websocketService.onMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
     websocketService.onMessage('PLANT_IDENTIFY_RESULT', handlePlantIdentified);
     websocketService.onMessage('PLANT_IDENTIFY_FAIL', handlePlantIdentified);
+    websocketService.onMessage('GET_USER_GARDENS_SUCCESS', handleGardenReceived);
+    websocketService.onMessage('CREATE_GARDEN_SUCCESS', handleGardenCreated);
+    websocketService.onMessage('JOIN_GARDEN_SUCCESS', handleGardenJoined);
+    websocketService.onMessage('LEAVE_GARDEN_SUCCESS', handleGardenLeft);
 
     /**
      * Handle WebSocket connection status changes
@@ -251,6 +410,10 @@ const MainScreen = () => {
       clearTimeout(connectionTimer);
       websocketService.offMessage('ADD_PLANT_SUCCESS', handlePlantAdded);
       websocketService.offMessage('DELETE_PLANT_SUCCESS', handlePlantDeleted);
+      websocketService.offMessage('PLANT_ADDED_TO_GARDEN', handlePlantAddedToGarden);
+      websocketService.offMessage('PLANT_DELETED_FROM_GARDEN', handlePlantDeletedFromGarden);
+      websocketService.offMessage('PLANT_UPDATED_IN_GARDEN', handlePlantUpdatedInGarden);
+      websocketService.offMessage('GARDEN_MOISTURE_UPDATE', handleGardenMoistureUpdate);
       websocketService.offMessage('GET_MY_PLANTS_RESPONSE', handlePlantsReceived);
       websocketService.offMessage('GET_MY_PLANTS_FAIL', handlePlantsError);
       websocketService.offMessage('GET_USER_DETAILS_SUCCESS', handleUserNameReceived);
@@ -260,6 +423,10 @@ const MainScreen = () => {
       websocketService.offMessage('ALL_MOISTURE_RESPONSE', handleAllPlantsMoistureResponse);
       websocketService.offMessage('PLANT_IDENTIFY_RESULT', handlePlantIdentified);
       websocketService.offMessage('PLANT_IDENTIFY_FAIL', handlePlantIdentified);
+      websocketService.offMessage('GET_USER_GARDENS_SUCCESS', handleGardenReceived);
+      websocketService.offMessage('CREATE_GARDEN_SUCCESS', handleGardenCreated);
+      websocketService.offMessage('JOIN_GARDEN_SUCCESS', handleGardenJoined);
+      websocketService.offMessage('LEAVE_GARDEN_SUCCESS', handleGardenLeft);
       websocketService.offConnectionChange(handleConnectionChange);
     };
   }, []);
@@ -396,6 +563,39 @@ const MainScreen = () => {
       'Help functionality will be implemented here',
       [{ text: 'OK' }]
     );
+  };
+
+  /**
+   * Handle garden navigation
+   * Navigates to garden management screen
+   */
+  const handleGarden = () => {
+    console.log('handleGarden called, garden state:', garden);
+    if (garden) {
+      console.log('Navigating to Garden screen with garden:', garden);
+      navigation.navigate('Garden', { garden });
+    } else {
+      console.log('Navigating to CreateOrJoinGarden screen');
+      navigation.navigate('CreateOrJoinGarden');
+    }
+  };
+
+  /**
+   * Handle garden settings
+   * Navigates to garden settings screen
+   */
+  const handleGardenSettings = () => {
+    if (garden) {
+      navigation.navigate('GardenSettings', { garden });
+    }
+  };
+
+  /**
+   * Handle create or join garden
+   * Navigates to garden creation/joining screen
+   */
+  const handleCreateOrJoinGarden = () => {
+    navigation.navigate('CreateOrJoinGarden');
   };
 
   /**
@@ -637,14 +837,44 @@ const MainScreen = () => {
             </View>
           )}
 
+          {/* Garden Status Banner */}
+          {!gardenLoading && (
+            <View style={styles.gardenStatusContainer}>
+              {garden ? (
+                <View style={styles.gardenActiveBanner}>
+                  <View style={styles.gardenInfo}>
+                    <Feather name="users" size={16} color="#4CAF50" />
+                    <Text style={styles.gardenStatusText}>
+                      Garden: {garden.name} • {garden.member_count || 1} member{garden.member_count !== 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={handleGardenSettings} style={styles.gardenSettingsButton}>
+                    <Feather name="settings" size={16} color="#4CAF50" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.gardenInactiveBanner}>
+                  <TouchableOpacity onPress={handleCreateOrJoinGarden} style={styles.gardenInfo}>
+                    <Feather name="plus-circle" size={16} color="#FF9800" />
+                    <Text style={styles.gardenStatusTextClickable}>
+                      Join a garden to start managing plants
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Plants List Section */}
           <View style={styles.plantsSection}>
-            <Text style={styles.sectionTitle}>My Plants</Text>
+            <Text style={styles.sectionTitle}>
+              {garden ? `${garden.name} Plants` : 'My Plants'}
+            </Text>
             <View style={styles.titleSeparator} />
             <PlantList
               plants={plants}
               onWaterPlant={handleWaterPlant}
-              onAddPlant={handleAddPlant}
+              onAddPlant={garden ? handleAddPlant : handleCreateOrJoinGarden}
               getPlantWateringState={getPlantWateringState}
             />
           </View>
@@ -658,6 +888,7 @@ const MainScreen = () => {
 
       {/* Bottom Toolbar - moved outside mainContentCard for fixed bottom position */}
       <BottomToolbar
+        onGarden={handleGarden}
         onAddPlant={handleAddPlant}
         onIdentifyPlant={handleIdentifyPlant}
         onSchedule={handleSchedule}

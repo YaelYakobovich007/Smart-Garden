@@ -1,4 +1,4 @@
-const { addPlant, getPlants, getPlantByName, deletePlant } = require('../models/plantModel');
+const { addPlant, getPlants, getPlantByName, deletePlantById } = require('../models/plantModel');
 const { getUser } = require('../models/userModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getEmailBySocket } = require('../models/userSessions');
@@ -6,6 +6,10 @@ const googleCloudStorage = require('../services/googleCloudStorage');
 const piCommunication = require('../services/piCommunication');
 const { addPendingPlant } = require('../services/pendingPlantsTracker');
 const { addPendingMoistureRequest } = require('../services/pendingMoistureTracker');
+const { broadcastPlantAdded, broadcastPlantDeleted, broadcastPlantUpdated } = require('../services/gardenBroadcaster');
+
+// Test mode flag - set to true to allow plant creation without Pi
+const TEST_MODE = process.env.TEST_MODE === 'true' || process.env.NODE_ENV === 'development';
 
 const plantHandlers = {
   ADD_PLANT: handleAddPlant,
@@ -101,69 +105,85 @@ async function handleAddPlant(data, ws, email) {
 
   // Step 1: Save plant to database WITHOUT hardware IDs (get stable plant_id)
   const result = await addPlant(user.id, plantDataToSave);
-  if (result.error === 'DUPLICATE_NAME') {
-    return sendError(ws, 'ADD_PLANT_FAIL', 'You already have a plant with this name');
+
+  if (result.error === 'NO_GARDEN_MEMBERSHIP') {
+    return sendError(ws, 'ADD_PLANT_FAIL', 'You must join a garden before adding plants. Please create or join a garden first.');
+
   }
+
+  if (result.error === 'DUPLICATE_NAME') {
+    return sendError(ws, 'ADD_PLANT_FAIL', 'A plant with this name already exists in your garden');
+  }
+
   if (result.error === 'MAX_PLANTS_REACHED') {
-    return sendError(ws, 'ADD_PLANT_FAIL', 'You can only have up to 2 plants connected at the same time');
+    return sendError(ws, 'ADD_PLANT_FAIL', 'Your garden can only have up to 2 plants connected at the same time');
   }
 
   console.log(`💾 Plant "${plantName}" saved to database with ID ${result.plant.plant_id}`);
 
-  // Step 2: Send request to Pi with REAL plant_id
-  const piResult = piCommunication.addPlant(result.plant);
+  // Step 2: Handle Pi connection based on test mode
+  if (TEST_MODE) {
+    // Test mode: Allow plant creation without Pi
+    console.log(`🧪 TEST MODE: Plant "${plantName}" created successfully without Pi connection`);
+    console.log(`🧪 TODO: Delete this test mode when Pi is connected`);
 
-  if (piResult.success) {
-    // Pi is connected - add to pending list and wait for hardware assignment
-    addPendingPlant(result.plant.plant_id, ws, email, {
+    const plantWithImage = {
       ...result.plant,
       image_url: imageUrl
+    };
+
+    sendSuccess(ws, 'ADD_PLANT_SUCCESS', {
+      plant: plantWithImage,
+      message: `Plant "${plantName}" created successfully in test mode (no hardware assignment)`,
+      testMode: true
     });
 
-    console.log(`⏳ Plant ${result.plant.plant_id} sent to Pi for hardware assignment...`);
-    // No immediate response - client will get success only after hardware assignment
+    // Broadcast plant addition to other garden members
+    try {
+      await broadcastPlantAdded(result.plant.garden_id, plantWithImage, email);
+    } catch (broadcastError) {
+      console.error('Error broadcasting plant addition:', broadcastError);
+    }
   } else {
-    // Pi not connected - DELETE the plant we just saved and return error
-    const { deletePlantById } = require('../models/plantModel');
-    await deletePlantById(result.plant.plant_id);
-    console.log(`🗑️ Deleted plant ${result.plant.plant_id} from database (Pi not connected)`);
+    // Production mode: Require Pi connection
+    const piResult = piCommunication.addPlant(result.plant);
 
-    return sendError(ws, 'ADD_PLANT_FAIL',
-      'Pi controller not connected. Cannot assign hardware to plant. Please try again when Pi is online.');
+    if (piResult.success) {
+      // Pi is connected - add to pending list and wait for hardware assignment
+      addPendingPlant(result.plant.plant_id, ws, email, {
+        ...result.plant,
+        image_url: imageUrl
+      });
+
+      console.log(`⏳ Plant ${result.plant.plant_id} sent to Pi for hardware assignment...`);
+      // No immediate response - client will get success only after hardware assignment
+    } else {
+      // Pi not connected - DELETE the plant we just saved and return error
+      await deletePlantById(result.plant.plant_id, user.id);
+      console.log(`🗑️ Deleted plant ${result.plant.plant_id} from database (Pi not connected)`);
+
+      return sendError(ws, 'ADD_PLANT_FAIL',
+        'Pi controller not connected. Cannot assign hardware to plant. Please try again when Pi is online.');
+    }
   }
 }
 
 async function handleGetPlantDetails(data, ws, email) {
   const { plantName } = data;
-  if (!plantName) {
-    return sendError(ws, 'GET_PLANT_DETAILS_FAIL', 'Missing plantName');
-  }
-
-  // Get user to get userId
+  if (!plantName) return sendError(ws, 'GET_PLANT_DETAILS_FAIL', 'Missing plantName');
   const user = await getUser(email);
-  if (!user) {
-    return sendError(ws, 'GET_PLANT_DETAILS_FAIL', 'User not found');
-  }
-
+  if (!user) return sendError(ws, 'GET_PLANT_DETAILS_FAIL', 'User not found');
   const plant = await getPlantByName(user.id, plantName);
-  if (!plant) {
-    return sendError(ws, 'GET_PLANT_DETAILS_FAIL', 'Plant not found');
-  }
+  if (!plant) return sendError(ws, 'GET_PLANT_DETAILS_FAIL', 'Plant not found');
 
-  const simulatedMoisture = Math.floor(Math.random() * 61) + 20;
-  const plantWithMoisture = { ...plant, currentMoisture: simulatedMoisture };
-
-  sendSuccess(ws, 'PLANT_DETAILS', { plant: plantWithMoisture });
+  sendSuccess(ws, 'GET_PLANT_DETAILS_RESPONSE', { plant });
 }
 
 async function handleGetMyPlants(data, ws, email) {
-  // Get user to get userId
   const user = await getUser(email);
-  if (!user) {
-    return sendError(ws, 'GET_MY_PLANTS_FAIL', 'User not found');
-  }
-
+  if (!user) return sendError(ws, 'GET_MY_PLANTS_FAIL', 'User not found');
   const plants = await getPlants(user.id);
+
   sendSuccess(ws, 'GET_MY_PLANTS_RESPONSE', { plants });
 }
 
@@ -171,17 +191,42 @@ async function handleGetMyPlants(data, ws, email) {
 async function handleDeletePlant(data, ws, email) {
   const { plantName } = data;
   if (!plantName) return sendError(ws, 'DELETE_PLANT_FAIL', 'Missing plantName');
+
   const user = await getUser(email);
   if (!user) return sendError(ws, 'DELETE_PLANT_FAIL', 'User not found');
+
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'DELETE_PLANT_FAIL', 'Plant not found');
 
   // Delete irrigation events first
   await require('../models/irrigationModel').deleteIrrigationResultsByPlantId(plant.plant_id);
-  // Delete the plant
-  await require('../models/plantModel').deletePlantById(plant.plant_id);
+
+  // Delete the plant with optimistic locking
+  const deleteResult = await deletePlantById(plant.plant_id, user.id);
+
+  if (deleteResult.error === 'PLANT_NOT_FOUND') {
+    return sendError(ws, 'DELETE_PLANT_FAIL', 'Plant not found in your garden');
+  }
+
+  if (deleteResult.error === 'CONCURRENT_MODIFICATION') {
+    return sendError(ws, 'DELETE_PLANT_FAIL', 'Plant was modified by another user. Please refresh and try again.');
+  }
+
+  if (deleteResult.error) {
+    return sendError(ws, 'DELETE_PLANT_FAIL', 'Failed to delete plant. Please try again.');
+  }
 
   sendSuccess(ws, 'DELETE_PLANT_SUCCESS', { message: 'Plant and its irrigation events deleted' });
+
+  // Broadcast plant deletion to other garden members
+  try {
+    const gardenId = await require('../models/plantModel').getUserGardenId(user.id);
+    if (gardenId) {
+      await broadcastPlantDeleted(gardenId, plant, email);
+    }
+  } catch (broadcastError) {
+    console.error('Error broadcasting plant deletion:', broadcastError);
+  }
 }
 
 async function handleUpdatePlantDetails(data, ws, email) {
@@ -217,7 +262,7 @@ async function handleUpdatePlantDetails(data, ws, email) {
     // Find the plant by name
     const plant = await getPlantByName(user.id, plantName);
     if (!plant) {
-      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Plant not found');
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Plant not found in your garden');
     }
 
     let imageUrlToSave;
@@ -235,25 +280,51 @@ async function handleUpdatePlantDetails(data, ws, email) {
     }
 
     // Update plant details
-    const updatedPlant = await updatePlantDetails(user.id, plant.plant_id, {
+    const updatedPlant = await require('../models/plantModel').updatePlantDetails(user.id, plant.plant_id, {
       plantName: newPlantName?.trim(),
       desiredMoisture,
       waterLimit,
       imageUrl: imageUrlToSave
     });
 
-    if (!updatedPlant) {
-      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Update failed');
+    if (updatedPlant.error === 'NO_GARDEN_MEMBERSHIP') {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'You must be a member of a garden to update plants');
+    }
+
+    if (updatedPlant.error === 'PLANT_NOT_FOUND') {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Plant not found in your garden');
     }
 
     if (updatedPlant.error === 'DUPLICATE_NAME') {
-      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'You already have a plant with this name');
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'A plant with this name already exists in your garden');
+    }
+
+    if (updatedPlant.error === 'CONCURRENT_MODIFICATION') {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Plant was updated by another user. Please refresh and try again.');
+    }
+
+    if (updatedPlant.error === 'DATABASE_ERROR') {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Failed to update plant details. Please try again.');
+    }
+
+    if (!updatedPlant) {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Update failed');
     }
 
     sendSuccess(ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {
       plant: updatedPlant,
       message: 'Plant details updated successfully'
     });
+
+    // Broadcast plant update to other garden members
+    try {
+      const gardenId = await require('../models/plantModel').getUserGardenId(user.id);
+      if (gardenId) {
+        await broadcastPlantUpdated(gardenId, updatedPlant, email);
+      }
+    } catch (broadcastError) {
+      console.error('Error broadcasting plant update:', broadcastError);
+    }
 
   } catch (err) {
     console.error('Update plant details error:', err);

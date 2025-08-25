@@ -99,8 +99,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE2E2',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FCA5A5',
+    marginHorizontal: 20,
+    marginVertical: 10,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#E74C3C',
   },
   connectionWarningText: {
     color: '#E74C3C',
@@ -110,17 +113,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_500Medium',
   },
   retryButton: {
-    backgroundColor: '#E74C3C',
+    marginLeft: 'auto',
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 6,
-    marginLeft: 12,
+    backgroundColor: '#E74C3C',
+    borderRadius: 4,
   },
   retryButtonText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
-    fontFamily: 'Nunito_700Bold',
+    fontFamily: 'Nunito_600SemiBold',
   },
   plantsSection: {
     flex: 0.6,
@@ -303,6 +306,55 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
     textAlign: 'center',
     fontFamily: 'Nunito_500Medium',
+  },
+
+  // Garden Status Banner Styles
+  gardenStatusContainer: {
+    marginHorizontal: 20,
+    marginVertical: 10,
+  },
+  gardenActiveBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#E8F5E8',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  gardenInactiveBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFF3E0',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+  },
+  gardenInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  gardenStatusText: {
+    color: '#2C3E50',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
+    fontFamily: 'Nunito_500Medium',
+  },
+  gardenStatusTextClickable: {
+    color: '#FF9800',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+    fontFamily: 'Nunito_600SemiBold',
+    textDecorationLine: 'underline',
+  },
+  gardenSettingsButton: {
+    padding: 4,
   },
 });
 
