@@ -175,6 +175,11 @@ async function updatePlantDetails(userId, plantId, updateData) {
       updateValues.push(updateData.waterLimit);
     }
 
+    if (updateData.dripperType !== undefined) {
+      updateFields.push(`dripper_type = $${paramIndex++}`);
+      updateValues.push(updateData.dripperType);
+    }
+
     if (updateData.imageUrl !== undefined) {
       updateFields.push(`image_url = $${paramIndex++}`);
       updateValues.push(updateData.imageUrl);

@@ -51,63 +51,57 @@ function handlePiSocket(ws) {
           console.log(`Plant ${plantId} database updated with hardware assignments`);
 
           // Notify client of successful plant creation with hardware assignment
-          if (pendingInfo && pendingInfo.ws) {
-            const plantWithHardware = {
-              ...pendingInfo,
-              sensor_port: responseData.sensor_port,
-              valve_id: responseData.assigned_valve
-            };
-
-            sendSuccess(pendingInfo.ws, 'ADD_PLANT_SUCCESS', {
-              message: `Plant "${pendingInfo.name}" added successfully! Assigned to sensor ${responseData.sensor_port} and valve ${responseData.assigned_valve}`,
-              plant: plantWithHardware,
-              hardware: {
+          if (pendingInfo) {
+            const { ws, email, plantData } = pendingInfo;
+            sendSuccess(ws, 'ADD_PLANT_SUCCESS', {
+              plant: {
+                ...plantData,
                 sensor_port: responseData.sensor_port,
                 valve_id: responseData.assigned_valve
-              }
+              },
+              message: `Plant "${plantData.name}" created successfully with hardware assignment`
             });
-            console.log(`Notified client: Plant ${pendingInfo.name} successfully added with hardware!`);
 
             // Broadcast plant addition to other garden members
             try {
-              await broadcastPlantAdded(pendingInfo.garden_id, plantWithHardware, pendingInfo.email);
+              const gardenId = await require('../models/plantModel').getUserGardenId(pendingInfo.userId);
+              if (gardenId) {
+                await broadcastPlantAdded(gardenId, {
+                  ...plantData,
+                  sensor_port: responseData.sensor_port,
+                  valve_id: responseData.assigned_valve
+                }, email);
+              }
             } catch (broadcastError) {
               console.error('Error broadcasting plant addition:', broadcastError);
             }
-          } else {
-            console.log(`No pending client found for plant ${plantId} - hardware assigned but client not notified`);
           }
-
-        } catch (err) {
-          console.error(`Plant ${plantId} database update failed:`, err);
-
-          // Database update failed - delete the plant and notify client
-          const { deletePlantById } = require('../models/plantModel');
-          await deletePlantById(plantId);
-          console.log(`Deleted plant ${plantId} from database (update failed)`);
-
-          if (pendingInfo && pendingInfo.ws) {
-            sendError(pendingInfo.ws, 'ADD_PLANT_FAIL',
-              `Hardware assigned but database update failed. Plant removed. Please try again.`);
+        } catch (dbError) {
+          console.error(`Failed to update plant ${plantId} in database:`, dbError);
+          // Notify client of database error
+          if (pendingInfo) {
+            sendError(pendingInfo.ws, 'ADD_PLANT_FAIL', 'Failed to save hardware assignment to database');
           }
         }
-
       } else {
-        // Hardware assignment failed
-        console.error(`Plant ${plantId} hardware assignment failed: ${responseData.error_message}`);
-
-        // Delete the plant from database since hardware assignment failed
-        const { deletePlantById } = require('../models/plantModel');
-        await deletePlantById(plantId);
-        console.log(`Deleted plant ${plantId} from database (hardware assignment failed)`);
-
+        console.log(`Plant ${plantId}: hardware assignment failed - ${responseData.error_message}`);
         // Notify client of hardware assignment failure
-        if (pendingInfo && pendingInfo.ws) {
-          sendError(pendingInfo.ws, 'ADD_PLANT_FAIL',
-            `Hardware assignment failed: ${responseData.error_message || 'Unknown error'}. Plant removed.`);
+        if (pendingInfo) {
+          sendError(pendingInfo.ws, 'ADD_PLANT_FAIL', `Hardware assignment failed: ${responseData.error_message}`);
         }
       }
-      return;
+    }
+
+    // Handle UPDATE_PLANT_RESPONSE from Pi
+    if (data.type === 'UPDATE_PLANT_RESPONSE') {
+      const responseData = data.data || {};
+      const plantId = responseData.plant_id;
+
+      if (responseData.success) {
+        console.log(`Plant ${plantId} updated successfully on Pi: ${responseData.message}`);
+      } else {
+        console.warn(`Failed to update plant ${plantId} on Pi: ${responseData.message}`);
+      }
     }
 
     // Handle PI_LOG messages from Pi

@@ -490,6 +490,22 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
     fontFamily: 'Nunito_700Bold',
   },
+  settingsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  settingsButtonText: {
+    color: '#4CAF50',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontFamily: 'Nunito_700Bold',
+  },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -33,6 +33,7 @@ import MoistureCircle from '../PlantList/MoistureCircle';
 import TempCircle from '../PlantList/TempCircle';
 import websocketService from '../../../services/websocketService';
 import CircularTimePicker from './CircularTimePicker';
+import * as ImagePicker from 'expo-image-picker';
 
 const PlantDetail = () => {
   const navigation = useNavigation();
@@ -85,6 +86,32 @@ const PlantDetail = () => {
     }
   }, [plant?.name]);
 
+  // Set up WebSocket message handlers for plant updates
+  useEffect(() => {
+    websocketService.onMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
+    websocketService.onMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
+
+    return () => {
+      websocketService.offMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
+      websocketService.offMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
+    };
+  }, []);
+
+  // Handle successful plant update
+  const handlePlantUpdateSuccess = (data) => {
+    Alert.alert('Success', data.message || 'Plant updated successfully');
+    // Optionally refresh the plant data or navigate back
+    if (data.plant) {
+      // Update the plant data in the route params
+      navigation.setParams({ plant: data.plant });
+    }
+  };
+
+  // Handle plant update error
+  const handlePlantUpdateError = (data) => {
+    Alert.alert('Error', data.message || 'Failed to update plant');
+  };
+
   // Available irrigation times (in minutes)
   const irrigationTimes = [0, 5, 10, 15, 20, 30, 45, 60];
 
@@ -96,6 +123,142 @@ const PlantDetail = () => {
   // Manual irrigation handlers
   const handleManualIrrigation = () => {
     setShowTimePicker(true);
+  };
+
+  // Plant settings handlers
+  const handleChangePlantName = () => {
+    Alert.prompt(
+      'Change Plant Name',
+      'Enter new name for the plant:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Update',
+          onPress: (newName) => {
+            if (newName && newName.trim()) {
+              updatePlantDetails({ newPlantName: newName.trim() });
+            }
+          }
+        }
+      ],
+      'plain-text',
+      plant?.name || ''
+    );
+  };
+
+  const handleChangeDesiredHumidity = () => {
+    Alert.prompt(
+      'Change Desired Humidity',
+      'Enter new desired humidity (0-100%):',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Update',
+          onPress: (humidity) => {
+            const humidityValue = parseFloat(humidity);
+            if (!isNaN(humidityValue) && humidityValue >= 0 && humidityValue <= 100) {
+              updatePlantDetails({ desiredMoisture: humidityValue });
+            } else {
+              Alert.alert('Invalid Input', 'Please enter a number between 0 and 100');
+            }
+          }
+        }
+      ],
+      'plain-text',
+      plant?.desiredMoisture?.toString() || '50'
+    );
+  };
+
+  const handleChangeDripper = () => {
+    Alert.alert(
+      'Change Dripper Type',
+      'Select new dripper type:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: '2L/h', onPress: () => updatePlantDetails({ dripperType: '2L/h' }) },
+        { text: '4L/h', onPress: () => updatePlantDetails({ dripperType: '4L/h' }) },
+        { text: '8L/h', onPress: () => updatePlantDetails({ dripperType: '8L/h' }) }
+      ]
+    );
+  };
+
+  const handleChangeWaterLimit = () => {
+    Alert.prompt(
+      'Change Water Limit',
+      'Enter new water limit (in liters):',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Update',
+          onPress: (limit) => {
+            const limitValue = parseFloat(limit);
+            if (!isNaN(limitValue) && limitValue > 0) {
+              updatePlantDetails({ waterLimit: limitValue });
+            } else {
+              Alert.alert('Invalid Input', 'Please enter a positive number');
+            }
+          }
+        }
+      ],
+      'plain-text',
+      plant?.waterLimit?.toString() || '1.0'
+    );
+  };
+
+  const handleChangeImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        const base64 = await convertImageToBase64(imageUri);
+        const filename = `plant_${plant?.id}_${Date.now()}.jpg`;
+        
+        updatePlantDetails({
+          imageData: {
+            base64,
+            filename,
+            mimeType: 'image/jpeg'
+          }
+        });
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to select image');
+    }
+  };
+
+  // Helper function to convert image to base64
+  const convertImageToBase64 = async (uri) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // Function to update plant details
+  const updatePlantDetails = (updateData) => {
+    if (!websocketService.isConnected()) {
+      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
+      return;
+    }
+
+    websocketService.sendMessage({
+      type: 'UPDATE_PLANT_DETAILS',
+      plantName: plant.name,
+      ...updateData
+    });
   };
 
   const handleTimeSelected = (timeMinutes) => {
@@ -538,6 +701,47 @@ const PlantDetail = () => {
           <TouchableOpacity style={styles.secondaryButton}>
             <Feather name="calendar" size={20} color="#4CAF50" />
             <Text style={styles.secondaryButtonText}>View Schedule</Text>
+          </TouchableOpacity>
+
+          {/* Plant Settings Buttons */}
+          <TouchableOpacity 
+            style={styles.settingsButton}
+            onPress={handleChangePlantName}
+          >
+            <Feather name="edit-3" size={20} color="#4CAF50" />
+            <Text style={styles.settingsButtonText}>Change Name</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.settingsButton}
+            onPress={handleChangeDesiredHumidity}
+          >
+            <Feather name="droplet" size={20} color="#4CAF50" />
+            <Text style={styles.settingsButtonText}>Change Desired Humidity</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.settingsButton}
+            onPress={handleChangeDripper}
+          >
+            <Feather name="settings" size={20} color="#4CAF50" />
+            <Text style={styles.settingsButtonText}>Change Dripper</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.settingsButton}
+            onPress={handleChangeWaterLimit}
+          >
+            <Feather name="maximize-2" size={20} color="#4CAF50" />
+            <Text style={styles.settingsButtonText}>Change Water Limit</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.settingsButton}
+            onPress={handleChangeImage}
+          >
+            <Feather name="image" size={20} color="#4CAF50" />
+            <Text style={styles.settingsButtonText}>Change Image</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

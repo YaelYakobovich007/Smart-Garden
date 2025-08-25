@@ -336,6 +336,64 @@ class SmartGardenEngine:
             self.plants[plant_id].valve.unblock()
             print(f"Watering enabled for plant {plant_id}")
 
+    async def update_plant(
+        self,
+        plant_id: int,
+        desired_moisture: Optional[float] = None,
+        water_limit: Optional[float] = None,
+        dripper_type: Optional[str] = None
+    ) -> bool:
+        """
+        Update plant settings.
+        
+        Args:
+            plant_id (int): ID of the plant to update
+            desired_moisture (Optional[float]): New desired moisture level
+            water_limit (Optional[float]): New water limit
+            dripper_type (Optional[str]): New dripper type
+            
+        Returns:
+            bool: True if update was successful, False otherwise
+        """
+        if plant_id not in self.plants:
+            print(f"Plant {plant_id} not found")
+            return False
+        
+        plant = self.plants[plant_id]
+        
+        try:
+            # Update desired moisture if provided
+            if desired_moisture is not None:
+                plant.desired_moisture = desired_moisture
+                print(f"Updated desired moisture for plant {plant_id} to {desired_moisture}%")
+            
+            # Update water limit if provided
+            if water_limit is not None:
+                plant.water_limit = water_limit
+                print(f"Updated water limit for plant {plant_id} to {water_limit}L")
+            
+            # Update dripper type if provided
+            if dripper_type is not None:
+                # Convert string to DripperType enum
+                if dripper_type == '2L/h':
+                    plant.dripper_type = DripperType.TYPE_2LH
+                elif dripper_type == '4L/h':
+                    plant.dripper_type = DripperType.TYPE_4LH
+                elif dripper_type == '8L/h':
+                    plant.dripper_type = DripperType.TYPE_8LH
+                else:
+                    print(f"Invalid dripper type: {dripper_type}")
+                    return False
+                
+                print(f"Updated dripper type for plant {plant_id} to {dripper_type}")
+            
+            print(f"Successfully updated plant {plant_id}")
+            return True
+            
+        except Exception as e:
+            print(f"Error updating plant {plant_id}: {e}")
+            return False
+
     def get_available_sensors(self) -> List[int]:
         """
         Get list of available sensor ports.

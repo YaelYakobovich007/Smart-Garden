@@ -232,7 +232,7 @@ async function handleDeletePlant(data, ws, email) {
 
 async function handleUpdatePlantDetails(data, ws, email) {
   try {
-    const { plantName, newPlantName, desiredMoisture, waterLimit, imageData } = data;
+    const { plantName, newPlantName, desiredMoisture, waterLimit, dripperType, imageData } = data;
 
     // Validate required fields
     if (!plantName) {
@@ -252,6 +252,12 @@ async function handleUpdatePlantDetails(data, ws, email) {
     // Validate water limit (positive number)
     if (waterLimit !== undefined && waterLimit <= 0) {
       return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Water limit must be a positive number');
+    }
+
+    // Validate dripper type (if provided)
+    const validDripperTypes = ['2L/h', '4L/h', '8L/h'];
+    if (dripperType && !validDripperTypes.includes(dripperType)) {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Invalid dripper type. Must be 2L/h, 4L/h, or 8L/h');
     }
 
     // Get user ID from email
@@ -285,6 +291,7 @@ async function handleUpdatePlantDetails(data, ws, email) {
       plantName: newPlantName?.trim(),
       desiredMoisture,
       waterLimit,
+      dripperType,
       imageUrl: imageUrlToSave
     });
 
@@ -310,6 +317,18 @@ async function handleUpdatePlantDetails(data, ws, email) {
 
     if (!updatedPlant) {
       return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Update failed');
+    }
+
+    // Send update to Pi controller if plant has hardware IDs
+    if (updatedPlant.sensor_port && updatedPlant.valve_id) {
+      try {
+        const piResult = piCommunication.updatePlant(updatedPlant);
+        if (!piResult.success) {
+          console.warn('Failed to update plant on Pi:', piResult.error);
+        }
+      } catch (piError) {
+        console.error('Error updating plant on Pi:', piError);
+      }
     }
 
     sendSuccess(ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {

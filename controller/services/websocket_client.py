@@ -395,7 +395,7 @@ class SmartGardenPiClient:
             
             self.logger.info(f"Received GET_VALVE_STATUS request for plant {plant_id}")
             
-            # Call the get valve status handler
+            # Create handler instance and call it
             from controller.handlers.get_valve_status_handler import GetValveStatusHandler
             handler = GetValveStatusHandler(self.engine)
             result = await handler.handle(plant_id)
@@ -419,6 +419,41 @@ class SmartGardenPiClient:
                 error_message=str(e)
             )
             await self.send_message("VALVE_STATUS_RESPONSE", error_result.to_websocket_data())
+
+    async def handle_update_plant_command(self, data: Dict[Any, Any]):
+        """Handle update plant request from server."""
+        try:
+            from controller.handlers.update_plant_handler import UpdatePlantHandler
+            
+            self.logger.info(f"Received UPDATE_PLANT command from server")
+            self.logger.info(f"Full message: {data}")
+            
+            # Create handler instance and call it
+            handler = UpdatePlantHandler(self.engine)
+            success, message = await handler.handle(data=data)
+            
+            # Send response back to server
+            response_data = {
+                "plant_id": data.get("plant_id"),
+                "success": success,
+                "message": message
+            }
+            
+            await self.send_message("UPDATE_PLANT_RESPONSE", response_data)
+            
+            if success:
+                self.logger.info(f"Successfully updated plant {data.get('plant_id')}")
+            else:
+                self.logger.error(f"Failed to update plant {data.get('plant_id')}: {message}")
+                
+        except Exception as e:
+            self.logger.error(f"Error during update plant: {e}")
+            error_response = {
+                "plant_id": data.get("plant_id", 0),
+                "success": False,
+                "message": f"Error updating plant: {str(e)}"
+            }
+            await self.send_message("UPDATE_PLANT_RESPONSE", error_response)
     
     async def handle_valve_status_request(self, data):
         """Handle valve status request from server."""
@@ -508,6 +543,9 @@ class SmartGardenPiClient:
             elif message_type == "VALVE_STATUS":
                 await self.handle_valve_status_request(message_data)
             
+            elif message_type == "UPDATE_PLANT":
+                await self.handle_update_plant_command(message_data)
+            
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")
                 
@@ -553,6 +591,7 @@ class SmartGardenPiClient:
             self.logger.info("  - OPEN_VALVE: Open valve for a specific plant for a given duration")
             self.logger.info("  - CLOSE_VALVE: Close valve for a specific plant")
             self.logger.info("  - GET_VALVE_STATUS: Get detailed valve status for a specific plant")
+            self.logger.info("  - UPDATE_PLANT: Update an existing plant's configuration")
             
             # Start listening for messages
             await self.listen_for_messages()
