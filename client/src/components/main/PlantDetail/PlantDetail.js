@@ -436,43 +436,7 @@ const PlantDetail = () => {
            </View>
          )}
          
-         {/* Debug: Show valve_blocked status */}
-         <View style={{padding: 10, backgroundColor: '#f0f0f0', margin: 10, borderRadius: 5}}>
-           <Text style={{fontSize: 12, color: 'red'}}>
-             Debug: valve_blocked = {plant.valve_blocked ? 'TRUE' : 'FALSE'}
-           </Text>
-                       <TouchableOpacity
-              style={{backgroundColor: '#ff0000', padding: 5, marginTop: 5, borderRadius: 3}}
-              onPress={() => {
-                // Manual test: Send valve blocked message
-                websocketService.sendMessage({
-                  type: 'UNBLOCK_VALVE',
-                  plantName: plant.name
-                });
-                Alert.alert('Test', 'Sent UNBLOCK_VALVE message to test valve blocking');
-              }}
-            >
-              <Text style={{color: 'white', fontSize: 10}}>Test: Send UNBLOCK_VALVE</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={{backgroundColor: '#ff6600', padding: 5, marginTop: 5, borderRadius: 3}}
-              onPress={() => {
-                // Manual test: Force valve blocked status
-                if (websocketService.isConnected()) {
-                  websocketService.sendMessage({
-                    type: 'TEST_VALVE_BLOCK',
-                    plantName: plant.name
-                  });
-                  Alert.alert('Test Valve Blocking', 'Sent TEST_VALVE_BLOCK message. Check if you see the amber warning and disabled buttons after refreshing.');
-                } else {
-                  Alert.alert('Error', 'Not connected to server');
-                }
-              }}
-            >
-              <Text style={{color: 'white', fontSize: 10}}>Test: Force Valve Blocked</Text>
-            </TouchableOpacity>
-         </View>
+
 
         {/* 2. Smart Irrigation Section */}
         <View style={styles.sectionContainer}>
@@ -491,38 +455,7 @@ const PlantDetail = () => {
             </Text>
           </TouchableOpacity>
           
-          {/* Debug: Test watering indicator */}
-          <TouchableOpacity 
-            style={{backgroundColor: '#00ff00', padding: 10, marginTop: 10, borderRadius: 5}}
-            onPress={() => {
-              console.log('🧪 Debug: Testing watering indicator for plant:', plant.name, 'ID:', plant.id);
-              console.log('🧪 Current watering state:', getPlantWateringState(plant.id));
-              Alert.alert('Debug', 'Check console logs and go back to main screen to see if indicator appears');
-            }}
-          >
-            <Text style={{color: 'white', fontSize: 12, textAlign: 'center'}}>
-              DEBUG: Check Watering State (see console)
-            </Text>
-          </TouchableOpacity>
-          
-          {/* Manual test: Force watering indicator */}
-          <TouchableOpacity 
-            style={{backgroundColor: '#0066ff', padding: 10, marginTop: 5, borderRadius: 5}}
-            onPress={() => {
-              console.log('🧪 FORCE: Manually setting watering state for plant:', plant.name, 'ID:', plant.id);
-              // Import the irrigation context functions
-              const { updatePlantWateringState } = useIrrigation();
-              
-              // Manually trigger watering state (this should show the indicator immediately)
-              startSmartIrrigation(plant);
-              
-              Alert.alert('Test', 'Watering indicator should now appear! Go back to main screen to see it.');
-            }}
-          >
-            <Text style={{color: 'white', fontSize: 12, textAlign: 'center'}}>
-              FORCE: Start Watering Indicator Test
-            </Text>
-          </TouchableOpacity>
+
         </View>
 
         {/* 3. Manual Controls Section */}
@@ -620,11 +553,7 @@ const PlantDetail = () => {
         isActive={isWateringActive && !pendingIrrigationRequest && (isManualMode || isSmartMode)}
         timeLeft={wateringTimeLeft}
         onStop={() => {
-          console.log('🛑 Stop called from PlantDetail, plant.id:', plant.id, 'plant.name:', plant.name);
-          console.log('🛑 Irrigation state:', { isWateringActive, isManualMode, isSmartMode });
-          
           // Send single STOP_IRRIGATION message
-          console.log('🛑 Stopping smart irrigation for plant:', plant.name);
           websocketService.sendMessage({
             type: 'STOP_IRRIGATION',
             plantName: plant.name

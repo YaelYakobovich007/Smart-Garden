@@ -741,8 +741,8 @@ function handlePiSocket(ws) {
       return;
     }
 
-    // Handle ALL_PLANTS_MOISTURE_RESPONSE from Pi
-    if (data.type === 'ALL_PLANTS_MOISTURE_RESPONSE') {
+    // Handle ALL_MOISTURE_RESPONSE from Pi
+    if (data.type === 'ALL_MOISTURE_RESPONSE') {
       const responseData = data.data || {};
 
       if (responseData.status === 'success') {
@@ -751,9 +751,19 @@ function handlePiSocket(ws) {
           console.log(`   Plant ${plant.plant_id}: moisture=${plant.moisture}%, temperature=${plant.temperature}°C`);
         });
         
-        // Broadcast to all connected clients (for now, we'll implement this later)
-        // For now, just log that we received the data
-        console.log(`📊 Received all plants moisture data - ${responseData.total_plants} plants`);
+        // Broadcast to all connected clients
+        const { getAllUserSockets } = require('../models/userSessions');
+        const userSockets = getAllUserSockets();
+        
+        userSockets.forEach(userSocket => {
+          try {
+            sendSuccess(userSocket, 'ALL_PLANTS_MOISTURE_RESPONSE', responseData);
+          } catch (error) {
+            console.error('Error sending moisture data to client:', error);
+          }
+        });
+        
+        console.log(`📊 Broadcasted moisture data to ${userSockets.length} connected clients`);
       } else {
         console.error(`❌ All plants moisture request failed: ${responseData.error_message}`);
       }

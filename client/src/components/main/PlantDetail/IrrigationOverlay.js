@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 
 /**
  * Irrigation Overlay Component
- * Shows animated water drops and blue background when irrigation is active
+ * Shows irrigation status with the same design as the lower "Active Watering" section
  */
 const IrrigationOverlay = ({ isActive, timeLeft, onStop }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -93,49 +93,46 @@ const IrrigationOverlay = ({ isActive, timeLeft, onStop }) => {
 
   return (
     <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-      {/* Blue background */}
-      <View style={styles.background} />
-      
       {/* Water drops */}
       <Animated.View style={[styles.drop, styles.drop1, { transform: [{ translateY: dropAnim1 }] }]}>
-        <Feather name="droplet" size={24} color="#3B82F6" />
+        <Feather name="droplet" size={24} color="#4CAF50" />
       </Animated.View>
       
       <Animated.View style={[styles.drop, styles.drop2, { transform: [{ translateY: dropAnim2 }] }]}>
-        <Feather name="droplet" size={20} color="#60A5FA" />
+        <Feather name="droplet" size={20} color="#66BB6A" />
       </Animated.View>
       
       <Animated.View style={[styles.drop, styles.drop3, { transform: [{ translateY: dropAnim3 }] }]}>
-        <Feather name="droplet" size={18} color="#93C5FD" />
+        <Feather name="droplet" size={18} color="#81C784" />
       </Animated.View>
 
-            {/* Combined status and control bar */}
+      {/* Combined status and control bar */}
       <View style={styles.combinedBar} pointerEvents="auto">
         {/* Status section */}
         <View style={styles.statusSection}>
-                     <View style={styles.statusLeft}>
-             <Feather name="droplet" size={20} color="#FFFFFF" />
-             <Text style={styles.statusText}>Irrigation in Progress</Text>
-           </View>
+          <View style={styles.statusLeft}>
+            <Feather name="droplet" size={20} color="#4CAF50" />
+            <Text style={styles.statusText}>Active Watering</Text>
+          </View>
           {timeLeft > 0 && (
             <Text style={styles.statusTimer}>{formatTime(timeLeft)}</Text>
           )}
         </View>
         
-                 {/* Control section */}
-         <View style={styles.controlSection}>
-           <TouchableOpacity 
-             style={[styles.controlButton, styles.stopButton]} 
-             onPress={() => {
-               console.log('🛑 Stop button pressed in IrrigationOverlay');
-               onStop();
-             }}
-             activeOpacity={0.7}
-           >
-             <Feather name="square" size={20} color="#FFFFFF" />
-             <Text style={styles.controlButtonText}>Stop</Text>
-           </TouchableOpacity>
-         </View>
+        {/* Control section */}
+        <View style={styles.controlSection}>
+          <TouchableOpacity 
+            style={[styles.controlButton, styles.stopButton]} 
+            onPress={() => {
+              console.log('🛑 Stop button pressed in IrrigationOverlay');
+              onStop();
+            }}
+            activeOpacity={0.7}
+          >
+            <Feather name="square" size={20} color="#FFFFFF" />
+            <Text style={styles.controlButtonText}>Stop</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </Animated.View>
   );
@@ -150,14 +147,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 1000,
     pointerEvents: 'box-none', // Allow touches to pass through, except for children with pointerEvents: 'auto'
-  },
-  background: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent', // No background overlay
   },
   drop: {
     position: 'absolute',
@@ -177,17 +166,17 @@ const styles = StyleSheet.create({
     top: 100, // Position below the header
     left: 20,
     right: 20,
-    backgroundColor: '#FFFFFF', // White background
+    backgroundColor: '#E8F5E8', // Green background
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 16,
-    shadowColor: '#3B82F6',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 8,
     borderWidth: 1,
-    borderColor: '#E3F2FD',
+    borderColor: '#4CAF50', // Green border
   },
   statusSection: {
     flexDirection: 'row',
@@ -202,14 +191,14 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E40AF', // Blue text
+    color: '#2C3E50', // Dark text
     marginLeft: 8,
     fontFamily: 'Nunito_600SemiBold',
   },
   statusTimer: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E40AF', // Blue text
+    color: '#4CAF50', // Green text
     fontFamily: 'Nunito_700Bold',
   },
   controlSection: {
@@ -220,18 +209,18 @@ const styles = StyleSheet.create({
   controlButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3B82F6', // Darker blue background for better visibility
+    backgroundColor: '#4CAF50', // Green background for button
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
     minWidth: 80,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#1E40AF',
+    borderColor: '#388E3C',
   },
   stopButton: {
-    backgroundColor: '#EF4444', // Red background for stop button
-    borderColor: '#DC2626',
+    backgroundColor: '#059669', // Green background to match Close Valve button
+    borderColor: '#047857',
   },
   controlButtonText: {
     fontSize: 14,

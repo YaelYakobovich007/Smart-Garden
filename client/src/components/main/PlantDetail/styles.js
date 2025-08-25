@@ -28,14 +28,14 @@ export const styles = StyleSheet.create({
     width: 32,
   },
   irrigationControlBar: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#4CAF50',
     paddingHorizontal: 16,
     paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#2563EB',
+    borderBottomColor: '#388E3C',
   },
   irrigationStatus: {
     flexDirection: 'row',

@@ -67,7 +67,24 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_400Regular',
   },
 
-  // Animation container
+  // Animation stage (for water manifold layout)
+  animationStage: {
+    width: "100%",
+    aspectRatio: 1,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: 0,
+    position: "relative",
+    overflow: "hidden",
+    marginVertical: 20,
+    minHeight: 320,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  // Animation container (legacy)
   animationContainer: {
     alignItems: 'center',
     paddingVertical: 20,
