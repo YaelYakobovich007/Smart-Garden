@@ -9,7 +9,7 @@ const { addPendingMoistureRequest } = require('../services/pendingMoistureTracke
 const { broadcastPlantAdded, broadcastPlantDeleted, broadcastPlantUpdated } = require('../services/gardenBroadcaster');
 
 // Test mode flag - set to true to allow plant creation without Pi
-const TEST_MODE = process.env.TEST_MODE === 'true' || process.env.NODE_ENV === 'development';
+const TEST_MODE = false
 
 const plantHandlers = {
   ADD_PLANT: handleAddPlant,

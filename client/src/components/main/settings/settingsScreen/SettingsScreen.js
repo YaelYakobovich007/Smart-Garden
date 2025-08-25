@@ -97,13 +97,13 @@ const SettingsScreen = () => {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#F0F4F8' }}>
+        <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Feather name="arrow-left" size={24} color="#333" />
+                    <Feather name="arrow-left" size={24} color="#2C3E50" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Settings</Text>
                 <View style={styles.headerSpacer} />
@@ -111,7 +111,7 @@ const SettingsScreen = () => {
 
             {/* Settings List */}
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Profile Section */}
+                {/* Account Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Account</Text>
                     <TouchableOpacity style={styles.settingItem} onPress={handleProfile}>
@@ -161,6 +161,25 @@ const SettingsScreen = () => {
                     </TouchableOpacity>
                 </View>
 
+                {/* Debug Section */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Debug</Text>
+                    <TouchableOpacity style={styles.settingItem} onPress={handleClearSession}>
+                        <View style={styles.settingLeft}>
+                            <Feather name="refresh-cw" size={20} color="#F39C12" />
+                            <Text style={[styles.settingText, styles.clearSessionText]}>Clear Session</Text>
+                        </View>
+                        <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.settingItem} onPress={handleResetOnboarding}>
+                        <View style={styles.settingLeft}>
+                            <Feather name="play-circle" size={20} color="#9B59B6" />
+                            <Text style={[styles.settingText, styles.clearSessionText]}>Reset Onboarding</Text>
+                        </View>
+                        <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                    </TouchableOpacity>
+                </View>
+
                 {/* Logout Section */}
                 <View style={styles.section}>
                     <TouchableOpacity style={[styles.settingItem, styles.logoutItem]} onPress={handleLogout}>
@@ -168,18 +187,7 @@ const SettingsScreen = () => {
                             <Feather name="log-out" size={20} color="#E74C3C" />
                             <Text style={[styles.settingText, styles.logoutText]}>Logout</Text>
                         </View>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.settingItem, styles.clearSessionItem]} onPress={handleClearSession}>
-                        <View style={styles.settingLeft}>
-                            <Feather name="refresh-cw" size={20} color="#F39C12" />
-                            <Text style={[styles.settingText, styles.clearSessionText]}>Clear Session (Debug)</Text>
-                        </View>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.settingItem, styles.clearSessionItem]} onPress={handleResetOnboarding}>
-                        <View style={styles.settingLeft}>
-                            <Feather name="play-circle" size={20} color="#9B59B6" />
-                            <Text style={[styles.settingText, styles.clearSessionText]}>Reset Onboarding (Debug)</Text>
-                        </View>
+                        <Feather name="chevron-right" size={20} color="#BDC3C7" />
                     </TouchableOpacity>
                 </View>
             </ScrollView>
