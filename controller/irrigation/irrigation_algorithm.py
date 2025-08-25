@@ -20,6 +20,32 @@ class IrrigationAlgorithm:
         self.weather_service = WeatherService()
         self.websocket_client = websocket_client  # For sending logs to server
 
+        # Calibrated sensor range constants (fixed)
+        # D (Dry point) = 90, F (Field capacity) = 10
+        self.dry_point_reading: float = 90.0
+        self.field_capacity_reading: float = 10.0
+
+    def _normalize_alpha(self, desired_value: float) -> float:
+        """Normalize desired moisture to alpha in [0,1]. Accepts 0..1 or 0..100."""
+        try:
+            value = float(desired_value)
+        except (TypeError, ValueError):
+            return 0.0
+        if value > 1.0:
+            return max(0.0, min(1.0, value / 100.0))
+        return max(0.0, min(1.0, value))
+
+    def _get_calibrated_target(self, plant: "Plant") -> float:
+        """Compute target sensor reading using calibration: D + α(F - D)."""
+        alpha = self._normalize_alpha(plant.desired_moisture)
+        D = self.dry_point_reading
+        F = self.field_capacity_reading
+        return D + alpha * (F - D)
+
+    def _get_effective_target(self, plant: "Plant", hysteresis: float = 1.5) -> float:
+        """Get calibrated target plus hysteresis (sensor units)."""
+        return self._get_calibrated_target(plant) + hysteresis
+
     async def log_to_server(self, message: str):
         """
         Send log message to server via WebSocket if available.
@@ -63,7 +89,7 @@ class IrrigationAlgorithm:
                     progress = IrrigationProgress(
                         plant_id=plant.plant_id,
                         current_moisture=current_moisture,
-                        target_moisture=plant.desired_moisture
+                        target_moisture=self._get_calibrated_target(plant)
                     )
                     print(f"Updater: Sending progress update - moisture: {current_moisture:.1f}%")
                     await self.send_progress_update(progress)
@@ -106,9 +132,10 @@ class IrrigationAlgorithm:
                 initial_moisture = current_moisture
                 print(f"Current moisture: {current_moisture:.1f}%")
                 
-                # Send initial check progress
+                # Send initial check progress using calibrated target
+                calibrated_target = self._get_calibrated_target(plant)
                 progress = IrrigationProgress.initial_check(
-                    plant.plant_id, current_moisture, plant.desired_moisture
+                    plant.plant_id, current_moisture, calibrated_target
                 )
                 await self.send_progress_update(progress)
                 
@@ -159,20 +186,20 @@ class IrrigationAlgorithm:
                 # All checks passed - notify that irrigation will start
                 print("\nAll checks passed - proceeding with irrigation")
                 
-                # Send decision that irrigation will start
+                # Send decision that irrigation will start (using calibrated target)
                 from controller.dto.irrigation_decision import IrrigationDecision
                 decision = IrrigationDecision.will_start(
                     plant_id=plant.plant_id,
                     current_moisture=current_moisture,
-                    target_moisture=plant.desired_moisture
+                    target_moisture=calibrated_target
                 )
                 
                 if self.websocket_client:
                     await self.websocket_client.send_message("IRRIGATION_DECISION", {
                         "plant_id": plant.plant_id,
                         "current_moisture": current_moisture,
-                        "target_moisture": plant.desired_moisture,
-                        "moisture_gap": plant.desired_moisture - current_moisture if current_moisture is not None else 0,
+                        "target_moisture": calibrated_target,
+                        "moisture_gap": calibrated_target - current_moisture if current_moisture is not None else 0,
                         "will_irrigate": True,
                         "reason": "moisture_below_target"
                     })
@@ -201,8 +228,8 @@ class IrrigationAlgorithm:
                         current_moisture = await self._get_averaged_moisture(plant, 5)
                         print(f"Current moisture: {current_moisture:.1f}%")
                         
-                        if plant.is_target_reached(current_moisture):
-                            print(f"Target moisture reached: {current_moisture:.1f}%")
+                        if current_moisture >= self._get_effective_target(plant, 1.5):
+                            print(f"Target moisture reached: {current_moisture:.1f}% (target: {self._get_effective_target(plant, 1.5):.1f}%)")
                             break
                         
                         # Pre-check water limit before starting cycle
@@ -427,9 +454,12 @@ class IrrigationAlgorithm:
         
         print(f"\nIrrigation Parameters:")
         print(f"   INITIAL MOISTURE: {initial_moisture}%")
-        print(f"   TARGET MOISTURE: {plant.desired_moisture}%")
-        print(f"   EFFECTIVE TARGET (with hysteresis): {plant.get_effective_target(1.5):.1f}%")
-        print(f"   MOISTURE GAP: {plant.desired_moisture - initial_moisture:.1f}%")
+        print(f"   CALIBRATION D (dry): {self.dry_point_reading}")
+        print(f"   CALIBRATION F (field capacity): {self.field_capacity_reading}")
+        print(f"   ALPHA (desired): {self._normalize_alpha(plant.desired_moisture):.3f}")
+        print(f"   TARGET (calibrated): {self._get_calibrated_target(plant):.1f}%")
+        print(f"   EFFECTIVE TARGET (with hysteresis): {self._get_effective_target(plant, 1.5):.1f}%")
+        print(f"   MOISTURE GAP: {self._get_calibrated_target(plant) - initial_moisture:.1f}%")
         print(f"   MAX WATER: {plant.valve.water_limit}L")
         
         print(f"\nMoisture Measurement Strategy:")
@@ -445,10 +475,10 @@ class IrrigationAlgorithm:
         final_moisture = await self._get_averaged_moisture(plant, 5)
         
         # Send final summary progress update
-        target_reached = final_moisture >= plant.desired_moisture
+        target_reached = final_moisture >= self._get_calibrated_target(plant)
         progress = IrrigationProgress.final_summary(
             plant.plant_id, initial_moisture, final_moisture,
-            plant.desired_moisture, total_water, cycle_count, target_reached
+            self._get_calibrated_target(plant), total_water, cycle_count, target_reached
         )
         await self.send_progress_update(progress)
         
@@ -458,16 +488,16 @@ class IrrigationAlgorithm:
         print(f"Initial Moisture: {initial_moisture:.1f}%")
         print(f"Final Moisture: {final_moisture:.1f}%")
         print(f"Moisture Increase: {final_moisture - initial_moisture:.1f}%")
-        print(f"Target Moisture: {plant.desired_moisture:.1f}%")
-        print(f"Target Reached: {'YES' if final_moisture >= plant.desired_moisture else 'NO'}")
+        print(f"Target Moisture (calibrated): {self._get_calibrated_target(plant):.1f}%")
+        print(f"Target Reached: {'YES' if final_moisture >= self._get_calibrated_target(plant) else 'NO'}")
         
         efficiency = (final_moisture - initial_moisture) / (total_water * 1000) if total_water > 0 else 0
         print(f"Water Efficiency: {efficiency:.2f} %/mL" if total_water > 0 else "Water Efficiency: N/A")
 
         # Check for faults
-        if total_water >= plant.valve.water_limit and final_moisture < plant.desired_moisture:
+        if total_water >= plant.valve.water_limit and final_moisture < self._get_calibrated_target(plant):
             progress = IrrigationProgress.fault_detected(
-                plant.plant_id, final_moisture, plant.desired_moisture, 
+                plant.plant_id, final_moisture, self._get_calibrated_target(plant), 
                 total_water, plant.valve.water_limit
             )
             await self.send_progress_update(progress)

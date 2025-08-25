@@ -120,33 +120,12 @@ class Plant:
         if sensor_data is not None:
             self.moisture_level, self.temperature_level = sensor_data
 
+        
     def is_target_reached(self, current_moisture: float, hysteresis: float = 1.5) -> bool:
         """
-        Check if moisture target is reached with hysteresis to prevent oscillation.
-        
-        Args:
-            current_moisture: Current soil moisture reading
-            hysteresis: Additional margin above target to prevent oscillation (default 1.5%)
-            
-        Returns:
-            bool: True if current moisture >= (desired_moisture + hysteresis)
-            
-        Example:
-            desired_moisture = 75%
-            hysteresis = 1.5% 
-            → Stop irrigation when current_moisture >= 76.5%
+        Legacy method retained for backward compatibility. The calibrated logic now lives
+        in the irrigation algorithm. This method uses a simple fixed-percentage target
+        based on desired_moisture.
         """
         target_with_hysteresis = self.desired_moisture + hysteresis
         return current_moisture >= target_with_hysteresis
-    
-    def get_effective_target(self, hysteresis: float = 1.5) -> float:
-        """
-        Get the effective target moisture including hysteresis.
-        
-        Args:
-            hysteresis: Hysteresis margin in percentage points
-            
-        Returns:
-            float: Effective target (desired_moisture + hysteresis)
-        """
-        return self.desired_moisture + hysteresis

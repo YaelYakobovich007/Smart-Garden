@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any
 from controller.engine.smart_garden_engine import SmartGardenEngine
 from controller.dto.irrigation_result import IrrigationResult
 
-#my ip is 192.168.68.68
+#my ip is 192.168.68.61
 class SmartGardenPiClient:
     """
     Simplified WebSocket client for Raspberry Pi to connect to the main Smart Garden server.
@@ -14,8 +14,8 @@ class SmartGardenPiClient:
     """
 
 
-    #my ip is 192.168.68.68
-    def __init__(self, server_url: str = "ws://192.168.68.68:8080", engine: SmartGardenEngine = None):
+    #my ip is 192.168.68.61
+    def __init__(self, server_url: str = "ws://192.168.68.61:8080", engine: SmartGardenEngine = None):
         self.server_url = server_url
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
         self.device_id = "raspberrypi_main_controller"
