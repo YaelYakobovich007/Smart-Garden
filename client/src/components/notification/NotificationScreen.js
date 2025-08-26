@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import websocketService from '../../services/websocketService';
 import { Feather } from '@expo/vector-icons';
@@ -18,6 +18,23 @@ const NotificationScreen = () => {
   const [notifications, setNotifications] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState({ sent: 0, received: 0, total: 0 });
+  const spinValue = useRef(new Animated.Value(0)).current;
+
+  // Spinning animation for loading
+  useEffect(() => {
+    if (loading) {
+      const spin = Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      );
+      spin.start();
+      return () => spin.stop();
+    }
+  }, [loading, spinValue]);
 
   useEffect(() => {
     let isMounted = true;
@@ -25,55 +42,98 @@ const NotificationScreen = () => {
     setNotifications([]);
     setLoading(true);
 
+    // Single handler for all irrigation results - defined outside handlePlants
+    const handleIrrigation = (irrigationData) => {
+      console.log('🔔 NotificationScreen: Received irrigation data:', irrigationData);
+      if (!isMounted) return;
+      const plantName = irrigationData.plantName;
+
+      // Update progress
+      setLoadingProgress(prev => {
+        const newProgress = { ...prev, received: prev.received + 1 };
+
+        // Check if all responses received
+        if (newProgress.received >= newProgress.total) {
+          console.log('🔔 NotificationScreen: All responses received, stopping loading');
+          setTimeout(() => {
+            if (isMounted) {
+              setLoading(false);
+            }
+          }, 500); // Small delay to show completion
+        }
+
+        return newProgress;
+      });
+
+      if (irrigationData.results && Array.isArray(irrigationData.results)) {
+        console.log(`🔔 NotificationScreen: Found ${irrigationData.results.length} irrigation results for ${plantName}`);
+        irrigationData.results.forEach((result) => {
+          setNotifications(prev => [...prev, {
+            plantName: plantName,
+            status: result.status,
+            time: result.irrigation_time || result.event_timestamp || result.time || result.timestamp || '',
+            message: result.reason || result.message || '',
+            amount: result.water_added_liters || result.amount || result.waterAmount || null,
+            finalMoisture: result.final_moisture || result.finalMoisture || result.moisture || null,
+            read: false, // All notifications start as unread
+          }]);
+        });
+      } else {
+        console.log('🔔 NotificationScreen: No results array in irrigation data');
+      }
+    };
+
     // Step 1: Get user's plants
     const handlePlants = (data) => {
+      console.log('🔔 NotificationScreen: Received plants data:', data);
       if (!isMounted) return;
       if (!data.plants || !Array.isArray(data.plants)) {
+        console.log('🔔 NotificationScreen: No plants found in data');
         setError('No plants found');
         setNotifications([]);
         setLoading(false);
         return;
       }
+      console.log(`🔔 NotificationScreen: Found ${data.plants.length} plants`);
+
       // Step 2: For each plant, get irrigation results
       let pending = data.plants.length;
-      const allNotifications = [];
+
       if (pending === 0) {
         setNotifications([]);
         setLoading(false);
         return;
       }
+
+      // Set progress info
+      setLoadingProgress({ sent: pending, received: 0, total: pending });
+
+      // Register the handler once
+      websocketService.onMessage('GET_IRRIGATION_RESULT_SUCCESS', handleIrrigation);
+
+      // Send requests for all plants
       data.plants.forEach((plant) => {
-        const handleIrrigation = (irrigationData) => {
-          const plantName = irrigationData.plantName;
-          if (!isMounted) return;
-          if (irrigationData.results && Array.isArray(irrigationData.results)) {
-            irrigationData.results.forEach((result) => {
-              allNotifications.push({
-                plantName: plantName,
-                status: result.status,
-                time: result.irrigation_time || result.event_timestamp || result.time || result.timestamp || '',
-                message: result.reason || result.message || '',
-                amount: result.water_added_liters || result.amount || result.waterAmount || null,
-                finalMoisture: result.final_moisture || result.finalMoisture || result.moisture || null,
-                read: false, // All notifications start as unread
-              });
-            });
-          }
-          pending--;
-          if (pending === 0) {
-            // Sort notifications by time descending (if available)
-            allNotifications.sort((a, b) => (b.time || '').localeCompare(a.time || ''));
-            setNotifications(allNotifications);
-            setLoading(false);
-          }
-        };
-        websocketService.onMessage('GET_IRRIGATION_RESULT_SUCCESS', handleIrrigation);
         websocketService.sendMessage({ type: 'GET_IRRIGATION_RESULT', plantName: plant.name });
       });
+
+      // Set a timeout to stop loading if no responses come
+      setTimeout(() => {
+        if (isMounted) {
+          console.log('🔔 NotificationScreen: Timeout reached, stopping loading');
+          setLoading(false);
+        }
+      }, 10000); // 10 seconds timeout
     };
+
     websocketService.onMessage('GET_MY_PLANTS_RESPONSE', handlePlants);
     websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
-    return () => { isMounted = false; };
+
+    return () => {
+      isMounted = false;
+      // Clean up message handlers
+      websocketService.offMessage('GET_MY_PLANTS_RESPONSE', handlePlants);
+      websocketService.offMessage('GET_IRRIGATION_RESULT_SUCCESS', handleIrrigation);
+    };
   }, []);
 
   const getStatusIcon = (status) => {
@@ -98,7 +158,7 @@ const NotificationScreen = () => {
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
 
-  // Loading state - removed, screen will be blank during loading
+  // Loading state with proper loading screen
   if (loading) {
     return (
       <View style={styles.container}>
@@ -106,6 +166,33 @@ const NotificationScreen = () => {
           <Feather name="chevron-left" size={24} color="#2C3E50" />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
+        <Text style={styles.title}>Irrigation Notifications</Text>
+        <View style={styles.loadingContainer}>
+          <Animated.View
+            style={[
+              styles.loadingSpinner,
+              {
+                transform: [{
+                  rotate: spinValue.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '360deg']
+                  })
+                }]
+              }
+            ]}
+          >
+            <Feather name="loader" size={48} color="#4CAF50" />
+          </Animated.View>
+          <Text style={styles.loadingTitle}>Loading Notifications...</Text>
+          <Text style={styles.loadingMessage}>
+            Fetching irrigation history for your plants
+          </Text>
+          {loadingProgress.total > 0 && (
+            <Text style={styles.loadingProgress}>
+              {loadingProgress.received} of {loadingProgress.total} plants processed
+            </Text>
+          )}
+        </View>
       </View>
     );
   }
