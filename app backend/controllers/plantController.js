@@ -232,6 +232,7 @@ async function handleDeletePlant(data, ws, email) {
 
 async function handleUpdatePlantDetails(data, ws, email) {
   try {
+    console.log('🔍 DEBUG - handleUpdatePlantDetails called with data:', data);
     const { plantName, newPlantName, desiredMoisture, waterLimit, dripperType, imageData } = data;
 
     // Validate required fields
@@ -322,6 +323,20 @@ async function handleUpdatePlantDetails(data, ws, email) {
     // Send update to Pi controller if plant has hardware IDs
     if (updatedPlant.sensor_port && updatedPlant.valve_id) {
       try {
+        console.log('🔍 DEBUG - About to send update to Pi:');
+        console.log('   - updatedPlant:', updatedPlant);
+        console.log('   - updatedPlant.plant_id:', updatedPlant.plant_id);
+        console.log('   - updatedPlant.name:', updatedPlant.name);
+        console.log('   - updatedPlant.ideal_moisture:', updatedPlant.ideal_moisture);
+        console.log('   - updatedPlant.water_limit:', updatedPlant.water_limit);
+        console.log('   - updatedPlant.dripper_type:', updatedPlant.dripper_type);
+        
+        // Ensure plant_id is available
+        if (!updatedPlant.plant_id) {
+          console.warn('⚠️ WARNING - updatedPlant.plant_id is missing, using original plantId:', plant.plant_id);
+          updatedPlant.plant_id = plant.plant_id;
+        }
+        
         const piResult = piCommunication.updatePlant(updatedPlant);
         if (!piResult.success) {
           console.warn('Failed to update plant on Pi:', piResult.error);

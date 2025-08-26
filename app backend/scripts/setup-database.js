@@ -65,6 +65,18 @@ async function setupDatabase() {
       console.log('Dripper type column already exists or error adding it:', error.message);
     }
 
+    // Add valve_blocked column if it doesn't exist (for valve status tracking)
+    try {
+      await pool.query(`
+        ALTER TABLE plants ADD COLUMN IF NOT EXISTS valve_blocked BOOLEAN DEFAULT false
+      `);
+      console.log('Valve blocked column added to plants table');
+    } catch (error) {
+      console.log('Valve blocked column already exists or error adding it:', error.message);
+    }
+
+
+
     try {
       await pool.query(`
         ALTER TABLE plants 

@@ -432,9 +432,13 @@ class SmartGardenPiClient:
             handler = UpdatePlantHandler(self.engine)
             success, message = await handler.handle(data=data)
             
+            # Extract plant_id from the nested data structure
+            plant_data = data.get("data", {})
+            plant_id = plant_data.get("plant_id")
+            
             # Send response back to server
             response_data = {
-                "plant_id": data.get("plant_id"),
+                "plant_id": plant_id,
                 "success": success,
                 "message": message
             }
@@ -442,14 +446,17 @@ class SmartGardenPiClient:
             await self.send_message("UPDATE_PLANT_RESPONSE", response_data)
             
             if success:
-                self.logger.info(f"Successfully updated plant {data.get('plant_id')}")
+                self.logger.info(f"Successfully updated plant {plant_id}")
             else:
-                self.logger.error(f"Failed to update plant {data.get('plant_id')}: {message}")
+                self.logger.error(f"Failed to update plant {plant_id}: {message}")
                 
         except Exception as e:
             self.logger.error(f"Error during update plant: {e}")
+            # Extract plant_id from the nested data structure for error response
+            plant_data = data.get("data", {})
+            plant_id = plant_data.get("plant_id", 0)
             error_response = {
-                "plant_id": data.get("plant_id", 0),
+                "plant_id": plant_id,
                 "success": False,
                 "message": f"Error updating plant: {str(e)}"
             }
