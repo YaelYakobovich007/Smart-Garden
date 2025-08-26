@@ -35,6 +35,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import styles from './styles';
 import websocketService from '../../services/websocketService';
+import HelpTooltip from './HelpTooltip';
 
 // Days of the week for schedule configuration
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -64,6 +65,27 @@ export default function AddPlantScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+
+  // Handle identified plant type from scan
+  useEffect(() => {
+    if (route.params?.identifiedPlantType) {
+      const { identifiedPlantType, confidence } = route.params;
+      setFormData(prev => ({
+        ...prev,
+        plantType: identifiedPlantType
+      }));
+
+      // Show success message
+      Alert.alert(
+        'Plant Identified!',
+        `Successfully identified as: ${identifiedPlantType} (${confidence}% confidence)`,
+        [{ text: 'OK' }]
+      );
+
+      // Clear the parameter to prevent setting it again
+      navigation.setParams({ identifiedPlantType: undefined, confidence: undefined });
+    }
+  }, [route.params?.identifiedPlantType]);
 
   /**
    * Set up WebSocket message handlers for plant creation responses
@@ -371,9 +393,15 @@ export default function AddPlantScreen() {
           <Text style={styles.sectionTitle}>Plant Information</Text>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              Plant Name <Text style={styles.required}>*</Text>
-            </Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>
+                Plant Name <Text style={styles.required}>*</Text>
+              </Text>
+              <HelpTooltip
+                title="Plant Name"
+                description="Give your plant a unique name to easily identify it in your garden. This name will be displayed in the app and used for notifications."
+              />
+            </View>
             <TextInput
               style={[styles.input, errors.plantName && styles.inputError]}
               value={formData.plantName}
@@ -390,14 +418,32 @@ export default function AddPlantScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Plant Type</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.plantType}
-              onChangeText={(text) => updateFormData('plantType', text)}
-              placeholder="e.g., Succulent, Herb, Flower"
-              placeholderTextColor="#9CA3AF"
-            />
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Plant Type</Text>
+              <HelpTooltip
+                title="Plant Type"
+                description="Specify the type of plant (e.g., Succulent, Herb, Flower). This helps the system provide better care recommendations and watering schedules."
+              />
+            </View>
+            <View style={styles.scanButtonContainer}>
+              <TextInput
+                style={[styles.input, styles.inputWithScan]}
+                value={formData.plantType}
+                onChangeText={(text) => updateFormData('plantType', text)}
+                placeholder="e.g., Succulent, Herb, Flower"
+                placeholderTextColor="#9CA3AF"
+              />
+              <TouchableOpacity
+                style={styles.scanButton}
+                onPress={() => navigation.navigate('Main', {
+                  openIdentifyPlant: true,
+                  fromAddPlant: true
+                })}
+              >
+                <Feather name="camera" size={20} color="#4CAF50" />
+                <Text style={styles.scanButtonText}>Scan</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -406,11 +452,17 @@ export default function AddPlantScreen() {
           <Text style={styles.sectionTitle}>Care Settings</Text>
 
           <View style={styles.inputContainer}>
-            <View style={styles.labelContainer}>
-              <Feather name="thermometer" size={20} color="#4CAF50" />
-              <Text style={styles.label}>
-                Optimal Humidity <Text style={styles.required}>*</Text>
-              </Text>
+            <View style={styles.labelRow}>
+              <View style={styles.labelContainer}>
+                <Feather name="thermometer" size={20} color="#4CAF50" />
+                <Text style={styles.label}>
+                  Optimal Humidity <Text style={styles.required}>*</Text>
+                </Text>
+              </View>
+              <HelpTooltip
+                title="Optimal Humidity"
+                description="This is the target soil moisture level (0-100%) that your plant prefers. The system will automatically water your plant when the soil moisture drops below this level. Most plants thrive at 60-80% humidity."
+              />
             </View>
             <View style={styles.sliderContainer}>
               <TextInput
@@ -434,11 +486,17 @@ export default function AddPlantScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <View style={styles.labelContainer}>
-              <Feather name="droplet" size={20} color="#4CAF50" />
-              <Text style={styles.label}>
-                Water Limit <Text style={styles.required}>*</Text>
-              </Text>
+            <View style={styles.labelRow}>
+              <View style={styles.labelContainer}>
+                <Feather name="droplet" size={20} color="#4CAF50" />
+                <Text style={styles.label}>
+                  Water Limit <Text style={styles.required}>*</Text>
+                </Text>
+              </View>
+              <HelpTooltip
+                title="Water Limit"
+                description="This is the maximum amount of water (in liters) that can be given to your plant in a single watering session. This prevents overwatering and helps conserve water. For most plants, 0.5-2 liters is sufficient."
+              />
             </View>
             <View style={styles.sliderContainer}>
               <TextInput
@@ -451,10 +509,10 @@ export default function AddPlantScreen() {
                     updateFormData('waterLimit', text === '.' ? 0 : 0);
                     return;
                   }
-                  
+
                   // Allow decimal numbers with proper validation
                   const cleanText = text.replace(/[^0-9.]/g, '');
-                  
+
                   // Handle multiple decimal points - keep only the first one
                   const parts = cleanText.split('.');
                   if (parts.length > 2) {
@@ -465,7 +523,7 @@ export default function AddPlantScreen() {
                     updateFormData('waterLimit', Math.max(0, value));
                     return;
                   }
-                  
+
                   // Handle single decimal point
                   if (parts.length === 2) {
                     // Allow typing like "0." or "1.5"
@@ -473,7 +531,7 @@ export default function AddPlantScreen() {
                     updateFormData('waterLimit', Math.max(0, value));
                     return;
                   }
-                  
+
                   // Handle whole numbers
                   const value = parseInt(cleanText) || 0;
                   updateFormData('waterLimit', Math.max(0, value));
@@ -496,11 +554,17 @@ export default function AddPlantScreen() {
 
           {/* Dripper Type Section */}
           <View style={styles.inputContainer}>
-            <View style={styles.labelContainer}>
-              <Feather name="droplet" size={20} color="#4CAF50" />
-              <Text style={styles.label}>
-                Dripper Type <Text style={styles.required}>*</Text>
-              </Text>
+            <View style={styles.labelRow}>
+              <View style={styles.labelContainer}>
+                <Feather name="droplet" size={20} color="#4CAF50" />
+                <Text style={styles.label}>
+                  Dripper Type <Text style={styles.required}>*</Text>
+                </Text>
+              </View>
+              <HelpTooltip
+                title="Dripper Type"
+                description="Select the flow rate of your irrigation dripper. This determines how much water flows per hour. Choose based on your plant's water needs and pot size. 2L/h is suitable for most plants."
+              />
             </View>
             <View style={styles.dripperOptionsContainer}>
               {['1L/h', '2L/h', '4L/h', '8L/h'].map((option) => (

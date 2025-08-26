@@ -22,11 +22,13 @@ import {
   StatusBar,
   ScrollView,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useCameraPermissions } from 'expo-camera';
 
 // Import components
 import PlantList from './PlantList/PlantList';
@@ -42,6 +44,7 @@ import styles from './styles';
 
 const MainScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
 
   // Get irrigation state from context
   const { getPlantWateringState, getWateringPlants } = useIrrigation();
@@ -56,10 +59,27 @@ const MainScreen = () => {
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   // Garden state
   const [garden, setGarden] = useState(null);
   const [gardenLoading, setGardenLoading] = useState(true);
+
+  // Check if we should open plant identification from navigation params
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      const params = route.params;
+      if (params?.openIdentifyPlant) {
+        // Clear the parameter to prevent opening again
+        navigation.setParams({ openIdentifyPlant: undefined });
+        // Open plant identification
+        handleIdentifyPlant();
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, route.params]);
 
   /**
    * Handle successful plant addition from server
@@ -170,7 +190,7 @@ const MainScreen = () => {
         const transformedPlants = data.plants.map(plant => {
           // Find existing plant data to preserve sensor values
           const existingPlant = prevPlants.find(p => p.id === plant.plant_id);
-          
+
           const transformed = {
             id: plant.plant_id,
             name: plant.name,
@@ -645,9 +665,17 @@ const MainScreen = () => {
 
   /**
    * Handle plant identification
-   * Opens image picker and sends image to backend for identification
+   * Shows modal to choose between camera and gallery
    */
-  const handleIdentifyPlant = async () => {
+  const handleIdentifyPlant = () => {
+    setShowImagePicker(true);
+  };
+
+  /**
+   * Launch image picker to select image from gallery
+   * Allows user to choose an existing photo from their device
+   */
+  const pickImage = async () => {
     try {
       // Request camera roll permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -666,45 +694,86 @@ const MainScreen = () => {
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
-        const base64Image = result.assets[0].base64;
-
-        // Check image size before sending (5MB limit)
-        const imageSizeBytes = Math.ceil((base64Image.length * 3) / 4);
-        const maxSizeBytes = 5 * 1024 * 1024; // 5MB
-
-        if (imageSizeBytes > maxSizeBytes) {
-          Alert.alert(
-            'Image Too Large',
-            'The selected image is too large. Please try with a smaller image or lower quality.',
-            [{ text: 'OK' }]
-          );
-          return;
-        }
-
-        console.log(`Image size: ${Math.round(imageSizeBytes / 1024 / 1024 * 100) / 100}MB`);
-
-        if (!websocketService.isConnected()) {
-          Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
-          return;
-        }
-
-        // Show loading state
-        setLoading(true);
-        setLoadingMessage('Identifying plant... This may take 10-15 seconds');
-
-        // Send image to backend for identification
-        websocketService.sendMessage({
-          type: 'PLANT_IDENTIFY',
-          imageBase64: base64Image
-        });
-
-        console.log('Plant identification request sent');
+        await processImageForIdentification(result.assets[0]);
       }
     } catch (error) {
-      console.error('Error in plant identification:', error);
-      Alert.alert('Error', 'Failed to identify plant. Please try again.');
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
+    setShowImagePicker(false);
+  };
+
+  /**
+   * Launch camera to take a new photo
+   * Handles camera permissions and captures new plant image
+   */
+  const takePhoto = async () => {
+    try {
+      // Check camera permissions
+      if (!cameraPermission?.granted) {
+        const permission = await requestCameraPermission();
+        if (!permission.granted) {
+          Alert.alert('Permission needed', 'Camera permission is required to take photos');
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1], // Square aspect ratio
+        quality: 0.6, // Lower quality for smaller file size
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        await processImageForIdentification(result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+    setShowImagePicker(false);
+  };
+
+  /**
+   * Process image for plant identification
+   * Handles image validation and sends to backend
+   * @param {Object} imageAsset - Image asset from picker
+   */
+  const processImageForIdentification = async (imageAsset) => {
+    const base64Image = imageAsset.base64;
+
+    // Check image size before sending (5MB limit)
+    const imageSizeBytes = Math.ceil((base64Image.length * 3) / 4);
+    const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+
+    if (imageSizeBytes > maxSizeBytes) {
+      Alert.alert(
+        'Image Too Large',
+        'The selected image is too large. Please try with a smaller image or lower quality.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    console.log(`Image size: ${Math.round(imageSizeBytes / 1024 / 1024 * 100) / 100}MB`);
+
+    if (!websocketService.isConnected()) {
+      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
+      return;
+    }
+
+    // Show loading state
+    setLoading(true);
+    setLoadingMessage('Identifying plant... This may take 10-15 seconds');
+
+    // Send image to backend for identification
+    websocketService.sendMessage({
+      type: 'PLANT_IDENTIFY',
+      imageBase64: base64Image
+    });
+
+    console.log('Plant identification request sent');
   };
 
   /**
@@ -731,11 +800,21 @@ const MainScreen = () => {
     if (data.species && data.probability) {
       const confidence = Math.round(data.probability * 100);
       console.log('✅ High confidence identification:', data.species, confidence + '%');
-      Alert.alert(
-        'Plant Identified!',
-        `This appears to be a ${data.species} (${confidence}% confidence)`,
-        [{ text: 'OK' }]
-      );
+
+      // Check if we came from AddPlantScreen
+      if (route.params?.fromAddPlant) {
+        // Navigate back to AddPlantScreen with the identified plant type
+        navigation.navigate('AddPlant', {
+          identifiedPlantType: data.species,
+          confidence: confidence
+        });
+      } else {
+        Alert.alert(
+          'Plant Identified!',
+          `This appears to be a ${data.species} (${confidence}% confidence)`,
+          [{ text: 'OK' }]
+        );
+      }
     } else if (data.suggestions && data.suggestions.length > 0) {
       const topSuggestion = data.suggestions[0];
       const confidence = Math.round(topSuggestion.probability * 100);
@@ -940,6 +1019,34 @@ const MainScreen = () => {
         onSettings={handleSettings}
         onHelp={handleHelp}
       />
+
+      {/* Image Picker Modal */}
+      <Modal
+        visible={showImagePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowImagePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Identify Plant</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={takePhoto}>
+              <Feather name="camera" size={24} color="#16A34A" />
+              <Text style={styles.modalButtonText}>Take Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalButton} onPress={pickImage}>
+              <Feather name="image" size={24} color="#16A34A" />
+              <Text style={styles.modalButtonText}>Choose from Gallery</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelButton]}
+              onPress={() => setShowImagePicker(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Loading Overlay */}
       {loading && (
