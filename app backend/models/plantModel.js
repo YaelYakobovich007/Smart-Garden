@@ -197,7 +197,7 @@ async function updatePlantDetails(userId, plantId, updateData) {
       UPDATE plants 
       SET ${updateFields.join(', ')}
       WHERE plant_id = $${paramIndex} AND version = $${paramIndex + 1}
-      RETURNING *
+      RETURNING plant_id, name, type, ideal_moisture, water_limit, dripper_type, sensor_port, valve_id, valve_blocked, image_url, created_at, updated_at, version
     `;
 
     const result = await client.query(updateQuery, updateValues);

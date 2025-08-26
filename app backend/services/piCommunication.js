@@ -354,6 +354,11 @@ class PiCommunication {
     updatePlant(plant) {
         console.log('🔍 DEBUG - piCommunication.updatePlant called:');
         console.log('   - plant:', plant);
+        console.log('   - plant.plant_id:', plant.plant_id, '(type:', typeof plant.plant_id, ')');
+        console.log('   - plant.name:', plant.name);
+        console.log('   - plant.ideal_moisture:', plant.ideal_moisture);
+        console.log('   - plant.water_limit:', plant.water_limit);
+        console.log('   - plant.dripper_type:', plant.dripper_type);
         
         console.log('🔍 DEBUG - Getting Pi socket...');
         const piSocket = getPiSocket();
@@ -362,6 +367,12 @@ class PiCommunication {
         if (!piSocket) {
             console.log('❌ Pi not connected - cannot update plant');
             return { success: false, error: 'Pi not connected' };
+        }
+
+        // Validate plant_id
+        if (!plant.plant_id) {
+            console.error('❌ ERROR - plant.plant_id is missing or falsy:', plant.plant_id);
+            return { success: false, error: 'plant_id is required' };
         }
 
         console.log('✅ DEBUG - Pi socket found, creating request...');

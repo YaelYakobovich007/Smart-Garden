@@ -46,6 +46,7 @@ const PlantDetail = () => {
 
   // Local state for UI
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Global irrigation state
   const {
@@ -256,7 +257,8 @@ const PlantDetail = () => {
 
     websocketService.sendMessage({
       type: 'UPDATE_PLANT_DETAILS',
-      plantName: plant.name,
+      plant_id: plant.id,
+      plantName: plant.name, // Keep for backward compatibility
       ...updateData
     });
   };
@@ -473,7 +475,9 @@ const PlantDetail = () => {
           <Feather name="chevron-left" size={24} color="#2C3E50" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Plant Details</Text>
-        <View style={styles.headerSpacer} />
+        <TouchableOpacity onPress={() => setShowSettingsModal(true)} style={styles.headerSettingsButton}>
+          <Feather name="settings" size={24} color="#2C3E50" />
+        </TouchableOpacity>
       </View>
 
       {/* Irrigation Control Bar - Shows when watering is active */}
@@ -703,47 +707,6 @@ const PlantDetail = () => {
             <Text style={styles.secondaryButtonText}>View Schedule</Text>
           </TouchableOpacity>
 
-          {/* Plant Settings Buttons */}
-          <TouchableOpacity 
-            style={styles.settingsButton}
-            onPress={handleChangePlantName}
-          >
-            <Feather name="edit-3" size={20} color="#4CAF50" />
-            <Text style={styles.settingsButtonText}>Change Name</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.settingsButton}
-            onPress={handleChangeDesiredHumidity}
-          >
-            <Feather name="droplet" size={20} color="#4CAF50" />
-            <Text style={styles.settingsButtonText}>Change Desired Humidity</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.settingsButton}
-            onPress={handleChangeDripper}
-          >
-            <Feather name="settings" size={20} color="#4CAF50" />
-            <Text style={styles.settingsButtonText}>Change Dripper</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.settingsButton}
-            onPress={handleChangeWaterLimit}
-          >
-            <Feather name="maximize-2" size={20} color="#4CAF50" />
-            <Text style={styles.settingsButtonText}>Change Water Limit</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.settingsButton}
-            onPress={handleChangeImage}
-          >
-            <Feather name="image" size={20} color="#4CAF50" />
-            <Text style={styles.settingsButtonText}>Change Image</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={handleDeletePlant}
@@ -783,6 +746,120 @@ const PlantDetail = () => {
           handleStopWatering(plant.id);
         }}
       />
+
+      {/* 9. Settings Modal */}
+      <Modal
+        visible={showSettingsModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowSettingsModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          {/* Modal Header */}
+          <View style={styles.modalHeader}>
+            <TouchableOpacity 
+              onPress={() => setShowSettingsModal(false)} 
+              style={styles.modalCloseButton}
+            >
+              <Feather name="x" size={24} color="#2C3E50" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Plant Settings</Text>
+            <View style={styles.modalSpacer} />
+          </View>
+
+          {/* Modal Content */}
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.settingsSection}>
+              <Text style={styles.settingsSectionTitle}>Plant Configuration</Text>
+              
+              <TouchableOpacity 
+                style={styles.settingsItem}
+                onPress={() => {
+                  setShowSettingsModal(false);
+                  handleChangePlantName();
+                }}
+              >
+                <View style={styles.settingsItemIcon}>
+                  <Feather name="edit-3" size={20} color="#4CAF50" />
+                </View>
+                <View style={styles.settingsItemContent}>
+                  <Text style={styles.settingsItemTitle}>Change Name</Text>
+                  <Text style={styles.settingsItemSubtitle}>Update plant name</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.settingsItem}
+                onPress={() => {
+                  setShowSettingsModal(false);
+                  handleChangeDesiredHumidity();
+                }}
+              >
+                <View style={styles.settingsItemIcon}>
+                  <Feather name="droplet" size={20} color="#4CAF50" />
+                </View>
+                <View style={styles.settingsItemContent}>
+                  <Text style={styles.settingsItemTitle}>Change Desired Humidity</Text>
+                  <Text style={styles.settingsItemSubtitle}>Set target moisture level</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.settingsItem}
+                onPress={() => {
+                  setShowSettingsModal(false);
+                  handleChangeDripper();
+                }}
+              >
+                <View style={styles.settingsItemIcon}>
+                  <Feather name="settings" size={20} color="#4CAF50" />
+                </View>
+                <View style={styles.settingsItemContent}>
+                  <Text style={styles.settingsItemTitle}>Change Dripper</Text>
+                  <Text style={styles.settingsItemSubtitle}>Select dripper type</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.settingsItem}
+                onPress={() => {
+                  setShowSettingsModal(false);
+                  handleChangeWaterLimit();
+                }}
+              >
+                <View style={styles.settingsItemIcon}>
+                  <Feather name="maximize-2" size={20} color="#4CAF50" />
+                </View>
+                <View style={styles.settingsItemContent}>
+                  <Text style={styles.settingsItemTitle}>Change Water Limit</Text>
+                  <Text style={styles.settingsItemSubtitle}>Set maximum water amount</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.settingsItem}
+                onPress={() => {
+                  setShowSettingsModal(false);
+                  handleChangeImage();
+                }}
+              >
+                <View style={styles.settingsItemIcon}>
+                  <Feather name="image" size={20} color="#4CAF50" />
+                </View>
+                <View style={styles.settingsItemContent}>
+                  <Text style={styles.settingsItemTitle}>Change Image</Text>
+                  <Text style={styles.settingsItemSubtitle}>Update plant photo</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
