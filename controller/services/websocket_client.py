@@ -527,6 +527,14 @@ class SmartGardenPiClient:
             if message_type not in expected_types:
                 self.logger.warning(f"UNKNOWN MESSAGE TYPE: '{message_type}' (not in expected list)")
                 self.logger.warning(f"Expected types: {expected_types}")
+                # Additional debugging for unknown message types
+                self.logger.warning(f"Message type bytes: {repr(message_type)}")
+                self.logger.warning(f"Message type hex: {message_type.encode('utf-8').hex() if message_type else 'None'}")
+                # Check for common issues
+                if message_type and message_type.strip() != message_type:
+                    self.logger.warning(f"Message type has leading/trailing whitespace!")
+                if message_type and message_type.lower() == "update_plant":
+                    self.logger.warning(f"Message type is lowercase - should be uppercase!")
             
             if message_type == "WELCOME":
                 self.logger.info("Received welcome message from server")
