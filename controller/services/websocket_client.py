@@ -551,7 +551,7 @@ class SmartGardenPiClient:
                 await self.handle_valve_status_request(message_data)
             
             elif message_type == "UPDATE_PLANT":
-                await self.handle_update_plant_command(message_data)
+                await self.handle_update_plant_command(data)
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")
