@@ -517,8 +517,16 @@ class SmartGardenPiClient:
             self.logger.info(f"Received {message_type} message")
             self.logger.info(f"Full message: {message}")
             self.logger.info(f"Parsed data: {data}")
-            self.logger.info(f"Message type: {message_type}")
+            self.logger.info(f"Message type: '{message_type}' (length: {len(message_type) if message_type else 0})")
             self.logger.info(f"Message data: {message_data}")
+            
+            # Debug: Check if message_type matches expected values
+            expected_types = ["WELCOME", "ADD_PLANT", "GET_PLANT_MOISTURE", "GET_ALL_MOISTURE", 
+                            "IRRIGATE_PLANT", "STOP_IRRIGATION", "OPEN_VALVE", "CLOSE_VALVE", 
+                            "GET_VALVE_STATUS", "VALVE_STATUS", "UPDATE_PLANT"]
+            if message_type not in expected_types:
+                self.logger.warning(f"UNKNOWN MESSAGE TYPE: '{message_type}' (not in expected list)")
+                self.logger.warning(f"Expected types: {expected_types}")
             
             if message_type == "WELCOME":
                 self.logger.info("Received welcome message from server")
