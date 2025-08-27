@@ -613,7 +613,7 @@ class SmartGardenPiClient:
             # Debug: Check if message_type matches expected values
             expected_types = ["WELCOME", "ADD_PLANT", "GET_PLANT_MOISTURE", "GET_ALL_MOISTURE", 
                             "IRRIGATE_PLANT", "STOP_IRRIGATION", "OPEN_VALVE", "CLOSE_VALVE", 
-                            "GET_VALVE_STATUS", "VALVE_STATUS", "UPDATE_PLANT", "UPDATE_PLANT_RESPONSE"]
+                            "GET_VALVE_STATUS", "VALVE_STATUS", "UPDATE_PLANT", "UPDATE_PLANT_RESPONSE", "GARDEN_SYNC"]
             if message_type not in expected_types:
                 self.logger.warning(f"UNKNOWN MESSAGE TYPE: '{message_type}' (not in expected list)")
                 self.logger.warning(f"Expected types: {expected_types}")
@@ -724,6 +724,7 @@ class SmartGardenPiClient:
             self.logger.info("  - CLOSE_VALVE: Close valve for a specific plant")
             self.logger.info("  - GET_VALVE_STATUS: Get detailed valve status for a specific plant")
             self.logger.info("  - UPDATE_PLANT: Update an existing plant's configuration")
+            self.logger.info("  - GARDEN_SYNC: Sync garden and plants data from server")
             
             # Start listening for messages
             await self.listen_for_messages()
