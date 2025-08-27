@@ -337,9 +337,9 @@ class IrrigationAlgorithm:
             print(f"Initial moisture: {initial_moisture or 0:.1f}%")
             print(f"Final moisture: {final_moisture or 0:.1f}%")
                 
+            # Treat user cancellation as a successful stop without adding an unsupported 'reason' argument
             return IrrigationResult.success(
                 plant_id=plant.plant_id,
-                reason="Cancelled by user",
                 moisture=initial_moisture or 0,  # Handle early cancellation
                 final_moisture=final_moisture or 0,  # Handle early cancellation
                 water_added_liters=total_water
