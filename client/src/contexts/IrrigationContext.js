@@ -545,14 +545,24 @@ export const IrrigationProvider = ({ children }) => {
 
     const handleIrrigatePlantFail = (data) => {
       // Smart irrigation failed
-      
-      // Find the plant by name in the watering plants
-      let targetPlantId = null;
-      wateringPlantsRef.current.forEach((state, plantId) => {
-        if (state.pendingIrrigationRequest) {
-          targetPlantId = plantId;
-        }
-      });
+      // Prefer plant id from payload
+      let targetPlantId = data?.plantId ?? data?.plant_id ?? null;
+      // Fallback: by name
+      if (targetPlantId == null && data?.plantName) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (state.currentPlant === data.plantName) {
+            targetPlantId = plantId;
+          }
+        });
+      }
+      // Fallback: pending state
+      if (targetPlantId == null) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (targetPlantId == null && state.pendingIrrigationRequest) {
+            targetPlantId = plantId;
+          }
+        });
+      }
       
       if (targetPlantId) {
         updatePlantWateringState(targetPlantId, {
@@ -570,13 +580,24 @@ export const IrrigationProvider = ({ children }) => {
       // Smart irrigation was skipped (not necessary)
       console.log('🔄 IrrigationContext: Irrigation skipped:', data);
       
-      // Find the plant by name in the watering plants
-      let targetPlantId = null;
-      wateringPlantsRef.current.forEach((state, plantId) => {
-        if (state.pendingIrrigationRequest || state.isSmartMode) {
-          targetPlantId = plantId;
-        }
-      });
+      // Prefer plant id from payload
+      let targetPlantId = data?.plantId ?? data?.plant_id ?? null;
+      // Fallback: by name
+      if (targetPlantId == null && data?.plantName) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (state.currentPlant === data.plantName) {
+            targetPlantId = plantId;
+          }
+        });
+      }
+      // Fallback: scan pending/smart
+      if (targetPlantId == null) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (targetPlantId == null && (state.pendingIrrigationRequest || state.isSmartMode)) {
+            targetPlantId = plantId;
+          }
+        });
+      }
       
       if (targetPlantId) {
         console.log('🔄 IrrigationContext: Clearing irrigation state for skipped irrigation, plant ID:', targetPlantId);
@@ -609,6 +630,54 @@ export const IrrigationProvider = ({ children }) => {
         }
       } else {
         console.log('🔄 IrrigationContext: No target plant found for skipped irrigation');
+      }
+    };
+
+    const handleIrrigatePlantResponse = (data) => {
+      // Fallback handler for Pi responses: status can be success | skipped | error
+      const status = (data?.status || '').toLowerCase();
+      if (status !== 'skipped' && status !== 'error') {
+        return;
+      }
+
+      // Prefer explicit plant id
+      let targetPlantId = data?.plantId ?? data?.plant_id ?? null;
+      // Fallback: by name
+      if (targetPlantId == null && data?.plantName) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (state.currentPlant === data.plantName) {
+            targetPlantId = plantId;
+          }
+        });
+      }
+      // Fallback: currently pending/smart
+      if (targetPlantId == null) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (targetPlantId == null && (state.pendingIrrigationRequest || state.isSmartMode)) {
+            targetPlantId = plantId;
+          }
+        });
+      }
+
+      if (targetPlantId != null) {
+        updatePlantWateringState(targetPlantId, {
+          isManualMode: false,
+          isSmartMode: false,
+          isWateringActive: false,
+          pendingIrrigationRequest: false,
+          wateringTimeLeft: 0,
+          timerStartTime: null,
+          timerEndTime: null,
+          timerInterval: null,
+          currentPlant: null
+        });
+
+        // Show a toast with appropriate styling
+        if (status === 'skipped') {
+          showIrrigationToast('info', data?.message || 'Irrigation was skipped - not necessary at this time.');
+        } else if (status === 'error') {
+          showIrrigationToast('error', data?.error_message || data?.message || 'Smart irrigation failed.');
+        }
       }
     };
 
@@ -694,6 +763,7 @@ export const IrrigationProvider = ({ children }) => {
     websocketService.onMessage('IRRIGATION_SKIPPED', handleIrrigatePlantSkipped);  // Handle both message types
     websocketService.onMessage('IRRIGATION_DECISION', handleIrrigationDecision);
     websocketService.onMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
+    websocketService.onMessage('IRRIGATE_PLANT_RESPONSE', handleIrrigatePlantResponse);
     websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
     websocketService.onMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
 
@@ -709,6 +779,7 @@ export const IrrigationProvider = ({ children }) => {
       websocketService.offMessage('IRRIGATION_SKIPPED', handleIrrigatePlantSkipped);  // Handle both message types
       websocketService.offMessage('IRRIGATION_DECISION', handleIrrigationDecision);
       websocketService.offMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
+      websocketService.offMessage('IRRIGATE_PLANT_RESPONSE', handleIrrigatePlantResponse);
       websocketService.offMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
       websocketService.offMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
     };
