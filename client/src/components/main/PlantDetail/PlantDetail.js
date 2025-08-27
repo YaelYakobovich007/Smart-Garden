@@ -33,11 +33,15 @@ import MoistureCircle from '../PlantList/MoistureCircle';
 import TempCircle from '../PlantList/TempCircle';
 import websocketService from '../../../services/websocketService';
 import CircularTimePicker from './CircularTimePicker';
+import * as ImagePicker from 'expo-image-picker';
 
 const PlantDetail = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { plant } = route.params || {};
+  const { plant: initialPlant } = route.params || {};
+
+  // State for plant data to allow updates
+  const [plant, setPlant] = useState(initialPlant);
 
   // State for real-time sensor data
   const [currentMoisture, setCurrentMoisture] = useState(plant?.moisture || 0);
@@ -45,6 +49,7 @@ const PlantDetail = () => {
 
   // Local state for UI
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Global irrigation state
   const {
@@ -85,6 +90,39 @@ const PlantDetail = () => {
     }
   }, [plant?.name]);
 
+  // Set up WebSocket message handlers for plant updates
+  useEffect(() => {
+    websocketService.onMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
+    websocketService.onMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
+
+    return () => {
+      websocketService.offMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
+      websocketService.offMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
+    };
+  }, []);
+
+  // Handle successful plant update
+  const handlePlantUpdateSuccess = (data) => {
+    Alert.alert('Success', data.message || 'Plant updated successfully');
+    // Update the plant data to refresh the UI
+    if (data.plant) {
+      // Update the plant data in the route params
+      navigation.setParams({ plant: data.plant });
+      // Update the local state to trigger re-render
+      setPlant(data.plant);
+    }
+  };
+
+  // Handle plant update error
+  const handlePlantUpdateError = (data) => {
+    Alert.alert('Error', data.message || 'Failed to update plant');
+    // Update the plant data even on error if it's provided (in case the update was partially successful)
+    if (data.plant) {
+      navigation.setParams({ plant: data.plant });
+      setPlant(data.plant);
+    }
+  };
+
   // Available irrigation times (in minutes)
   const irrigationTimes = [0, 5, 10, 15, 20, 30, 45, 60];
 
@@ -96,6 +134,143 @@ const PlantDetail = () => {
   // Manual irrigation handlers
   const handleManualIrrigation = () => {
     setShowTimePicker(true);
+  };
+
+  // Plant settings handlers
+  const handleChangePlantName = () => {
+    Alert.prompt(
+      'Change Plant Name',
+      'Enter new name for the plant:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Update',
+          onPress: (newName) => {
+            if (newName && newName.trim()) {
+              updatePlantDetails({ newPlantName: newName.trim() });
+            }
+          }
+        }
+      ],
+      'plain-text',
+      plant?.name || ''
+    );
+  };
+
+  const handleChangeDesiredHumidity = () => {
+    Alert.prompt(
+      'Change Desired Humidity',
+      'Enter new desired humidity (0-100%):',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Update',
+          onPress: (humidity) => {
+            const humidityValue = parseFloat(humidity);
+            if (!isNaN(humidityValue) && humidityValue >= 0 && humidityValue <= 100) {
+              updatePlantDetails({ desiredMoisture: humidityValue });
+            } else {
+              Alert.alert('Invalid Input', 'Please enter a number between 0 and 100');
+            }
+          }
+        }
+      ],
+      'plain-text',
+      plant?.desiredMoisture?.toString() || '50'
+    );
+  };
+
+  const handleChangeDripper = () => {
+    Alert.alert(
+      'Change Dripper Type',
+      'Select new dripper type:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: '2L/h', onPress: () => updatePlantDetails({ dripperType: '2L/h' }) },
+        { text: '4L/h', onPress: () => updatePlantDetails({ dripperType: '4L/h' }) },
+        { text: '8L/h', onPress: () => updatePlantDetails({ dripperType: '8L/h' }) }
+      ]
+    );
+  };
+
+  const handleChangeWaterLimit = () => {
+    Alert.prompt(
+      'Change Water Limit',
+      'Enter new water limit (in liters):',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Update',
+          onPress: (limit) => {
+            const limitValue = parseFloat(limit);
+            if (!isNaN(limitValue) && limitValue > 0) {
+              updatePlantDetails({ waterLimit: limitValue });
+            } else {
+              Alert.alert('Invalid Input', 'Please enter a positive number');
+            }
+          }
+        }
+      ],
+      'plain-text',
+      plant?.waterLimit?.toString() || '1.0'
+    );
+  };
+
+  const handleChangeImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        const base64 = await convertImageToBase64(imageUri);
+        const filename = `plant_${plant?.id}_${Date.now()}.jpg`;
+        
+        updatePlantDetails({
+          imageData: {
+            base64,
+            filename,
+            mimeType: 'image/jpeg'
+          }
+        });
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to select image');
+    }
+  };
+
+  // Helper function to convert image to base64
+  const convertImageToBase64 = async (uri) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // Function to update plant details
+  const updatePlantDetails = (updateData) => {
+    if (!websocketService.isConnected()) {
+      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
+      return;
+    }
+
+    websocketService.sendMessage({
+      type: 'UPDATE_PLANT_DETAILS',
+      plant_id: plant.id,
+      plantName: plant.name, // Keep for backward compatibility
+      ...updateData
+    });
   };
 
   const handleTimeSelected = (timeMinutes) => {
@@ -310,7 +485,9 @@ const PlantDetail = () => {
           <Feather name="chevron-left" size={24} color="#2C3E50" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Plant Details</Text>
-        <View style={styles.headerSpacer} />
+        <TouchableOpacity onPress={() => setShowSettingsModal(true)} style={styles.headerSettingsButton}>
+          <Feather name="settings" size={24} color="#2C3E50" />
+        </TouchableOpacity>
       </View>
 
       {/* Irrigation Control Bar - Shows when watering is active */}
@@ -387,33 +564,33 @@ const PlantDetail = () => {
         <View style={styles.plantConfigContainer}>
           <Text style={styles.sectionTitle}>Plant Configuration</Text>
           <View style={styles.configGrid}>
-            <View style={styles.configItem}>
-              <View style={styles.configIconContainer}>
-                <Feather name="droplet" size={16} color="#4CAF50" />
-              </View>
-              <View style={styles.configInfo}>
-                <Text style={styles.configLabel}>Dripper Type</Text>
-                <Text style={styles.configValue}>{plant.dripper_type || '2L/h'}</Text>
-              </View>
-            </View>
-            <View style={styles.configItem}>
-              <View style={styles.configIconContainer}>
-                <Feather name="target" size={16} color="#4CAF50" />
-              </View>
-              <View style={styles.configInfo}>
-                <Text style={styles.configLabel}>Target Moisture</Text>
-                <Text style={styles.configValue}>{plant.ideal_moisture}%</Text>
-              </View>
-            </View>
-            <View style={styles.configItem}>
-              <View style={styles.configIconContainer}>
-                <Feather name="bucket" size={16} color="#4CAF50" />
-              </View>
-              <View style={styles.configInfo}>
-                <Text style={styles.configLabel}>Water Limit</Text>
-                <Text style={styles.configValue}>{plant.water_limit}L</Text>
-              </View>
-            </View>
+                         <View style={styles.configItem}>
+               <View style={styles.configIconContainer}>
+                 <Feather name="activity" size={16} color="#4CAF50" />
+               </View>
+               <View style={styles.configInfo}>
+                 <Text style={styles.configLabel}>Dripper Type</Text>
+                 <Text style={styles.configValue}>{plant.dripper_type || '2L/h'}</Text>
+               </View>
+             </View>
+             <View style={styles.configItem}>
+               <View style={styles.configIconContainer}>
+                 <Feather name="droplet" size={16} color="#4CAF50" />
+               </View>
+               <View style={styles.configInfo}>
+                 <Text style={styles.configLabel}>Target Moisture</Text>
+                 <Text style={styles.configValue}>{plant.ideal_moisture || plant.desiredMoisture || 50}%</Text>
+               </View>
+             </View>
+             <View style={styles.configItem}>
+               <View style={styles.configIconContainer}>
+                 <Feather name="bar-chart-2" size={16} color="#4CAF50" />
+               </View>
+               <View style={styles.configInfo}>
+                 <Text style={styles.configLabel}>Water Limit</Text>
+                 <Text style={styles.configValue}>{plant.water_limit}L</Text>
+               </View>
+             </View>
           </View>
         </View>
 
@@ -579,6 +756,120 @@ const PlantDetail = () => {
           handleStopWatering(plant.id);
         }}
       />
+
+      {/* 9. Settings Modal */}
+      <Modal
+        visible={showSettingsModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowSettingsModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          {/* Modal Header */}
+          <View style={styles.modalHeader}>
+            <TouchableOpacity 
+              onPress={() => setShowSettingsModal(false)} 
+              style={styles.modalCloseButton}
+            >
+              <Feather name="x" size={24} color="#2C3E50" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Plant Settings</Text>
+            <View style={styles.modalSpacer} />
+          </View>
+
+          {/* Modal Content */}
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.settingsSection}>
+              <Text style={styles.settingsSectionTitle}>Plant Configuration</Text>
+              
+              <TouchableOpacity 
+                style={styles.settingsItem}
+                onPress={() => {
+                  setShowSettingsModal(false);
+                  handleChangePlantName();
+                }}
+              >
+                <View style={styles.settingsItemIcon}>
+                  <Feather name="edit-3" size={20} color="#4CAF50" />
+                </View>
+                <View style={styles.settingsItemContent}>
+                  <Text style={styles.settingsItemTitle}>Change Name</Text>
+                  <Text style={styles.settingsItemSubtitle}>Update plant name</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.settingsItem}
+                onPress={() => {
+                  setShowSettingsModal(false);
+                  handleChangeDesiredHumidity();
+                }}
+              >
+                <View style={styles.settingsItemIcon}>
+                  <Feather name="droplet" size={20} color="#4CAF50" />
+                </View>
+                <View style={styles.settingsItemContent}>
+                  <Text style={styles.settingsItemTitle}>Change Desired Humidity</Text>
+                  <Text style={styles.settingsItemSubtitle}>Set target moisture level</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.settingsItem}
+                onPress={() => {
+                  setShowSettingsModal(false);
+                  handleChangeDripper();
+                }}
+              >
+                <View style={styles.settingsItemIcon}>
+                  <Feather name="settings" size={20} color="#4CAF50" />
+                </View>
+                <View style={styles.settingsItemContent}>
+                  <Text style={styles.settingsItemTitle}>Change Dripper</Text>
+                  <Text style={styles.settingsItemSubtitle}>Select dripper type</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.settingsItem}
+                onPress={() => {
+                  setShowSettingsModal(false);
+                  handleChangeWaterLimit();
+                }}
+              >
+                <View style={styles.settingsItemIcon}>
+                  <Feather name="maximize-2" size={20} color="#4CAF50" />
+                </View>
+                <View style={styles.settingsItemContent}>
+                  <Text style={styles.settingsItemTitle}>Change Water Limit</Text>
+                  <Text style={styles.settingsItemSubtitle}>Set maximum water amount</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.settingsItem}
+                onPress={() => {
+                  setShowSettingsModal(false);
+                  handleChangeImage();
+                }}
+              >
+                <View style={styles.settingsItemIcon}>
+                  <Feather name="image" size={20} color="#4CAF50" />
+                </View>
+                <View style={styles.settingsItemContent}>
+                  <Text style={styles.settingsItemTitle}>Change Image</Text>
+                  <Text style={styles.settingsItemSubtitle}>Update plant photo</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };

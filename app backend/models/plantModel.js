@@ -116,6 +116,7 @@ async function updatePlantSchedule(plantId, days, time) {
 
 // Update plant details with optimistic locking
 async function updatePlantDetails(userId, plantId, updateData) {
+  console.log('🔍 DEBUG - updatePlantDetails called with:', { userId, plantId, updateData });
   const client = await pool.connect();
 
   try {
@@ -128,9 +129,9 @@ async function updatePlantDetails(userId, plantId, updateData) {
       return { error: 'NO_GARDEN_MEMBERSHIP' };
     }
 
-    // Get current plant with version for optimistic locking
+    // Get current plant
     const plantCheck = await client.query(
-      'SELECT *, version FROM plants WHERE plant_id = $1 AND garden_id = $2 FOR UPDATE',
+      'SELECT * FROM plants WHERE plant_id = $1 AND garden_id = $2 FOR UPDATE',
       [plantId, gardenId]
     );
 
@@ -140,7 +141,6 @@ async function updatePlantDetails(userId, plantId, updateData) {
     }
 
     const plant = plantCheck.rows[0];
-    const currentVersion = plant.version;
 
     // Check for duplicate name within the garden if name is being updated
     if (updateData.plantName && updateData.plantName !== plant.name) {
@@ -175,31 +175,36 @@ async function updatePlantDetails(userId, plantId, updateData) {
       updateValues.push(updateData.waterLimit);
     }
 
+    if (updateData.dripperType !== undefined) {
+      updateFields.push(`dripper_type = $${paramIndex++}`);
+      updateValues.push(updateData.dripperType);
+    }
+
     if (updateData.imageUrl !== undefined) {
       updateFields.push(`image_url = $${paramIndex++}`);
       updateValues.push(updateData.imageUrl);
     }
 
-    // Add version increment and updated_at timestamp
-    updateFields.push(`version = version + 1`);
+    // Add updated_at timestamp
     updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
 
-    // Add plant_id and current version to values for WHERE clause
+    // Add plant_id to values for WHERE clause
     updateValues.push(plantId);
-    updateValues.push(currentVersion);
 
     const updateQuery = `
       UPDATE plants 
       SET ${updateFields.join(', ')}
-      WHERE plant_id = $${paramIndex} AND version = $${paramIndex + 1}
-      RETURNING *
+      WHERE plant_id = $${updateValues.length}
+      RETURNING plant_id, name, plant_type, ideal_moisture, water_limit, dripper_type, sensor_port, valve_id, valve_blocked, image_url, created_at, updated_at
     `;
 
+    console.log('🔍 DEBUG - Executing SQL query:', updateQuery);
+    console.log('🔍 DEBUG - With values:', updateValues);
     const result = await client.query(updateQuery, updateValues);
 
     if (result.rows.length === 0) {
       await client.query('ROLLBACK');
-      return { error: 'CONCURRENT_MODIFICATION' };
+      return { error: 'PLANT_NOT_FOUND' };
     }
 
     await client.query('COMMIT');

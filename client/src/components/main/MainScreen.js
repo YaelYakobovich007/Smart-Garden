@@ -1022,7 +1022,6 @@ const MainScreen = () => {
         onGarden={handleGarden}
         onAddPlant={handleAddPlant}
         onIdentifyPlant={handleIdentifyPlant}
-        onSchedule={handleSchedule}
         onSettings={handleSettings}
         onHelp={handleHelp}
       />

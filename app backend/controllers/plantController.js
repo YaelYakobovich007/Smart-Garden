@@ -7,6 +7,7 @@ const piCommunication = require('../services/piCommunication');
 const { addPendingPlant } = require('../services/pendingPlantsTracker');
 const { addPendingMoistureRequest } = require('../services/pendingMoistureTracker');
 const { broadcastPlantAdded, broadcastPlantDeleted, broadcastPlantUpdated } = require('../services/gardenBroadcaster');
+const { storePendingUpdate } = require('../services/pendingUpdateTracker');
 
 // Test mode flag - set to true to allow plant creation without Pi
 const TEST_MODE = false
@@ -232,7 +233,8 @@ async function handleDeletePlant(data, ws, email) {
 
 async function handleUpdatePlantDetails(data, ws, email) {
   try {
-    const { plantName, newPlantName, desiredMoisture, waterLimit, imageData } = data;
+    console.log('🔍 DEBUG - handleUpdatePlantDetails called with data:', data);
+    const { plantName, newPlantName, desiredMoisture, waterLimit, dripperType, imageData } = data;
 
     // Validate required fields
     if (!plantName) {
@@ -252,6 +254,12 @@ async function handleUpdatePlantDetails(data, ws, email) {
     // Validate water limit (positive number)
     if (waterLimit !== undefined && waterLimit <= 0) {
       return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Water limit must be a positive number');
+    }
+
+    // Validate dripper type (if provided)
+    const validDripperTypes = ['2L/h', '4L/h', '8L/h'];
+    if (dripperType && !validDripperTypes.includes(dripperType)) {
+      return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Invalid dripper type. Must be 2L/h, 4L/h, or 8L/h');
     }
 
     // Get user ID from email
@@ -285,6 +293,7 @@ async function handleUpdatePlantDetails(data, ws, email) {
       plantName: newPlantName?.trim(),
       desiredMoisture,
       waterLimit,
+      dripperType,
       imageUrl: imageUrlToSave
     });
 
@@ -312,10 +321,52 @@ async function handleUpdatePlantDetails(data, ws, email) {
       return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Update failed');
     }
 
-    sendSuccess(ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {
-      plant: updatedPlant,
-      message: 'Plant details updated successfully'
-    });
+    // Send update to Pi controller if plant has hardware IDs
+    if (updatedPlant.sensor_port && updatedPlant.valve_id) {
+      try {
+        console.log('🔍 DEBUG - About to send update to Pi:');
+        console.log('   - updatedPlant:', updatedPlant);
+        console.log('   - updatedPlant.plant_id:', updatedPlant.plant_id);
+        console.log('   - updatedPlant.name:', updatedPlant.name);
+        console.log('   - updatedPlant.ideal_moisture:', updatedPlant.ideal_moisture);
+        console.log('   - updatedPlant.water_limit:', updatedPlant.water_limit);
+        console.log('   - updatedPlant.dripper_type:', updatedPlant.dripper_type);
+        
+        // Ensure plant_id is available
+        if (!updatedPlant.plant_id) {
+          console.warn('⚠️ WARNING - updatedPlant.plant_id is missing, using original plantId:', plant.plant_id);
+          updatedPlant.plant_id = plant.plant_id;
+        }
+        
+        // Store pending update to track the response
+        storePendingUpdate(updatedPlant.plant_id, ws, email, {
+          newPlantName,
+          desiredMoisture,
+          waterLimit,
+          dripperType,
+          imageData
+        });
+        
+        const piResult = piCommunication.updatePlant(updatedPlant);
+        if (!piResult.success) {
+          console.warn('Failed to update plant on Pi:', piResult.error);
+          // Remove pending update since Pi update failed
+          const { getPendingUpdate } = require('../services/pendingUpdateTracker');
+          getPendingUpdate(updatedPlant.plant_id);
+        }
+      } catch (piError) {
+        console.error('Error updating plant on Pi:', piError);
+        // Remove pending update since Pi update failed
+        const { getPendingUpdate } = require('../services/pendingUpdateTracker');
+        getPendingUpdate(updatedPlant.plant_id);
+      }
+    } else {
+      // Plant doesn't have hardware IDs, send success immediately
+      sendSuccess(ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {
+        plant: updatedPlant,
+        message: 'Plant details updated successfully'
+      });
+    }
 
     // Broadcast plant update to other garden members
     try {
