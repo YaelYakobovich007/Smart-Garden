@@ -229,7 +229,7 @@ const PlantDetail = () => {
         const imageUri = result.assets[0].uri;
         const base64 = await convertImageToBase64(imageUri);
         const filename = `plant_${plant?.id}_${Date.now()}.jpg`;
-        
+
         updatePlantDetails({
           imageData: {
             base64,
@@ -440,6 +440,14 @@ const PlantDetail = () => {
       Alert.alert('Stop Failed', data?.message || 'Failed to stop irrigation. Please try again.');
     };
 
+    const handleMoistureUpdate = (data) => {
+      console.log('💧 PlantDetail: Moisture update received:', data);
+      if (data.moistureData && data.moistureData.plant_id === plant.id) {
+        setCurrentMoisture(data.moistureData.moisture);
+        console.log(`💧 Updated moisture for plant ${plant.name}: ${data.moistureData.moisture}%`);
+      }
+    };
+
     websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleFail);
     websocketService.onMessage('IRRIGATE_SKIPPED', handleSkipped);
@@ -455,6 +463,7 @@ const PlantDetail = () => {
     websocketService.onMessage('TEST_VALVE_BLOCK_SUCCESS', handleTestValveBlockSuccess);
     websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
     websocketService.onMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
+    websocketService.onMessage('GARDEN_MOISTURE_UPDATE', handleMoistureUpdate);
 
     return () => {
       websocketService.offMessage('IRRIGATE_SUCCESS', handleSuccess);
@@ -472,6 +481,7 @@ const PlantDetail = () => {
       websocketService.offMessage('TEST_VALVE_BLOCK_SUCCESS', handleTestValveBlockSuccess);
       websocketService.offMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
       websocketService.offMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
+      websocketService.offMessage('GARDEN_MOISTURE_UPDATE', handleMoistureUpdate);
     };
   }, [navigation, plant.name]);
 
@@ -564,33 +574,33 @@ const PlantDetail = () => {
         <View style={styles.plantConfigContainer}>
           <Text style={styles.sectionTitle}>Plant Configuration</Text>
           <View style={styles.configGrid}>
-                         <View style={styles.configItem}>
-               <View style={styles.configIconContainer}>
-                 <Feather name="activity" size={16} color="#4CAF50" />
-               </View>
-               <View style={styles.configInfo}>
-                 <Text style={styles.configLabel}>Dripper Type</Text>
-                 <Text style={styles.configValue}>{plant.dripper_type || '2L/h'}</Text>
-               </View>
-             </View>
-             <View style={styles.configItem}>
-               <View style={styles.configIconContainer}>
-                 <Feather name="droplet" size={16} color="#4CAF50" />
-               </View>
-               <View style={styles.configInfo}>
-                 <Text style={styles.configLabel}>Target Moisture</Text>
-                 <Text style={styles.configValue}>{plant.ideal_moisture || plant.desiredMoisture || 50}%</Text>
-               </View>
-             </View>
-             <View style={styles.configItem}>
-               <View style={styles.configIconContainer}>
-                 <Feather name="bar-chart-2" size={16} color="#4CAF50" />
-               </View>
-               <View style={styles.configInfo}>
-                 <Text style={styles.configLabel}>Water Limit</Text>
-                 <Text style={styles.configValue}>{plant.water_limit}L</Text>
-               </View>
-             </View>
+            <View style={styles.configItem}>
+              <View style={styles.configIconContainer}>
+                <Feather name="activity" size={16} color="#4CAF50" />
+              </View>
+              <View style={styles.configInfo}>
+                <Text style={styles.configLabel}>Dripper Type</Text>
+                <Text style={styles.configValue}>{plant.dripper_type || '2L/h'}</Text>
+              </View>
+            </View>
+            <View style={styles.configItem}>
+              <View style={styles.configIconContainer}>
+                <Feather name="droplet" size={16} color="#4CAF50" />
+              </View>
+              <View style={styles.configInfo}>
+                <Text style={styles.configLabel}>Target Moisture</Text>
+                <Text style={styles.configValue}>{plant.ideal_moisture || plant.desiredMoisture || 50}%</Text>
+              </View>
+            </View>
+            <View style={styles.configItem}>
+              <View style={styles.configIconContainer}>
+                <Feather name="bar-chart-2" size={16} color="#4CAF50" />
+              </View>
+              <View style={styles.configInfo}>
+                <Text style={styles.configLabel}>Water Limit</Text>
+                <Text style={styles.configValue}>{plant.water_limit}L</Text>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -609,27 +619,27 @@ const PlantDetail = () => {
           </View>
         </View>
 
-                 {/* Valve Blocked Warning */}
-         {plant.valve_blocked && (
-           <View style={styles.valveBlockedContainer}>
-             <View style={styles.valveBlockedHeader}>
-               <Feather name="alert-triangle" size={24} color="#F59E0B" />
-               <Text style={styles.valveBlockedTitle}>Tap is Blocked</Text>
-             </View>
-             <Text style={styles.valveBlockedDescription}>
-               The valve for this plant is currently blocked and cannot be operated. 
-               Please troubleshoot the hardware issue to restore irrigation functionality.
-             </Text>
-             <TouchableOpacity
-               style={styles.troubleshootButton}
-               onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
-             >
-               <Feather name="tool" size={20} color="#FFFFFF" />
-               <Text style={styles.troubleshootButtonText}>Troubleshoot Valve</Text>
-             </TouchableOpacity>
-           </View>
-         )}
-         
+        {/* Valve Blocked Warning */}
+        {plant.valve_blocked && (
+          <View style={styles.valveBlockedContainer}>
+            <View style={styles.valveBlockedHeader}>
+              <Feather name="alert-triangle" size={24} color="#F59E0B" />
+              <Text style={styles.valveBlockedTitle}>Tap is Blocked</Text>
+            </View>
+            <Text style={styles.valveBlockedDescription}>
+              The valve for this plant is currently blocked and cannot be operated.
+              Please troubleshoot the hardware issue to restore irrigation functionality.
+            </Text>
+            <TouchableOpacity
+              style={styles.troubleshootButton}
+              onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
+            >
+              <Feather name="tool" size={20} color="#FFFFFF" />
+              <Text style={styles.troubleshootButtonText}>Troubleshoot Valve</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
 
 
         {/* 2. Smart Irrigation Section */}
@@ -638,8 +648,8 @@ const PlantDetail = () => {
           <Text style={styles.sectionDescription}>
             Smart irrigation automatically waters your plant based on soil moisture levels and optimal conditions.
           </Text>
-          <TouchableOpacity 
-            style={[styles.primaryButton, (isWateringActive || plant.valve_blocked) && styles.disabledButton]} 
+          <TouchableOpacity
+            style={[styles.primaryButton, (isWateringActive || plant.valve_blocked) && styles.disabledButton]}
             onPress={handleSmartIrrigation}
             disabled={isWateringActive || plant.valve_blocked}
           >
@@ -648,7 +658,7 @@ const PlantDetail = () => {
               {plant.valve_blocked ? 'Valve Blocked' : 'Start Smart Irrigation'}
             </Text>
           </TouchableOpacity>
-          
+
 
         </View>
 
@@ -665,8 +675,8 @@ const PlantDetail = () => {
           </TouchableOpacity>
 
           <View style={styles.valveButtonsContainer}>
-            <TouchableOpacity 
-              style={[styles.primaryButton, styles.halfButton, (isWateringActive || plant.valve_blocked) && styles.disabledButton]} 
+            <TouchableOpacity
+              style={[styles.primaryButton, styles.halfButton, (isWateringActive || plant.valve_blocked) && styles.disabledButton]}
               onPress={() => {
                 // Open Valve button pressed
                 handleManualIrrigation();
@@ -679,8 +689,8 @@ const PlantDetail = () => {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.stopButton, styles.halfButton, (!isManualMode || plant.valve_blocked) && styles.disabledButton]} 
+            <TouchableOpacity
+              style={[styles.stopButton, styles.halfButton, (!isManualMode || plant.valve_blocked) && styles.disabledButton]}
               onPress={() => {
                 // Close Valve button pressed
                 handleStopWatering(plant.id);
@@ -737,12 +747,12 @@ const PlantDetail = () => {
       />
 
       {/* 7. Smart Irrigation Loader */}
-      <SmartIrrigationLoader 
+      <SmartIrrigationLoader
         isVisible={pendingIrrigationRequest}
       />
 
       {/* 8. Irrigation Overlay */}
-      <IrrigationOverlay 
+      <IrrigationOverlay
         isActive={isWateringActive && !pendingIrrigationRequest && (isManualMode || isSmartMode)}
         timeLeft={wateringTimeLeft}
         onStop={() => {
@@ -751,7 +761,7 @@ const PlantDetail = () => {
             type: 'STOP_IRRIGATION',
             plantName: plant.name
           });
-          
+
           // Update local state
           handleStopWatering(plant.id);
         }}
@@ -767,8 +777,8 @@ const PlantDetail = () => {
         <SafeAreaView style={styles.modalContainer}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
-            <TouchableOpacity 
-              onPress={() => setShowSettingsModal(false)} 
+            <TouchableOpacity
+              onPress={() => setShowSettingsModal(false)}
               style={styles.modalCloseButton}
             >
               <Feather name="x" size={24} color="#2C3E50" />
@@ -781,8 +791,8 @@ const PlantDetail = () => {
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             <View style={styles.settingsSection}>
               <Text style={styles.settingsSectionTitle}>Plant Configuration</Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.settingsItem}
                 onPress={() => {
                   setShowSettingsModal(false);
@@ -799,7 +809,7 @@ const PlantDetail = () => {
                 <Feather name="chevron-right" size={20} color="#C7C7CC" />
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.settingsItem}
                 onPress={() => {
                   setShowSettingsModal(false);
@@ -816,7 +826,7 @@ const PlantDetail = () => {
                 <Feather name="chevron-right" size={20} color="#C7C7CC" />
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.settingsItem}
                 onPress={() => {
                   setShowSettingsModal(false);
@@ -833,7 +843,7 @@ const PlantDetail = () => {
                 <Feather name="chevron-right" size={20} color="#C7C7CC" />
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.settingsItem}
                 onPress={() => {
                   setShowSettingsModal(false);
@@ -850,7 +860,7 @@ const PlantDetail = () => {
                 <Feather name="chevron-right" size={20} color="#C7C7CC" />
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.settingsItem}
                 onPress={() => {
                   setShowSettingsModal(false);
