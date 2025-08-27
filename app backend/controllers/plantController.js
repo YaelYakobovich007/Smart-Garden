@@ -7,6 +7,7 @@ const piCommunication = require('../services/piCommunication');
 const { addPendingPlant } = require('../services/pendingPlantsTracker');
 const { addPendingMoistureRequest } = require('../services/pendingMoistureTracker');
 const { broadcastPlantAdded, broadcastPlantDeleted, broadcastPlantUpdated } = require('../services/gardenBroadcaster');
+const { storePendingUpdate } = require('../services/pendingUpdateTracker');
 
 // Test mode flag - set to true to allow plant creation without Pi
 const TEST_MODE = false
@@ -337,19 +338,35 @@ async function handleUpdatePlantDetails(data, ws, email) {
           updatedPlant.plant_id = plant.plant_id;
         }
         
+        // Store pending update to track the response
+        storePendingUpdate(updatedPlant.plant_id, ws, email, {
+          newPlantName,
+          desiredMoisture,
+          waterLimit,
+          dripperType,
+          imageData
+        });
+        
         const piResult = piCommunication.updatePlant(updatedPlant);
         if (!piResult.success) {
           console.warn('Failed to update plant on Pi:', piResult.error);
+          // Remove pending update since Pi update failed
+          const { getPendingUpdate } = require('../services/pendingUpdateTracker');
+          getPendingUpdate(updatedPlant.plant_id);
         }
       } catch (piError) {
         console.error('Error updating plant on Pi:', piError);
+        // Remove pending update since Pi update failed
+        const { getPendingUpdate } = require('../services/pendingUpdateTracker');
+        getPendingUpdate(updatedPlant.plant_id);
       }
+    } else {
+      // Plant doesn't have hardware IDs, send success immediately
+      sendSuccess(ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {
+        plant: updatedPlant,
+        message: 'Plant details updated successfully'
+      });
     }
-
-    sendSuccess(ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {
-      plant: updatedPlant,
-      message: 'Plant details updated successfully'
-    });
 
     // Broadcast plant update to other garden members
     try {

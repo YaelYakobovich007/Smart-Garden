@@ -97,10 +97,50 @@ function handlePiSocket(ws) {
       const responseData = data.data || {};
       const plantId = responseData.plant_id;
 
+      // Get pending update info
+      const { getPendingUpdate } = require('../services/pendingUpdateTracker');
+      const pendingInfo = getPendingUpdate(plantId);
+
       if (responseData.success) {
         console.log(`Plant ${plantId} updated successfully on Pi: ${responseData.message}`);
+        
+        // Send success response to frontend
+        if (pendingInfo) {
+          const { sendSuccess } = require('../utils/wsResponses');
+          // Get the updated plant data from the database
+          const { getPlantById } = require('../models/plantModel');
+          try {
+            const updatedPlant = await getPlantById(plantId);
+            sendSuccess(pendingInfo.ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {
+              plant: updatedPlant,
+              message: `Plant updated successfully on hardware: ${responseData.message}`
+            });
+          } catch (error) {
+            console.error('Error getting updated plant data:', error);
+            sendSuccess(pendingInfo.ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {
+              message: `Plant updated successfully on hardware: ${responseData.message}`
+            });
+          }
+        }
       } else {
         console.warn(`Failed to update plant ${plantId} on Pi: ${responseData.message}`);
+        
+        // Send error response to frontend
+        if (pendingInfo) {
+          const { sendError } = require('../utils/wsResponses');
+          // Get the updated plant data from the database even on error (in case the update was partially successful)
+          const { getPlantById } = require('../models/plantModel');
+          try {
+            const updatedPlant = await getPlantById(plantId);
+            sendError(pendingInfo.ws, 'UPDATE_PLANT_DETAILS_FAIL', {
+              plant: updatedPlant,
+              message: `Hardware update failed: ${responseData.message}`
+            });
+          } catch (error) {
+            console.error('Error getting updated plant data:', error);
+            sendError(pendingInfo.ws, 'UPDATE_PLANT_DETAILS_FAIL', `Hardware update failed: ${responseData.message}`);
+          }
+        }
       }
     }
 

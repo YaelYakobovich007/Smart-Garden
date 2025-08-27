@@ -38,7 +38,10 @@ import * as ImagePicker from 'expo-image-picker';
 const PlantDetail = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { plant } = route.params || {};
+  const { plant: initialPlant } = route.params || {};
+
+  // State for plant data to allow updates
+  const [plant, setPlant] = useState(initialPlant);
 
   // State for real-time sensor data
   const [currentMoisture, setCurrentMoisture] = useState(plant?.moisture || 0);
@@ -101,16 +104,23 @@ const PlantDetail = () => {
   // Handle successful plant update
   const handlePlantUpdateSuccess = (data) => {
     Alert.alert('Success', data.message || 'Plant updated successfully');
-    // Optionally refresh the plant data or navigate back
+    // Update the plant data to refresh the UI
     if (data.plant) {
       // Update the plant data in the route params
       navigation.setParams({ plant: data.plant });
+      // Update the local state to trigger re-render
+      setPlant(data.plant);
     }
   };
 
   // Handle plant update error
   const handlePlantUpdateError = (data) => {
     Alert.alert('Error', data.message || 'Failed to update plant');
+    // Update the plant data even on error if it's provided (in case the update was partially successful)
+    if (data.plant) {
+      navigation.setParams({ plant: data.plant });
+      setPlant(data.plant);
+    }
   };
 
   // Available irrigation times (in minutes)
@@ -554,33 +564,33 @@ const PlantDetail = () => {
         <View style={styles.plantConfigContainer}>
           <Text style={styles.sectionTitle}>Plant Configuration</Text>
           <View style={styles.configGrid}>
-            <View style={styles.configItem}>
-              <View style={styles.configIconContainer}>
-                <Feather name="droplet" size={16} color="#4CAF50" />
-              </View>
-              <View style={styles.configInfo}>
-                <Text style={styles.configLabel}>Dripper Type</Text>
-                <Text style={styles.configValue}>{plant.dripper_type || '2L/h'}</Text>
-              </View>
-            </View>
-            <View style={styles.configItem}>
-              <View style={styles.configIconContainer}>
-                <Feather name="target" size={16} color="#4CAF50" />
-              </View>
-              <View style={styles.configInfo}>
-                <Text style={styles.configLabel}>Target Moisture</Text>
-                <Text style={styles.configValue}>{plant.ideal_moisture}%</Text>
-              </View>
-            </View>
-            <View style={styles.configItem}>
-              <View style={styles.configIconContainer}>
-                <Feather name="bucket" size={16} color="#4CAF50" />
-              </View>
-              <View style={styles.configInfo}>
-                <Text style={styles.configLabel}>Water Limit</Text>
-                <Text style={styles.configValue}>{plant.water_limit}L</Text>
-              </View>
-            </View>
+                         <View style={styles.configItem}>
+               <View style={styles.configIconContainer}>
+                 <Feather name="activity" size={16} color="#4CAF50" />
+               </View>
+               <View style={styles.configInfo}>
+                 <Text style={styles.configLabel}>Dripper Type</Text>
+                 <Text style={styles.configValue}>{plant.dripper_type || '2L/h'}</Text>
+               </View>
+             </View>
+             <View style={styles.configItem}>
+               <View style={styles.configIconContainer}>
+                 <Feather name="droplet" size={16} color="#4CAF50" />
+               </View>
+               <View style={styles.configInfo}>
+                 <Text style={styles.configLabel}>Target Moisture</Text>
+                 <Text style={styles.configValue}>{plant.ideal_moisture || plant.desiredMoisture || 50}%</Text>
+               </View>
+             </View>
+             <View style={styles.configItem}>
+               <View style={styles.configIconContainer}>
+                 <Feather name="bar-chart-2" size={16} color="#4CAF50" />
+               </View>
+               <View style={styles.configInfo}>
+                 <Text style={styles.configLabel}>Water Limit</Text>
+                 <Text style={styles.configValue}>{plant.water_limit}L</Text>
+               </View>
+             </View>
           </View>
         </View>
 

@@ -523,7 +523,7 @@ class SmartGardenPiClient:
             # Debug: Check if message_type matches expected values
             expected_types = ["WELCOME", "ADD_PLANT", "GET_PLANT_MOISTURE", "GET_ALL_MOISTURE", 
                             "IRRIGATE_PLANT", "STOP_IRRIGATION", "OPEN_VALVE", "CLOSE_VALVE", 
-                            "GET_VALVE_STATUS", "VALVE_STATUS", "UPDATE_PLANT"]
+                            "GET_VALVE_STATUS", "VALVE_STATUS", "UPDATE_PLANT", "UPDATE_PLANT_RESPONSE"]
             if message_type not in expected_types:
                 self.logger.warning(f"UNKNOWN MESSAGE TYPE: '{message_type}' (not in expected list)")
                 self.logger.warning(f"Expected types: {expected_types}")
@@ -568,6 +568,11 @@ class SmartGardenPiClient:
             
             elif message_type == "UPDATE_PLANT":
                 await self.handle_update_plant_command(data)
+            
+            elif message_type == "UPDATE_PLANT_RESPONSE":
+                self.logger.warning(f"Received UPDATE_PLANT_RESPONSE - this should not happen! This is likely an echo of our own response.")
+                self.logger.warning(f"Full message: {data}")
+                # Ignore this message as it's likely an echo
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")
