@@ -88,6 +88,7 @@ const PlantDetail = () => {
         websocketService.sendMessage({ type: 'GET_PLANT_DETAILS', plantName: plant.name });
       }
     };
+    ///check 
 
     fetchLatest();
 
