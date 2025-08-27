@@ -1430,9 +1430,9 @@ function normalizePlantName(speciesName) {
 /**
  * Get plant care information by species name
  * @param {string} speciesName - The plant species name
- * @returns {Object|null} - Plant care data or null if not found
+ * @returns {Promise<Object|null>} - Plant care data or null if not found
  */
-function getPlantCare(speciesName) {
+async function getPlantCare(speciesName) {
     if (!speciesName) return null;
 
     const normalizedName = normalizePlantName(speciesName);
@@ -1448,6 +1448,22 @@ function getPlantCare(speciesName) {
     }
 
     console.log('❌ No plant care data found for:', speciesName, '(normalized:', normalizedName, ')');
+    console.log('🤖 Trying ChatGPT as fallback...');
+
+    // Try ChatGPT as fallback
+    try {
+        const { getPlantCareFromChatGPT } = require('./chatgptService');
+        const chatgptCareData = await getPlantCareFromChatGPT(speciesName);
+
+        if (chatgptCareData) {
+            console.log('✅ Got care data from ChatGPT for:', speciesName);
+            return chatgptCareData;
+        }
+    } catch (error) {
+        console.error('❌ ChatGPT fallback failed for:', speciesName, error.message);
+    }
+
+    console.log('❌ No care data available from any source for:', speciesName);
     return null;
 }
 
@@ -1477,10 +1493,10 @@ function searchPlants(searchTerm) {
  * Get comprehensive plant identification result with care data
  * @param {string} speciesName - Identified plant species
  * @param {number} probability - Identification confidence
- * @returns {Object} - Combined identification and care data
+ * @returns {Promise<Object>} - Combined identification and care data
  */
-function getPlantIdentificationWithCare(speciesName, probability) {
-    const careData = getPlantCare(speciesName);
+async function getPlantIdentificationWithCare(speciesName, probability) {
+    const careData = await getPlantCare(speciesName);
 
     return {
         species: speciesName,
