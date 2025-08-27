@@ -531,20 +531,21 @@ class SmartGardenPiClient:
             }
             await self.send_message("VALVE_STATUS_RESPONSE", error_response)
     
-    async def handle_garden_sync(self, data: Dict[Any, Any]):
+    async def handle_garden_sync(self, message: Dict[Any, Any]):
         """Handle GARDEN_SYNC message from server with garden and plants data."""
         try:
             self.logger.info("=== HANDLING GARDEN_SYNC ===")
-            self.logger.info(f"Received garden sync data: {data}")
+            self.logger.info(f"Received garden sync message: {message}")
             
-            garden_data = data.get("garden", {})
-            plants_data = data.get("plants", [])
+            # Extract garden and plants data from the message
+            garden_data = message.get("garden", {})
+            plants_data = message.get("plants", [])
             
             self.logger.info(f"Garden: {garden_data.get('name', 'Unknown')} (Code: {garden_data.get('invite_code', 'Unknown')})")
             self.logger.info(f"Plants to sync: {len(plants_data)}")
             
             # Store the sync data
-            self.garden_sync_data = data
+            self.garden_sync_data = message
             
             # Add each plant to the engine
             for plant_data in plants_data:
@@ -665,7 +666,7 @@ class SmartGardenPiClient:
                 # Ignore this message as it's likely an echo
             
             elif message_type == "GARDEN_SYNC":
-                await self.handle_garden_sync(message_data)
+                await self.handle_garden_sync(data)
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")
