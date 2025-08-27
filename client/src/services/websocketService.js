@@ -9,10 +9,12 @@ const BACKEND_URL = Constants.expoConfig.extra.BACKEND_URL;
 const CONFIG = {
   // For local development, use 'localhost'
   // For network access, use your computer's IP address
-  SERVER_URL: 'ws://192.168.68.74:8080',
+  // For production, use Cloud Run URL
+  SERVER_URL: 'wss://smart-garden-backend-1088783109508.europe-west1.run.app',
   // Alternative configurations
   // LOCAL: 'ws://localhost:8080'
   // NETWORK: 'ws://192.168.68.74:8080'
+  // PRODUCTION: 'wss://smart-garden-backend-1088783109508.europe-west1.run.app'
 };
 
 class WebSocketService {
