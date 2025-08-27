@@ -195,13 +195,18 @@ const MainScreen = () => {
             id: plant.plant_id,
             name: plant.name,
             type: plant.plant_type || 'Unknown',
-            image_url: plant.image_url, // Add image_url from server
-            location: 'Garden', // Default location
-            moisture: existingPlant?.moisture ?? null, // Preserve existing moisture or use null
-            temperature: existingPlant?.temperature ?? null, // Preserve existing temperature or use null
-            lightLevel: existingPlant?.lightLevel ?? 0, // Preserve existing light level or use 0
-            isHealthy: true, // Default to healthy
-            valve_blocked: plant.valve_blocked || false, // Include valve blocked status
+            image_url: plant.image_url,
+            location: 'Garden',
+            // Preserve live sensor readings to avoid flicker
+            moisture: existingPlant?.moisture ?? null,
+            temperature: existingPlant?.temperature ?? null,
+            lightLevel: existingPlant?.lightLevel ?? 0,
+            isHealthy: true,
+            valve_blocked: plant.valve_blocked || false,
+            // Ensure config fields are carried through so PlantDetail shows the updated values
+            ideal_moisture: plant.ideal_moisture,
+            water_limit: plant.water_limit,
+            dripper_type: plant.dripper_type,
           };
           return transformed;
         });

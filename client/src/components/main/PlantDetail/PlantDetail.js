@@ -80,24 +80,36 @@ const PlantDetail = () => {
     return Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
   };
 
-  // Request latest sensor data when component mounts
+  // Request latest sensor data and details when screen is focused or plant changes
   useEffect(() => {
-    if (plant?.name && websocketService.isConnected()) {
-      websocketService.sendMessage({
-        type: 'GET_PLANT_MOISTURE',
-        plantName: plant.name
-      });
-    }
-  }, [plant?.name]);
+    const fetchLatest = () => {
+      if (plant?.name && websocketService.isConnected()) {
+        websocketService.sendMessage({ type: 'GET_PLANT_MOISTURE', plantName: plant.name });
+        websocketService.sendMessage({ type: 'GET_PLANT_DETAILS', plantName: plant.name });
+      }
+    };
+
+    fetchLatest();
+
+    const unsubscribe = navigation.addListener('focus', fetchLatest);
+    return unsubscribe;
+  }, [navigation, plant?.name]);
 
   // Set up WebSocket message handlers for plant updates
   useEffect(() => {
     websocketService.onMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
     websocketService.onMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
+    websocketService.onMessage('GET_PLANT_DETAILS_RESPONSE', (data) => {
+      if (data?.plant) {
+        navigation.setParams({ plant: data.plant });
+        setPlant(data.plant);
+      }
+    });
 
     return () => {
       websocketService.offMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
       websocketService.offMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
+      websocketService.offMessage('GET_PLANT_DETAILS_RESPONSE', (data) => {});
     };
   }, []);
 
