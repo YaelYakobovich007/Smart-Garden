@@ -347,6 +347,75 @@ class PiCommunication {
             return { success: false, error: error.message };
         }
     }
+
+    /**
+     * Send UPDATE_PLANT request to Pi (no waiting)
+     */
+    updatePlant(plant) {
+        console.log('🔍 DEBUG - piCommunication.updatePlant called:');
+        console.log('   - plant:', plant);
+        console.log('   - plant.plant_id:', plant.plant_id, '(type:', typeof plant.plant_id, ')');
+        console.log('   - plant.name:', plant.name);
+        console.log('   - plant.ideal_moisture:', plant.ideal_moisture);
+        console.log('   - plant.water_limit:', plant.water_limit);
+        console.log('   - plant.dripper_type:', plant.dripper_type);
+        
+        console.log('🔍 DEBUG - Getting Pi socket...');
+        const piSocket = getPiSocket();
+        console.log('🔍 DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
+        
+        if (!piSocket) {
+            console.log('❌ Pi not connected - cannot update plant');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        // Validate plant_id
+        if (!plant.plant_id) {
+            console.error('❌ ERROR - plant.plant_id is missing or falsy:', plant.plant_id);
+            return { success: false, error: 'plant_id is required' };
+        }
+
+        console.log('✅ DEBUG - Pi socket found, creating request...');
+        
+        try {
+            const request = {
+                type: 'UPDATE_PLANT',
+                data: {
+                    plant_id: plant.plant_id,
+                    plant_name: plant.name,
+                    desired_moisture: parseFloat(plant.ideal_moisture),
+                    water_limit: parseFloat(plant.water_limit),
+                    dripper_type: plant.dripper_type
+                }
+            };
+
+            console.log('📤 DEBUG - Created request object:');
+            console.log('   - type:', request.type);
+            console.log('   - data.plant_id:', request.data.plant_id, '(type:', typeof request.data.plant_id, ')');
+            console.log('   - data.plant_name:', request.data.plant_name);
+            console.log('   - data.desired_moisture:', request.data.desired_moisture);
+            console.log('   - data.water_limit:', request.data.water_limit);
+            console.log('   - data.dripper_type:', request.data.dripper_type);
+            console.log('   - Full JSON:', JSON.stringify(request));
+
+            console.log('🔍 DEBUG - Converting to JSON string...');
+            const jsonString = JSON.stringify(request);
+            console.log('✅ DEBUG - JSON string created, length:', jsonString.length);
+
+            console.log('🔍 DEBUG - Sending to Pi socket...');
+            piSocket.send(jsonString);
+            console.log('✅ DEBUG - UPDATE_PLANT message sent to Pi successfully');
+            
+            console.log('🔍 DEBUG - Returning success result');
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ ERROR - Error sending UPDATE_PLANT to Pi:');
+            console.error('   - Error message:', error.message);
+            console.error('   - Error stack:', error.stack);
+            return { success: false, error: error.message };
+        }
+    }
 }
 
 // Create single instance

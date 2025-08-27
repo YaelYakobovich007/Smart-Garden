@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any
 from controller.engine.smart_garden_engine import SmartGardenEngine
 from controller.dto.irrigation_result import IrrigationResult
 
-#my ip is 192.168.68.61
+#my ip is 192.168.68.74
 class SmartGardenPiClient:
     """
     Simplified WebSocket client for Raspberry Pi to connect to the main Smart Garden server.
@@ -14,8 +14,8 @@ class SmartGardenPiClient:
     """
 
 
-    #my ip is 192.168.68.61
-    def __init__(self, server_url: str = "ws://192.168.68.61:8080", engine: SmartGardenEngine = None):
+    #my ip is 192.168.68.74
+    def __init__(self, server_url: str = "ws://192.168.68.74:8080", engine: SmartGardenEngine = None):
         self.server_url = server_url
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
         self.device_id = "raspberrypi_main_controller"
@@ -395,7 +395,7 @@ class SmartGardenPiClient:
             
             self.logger.info(f"Received GET_VALVE_STATUS request for plant {plant_id}")
             
-            # Call the get valve status handler
+            # Create handler instance and call it
             from controller.handlers.get_valve_status_handler import GetValveStatusHandler
             handler = GetValveStatusHandler(self.engine)
             result = await handler.handle(plant_id)
@@ -419,6 +419,48 @@ class SmartGardenPiClient:
                 error_message=str(e)
             )
             await self.send_message("VALVE_STATUS_RESPONSE", error_result.to_websocket_data())
+
+    async def handle_update_plant_command(self, data: Dict[Any, Any]):
+        """Handle update plant request from server."""
+        try:
+            from controller.handlers.update_plant_handler import UpdatePlantHandler
+            
+            self.logger.info(f"Received UPDATE_PLANT command from server")
+            self.logger.info(f"Full message: {data}")
+            
+            # Create handler instance and call it
+            handler = UpdatePlantHandler(self.engine)
+            success, message = await handler.handle(data=data)
+            
+            # Extract plant_id from the nested data structure
+            plant_data = data.get("data", {})
+            plant_id = plant_data.get("plant_id")
+            
+            # Send response back to server
+            response_data = {
+                "plant_id": plant_id,
+                "success": success,
+                "message": message
+            }
+            
+            await self.send_message("UPDATE_PLANT_RESPONSE", response_data)
+            
+            if success:
+                self.logger.info(f"Successfully updated plant {plant_id}")
+            else:
+                self.logger.error(f"Failed to update plant {plant_id}: {message}")
+                
+        except Exception as e:
+            self.logger.error(f"Error during update plant: {e}")
+            # Extract plant_id from the nested data structure for error response
+            plant_data = data.get("data", {})
+            plant_id = plant_data.get("plant_id", 0)
+            error_response = {
+                "plant_id": plant_id,
+                "success": False,
+                "message": f"Error updating plant: {str(e)}"
+            }
+            await self.send_message("UPDATE_PLANT_RESPONSE", error_response)
     
     async def handle_valve_status_request(self, data):
         """Handle valve status request from server."""
@@ -475,8 +517,24 @@ class SmartGardenPiClient:
             self.logger.info(f"Received {message_type} message")
             self.logger.info(f"Full message: {message}")
             self.logger.info(f"Parsed data: {data}")
-            self.logger.info(f"Message type: {message_type}")
+            self.logger.info(f"Message type: '{message_type}' (length: {len(message_type) if message_type else 0})")
             self.logger.info(f"Message data: {message_data}")
+            
+            # Debug: Check if message_type matches expected values
+            expected_types = ["WELCOME", "ADD_PLANT", "GET_PLANT_MOISTURE", "GET_ALL_MOISTURE", 
+                            "IRRIGATE_PLANT", "STOP_IRRIGATION", "OPEN_VALVE", "CLOSE_VALVE", 
+                            "GET_VALVE_STATUS", "VALVE_STATUS", "UPDATE_PLANT", "UPDATE_PLANT_RESPONSE"]
+            if message_type not in expected_types:
+                self.logger.warning(f"UNKNOWN MESSAGE TYPE: '{message_type}' (not in expected list)")
+                self.logger.warning(f"Expected types: {expected_types}")
+                # Additional debugging for unknown message types
+                self.logger.warning(f"Message type bytes: {repr(message_type)}")
+                self.logger.warning(f"Message type hex: {message_type.encode('utf-8').hex() if message_type else 'None'}")
+                # Check for common issues
+                if message_type and message_type.strip() != message_type:
+                    self.logger.warning(f"Message type has leading/trailing whitespace!")
+                if message_type and message_type.lower() == "update_plant":
+                    self.logger.warning(f"Message type is lowercase - should be uppercase!")
             
             if message_type == "WELCOME":
                 self.logger.info("Received welcome message from server")
@@ -507,6 +565,14 @@ class SmartGardenPiClient:
             
             elif message_type == "VALVE_STATUS":
                 await self.handle_valve_status_request(message_data)
+            
+            elif message_type == "UPDATE_PLANT":
+                await self.handle_update_plant_command(data)
+            
+            elif message_type == "UPDATE_PLANT_RESPONSE":
+                self.logger.warning(f"Received UPDATE_PLANT_RESPONSE - this should not happen! This is likely an echo of our own response.")
+                self.logger.warning(f"Full message: {data}")
+                # Ignore this message as it's likely an echo
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")
@@ -553,6 +619,7 @@ class SmartGardenPiClient:
             self.logger.info("  - OPEN_VALVE: Open valve for a specific plant for a given duration")
             self.logger.info("  - CLOSE_VALVE: Close valve for a specific plant")
             self.logger.info("  - GET_VALVE_STATUS: Get detailed valve status for a specific plant")
+            self.logger.info("  - UPDATE_PLANT: Update an existing plant's configuration")
             
             # Start listening for messages
             await self.listen_for_messages()

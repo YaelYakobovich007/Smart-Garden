@@ -109,86 +109,88 @@ const SettingsScreen = () => {
                 <View style={styles.headerSpacer} />
             </View>
 
-            {/* Settings List */}
+            {/* Settings Container */}
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Account Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Account</Text>
-                    <TouchableOpacity style={styles.settingItem} onPress={handleProfile}>
-                        <View style={styles.settingLeft}>
-                            <Feather name="user" size={20} color="#4CAF50" />
-                            <Text style={styles.settingText}>Profile</Text>
-                        </View>
-                        <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                    </TouchableOpacity>
-                </View>
+                <View style={styles.settingsContainer}>
+                    {/* Account Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Account</Text>
+                        <TouchableOpacity style={styles.settingItem} onPress={handleProfile}>
+                            <View style={styles.settingLeft}>
+                                <Feather name="user" size={20} color="#4CAF50" />
+                                <Text style={styles.settingText}>Profile</Text>
+                            </View>
+                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                        </TouchableOpacity>
+                    </View>
 
-                {/* Preferences Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Preferences</Text>
-                    <TouchableOpacity style={styles.settingItem} onPress={handleNotifications}>
-                        <View style={styles.settingLeft}>
-                            <Feather name="bell" size={20} color="#4CAF50" />
-                            <Text style={styles.settingText}>Notifications</Text>
-                        </View>
-                        <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.settingItem} onPress={handlePrivacy}>
-                        <View style={styles.settingLeft}>
-                            <Feather name="shield" size={20} color="#4CAF50" />
-                            <Text style={styles.settingText}>Privacy & Security</Text>
-                        </View>
-                        <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                    </TouchableOpacity>
-                </View>
+                    {/* Preferences Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Preferences</Text>
+                        <TouchableOpacity style={styles.settingItem} onPress={handleNotifications}>
+                            <View style={styles.settingLeft}>
+                                <Feather name="bell" size={20} color="#4CAF50" />
+                                <Text style={styles.settingText}>Notifications</Text>
+                            </View>
+                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.settingItem} onPress={handlePrivacy}>
+                            <View style={styles.settingLeft}>
+                                <Feather name="shield" size={20} color="#4CAF50" />
+                                <Text style={styles.settingText}>Privacy & Security</Text>
+                            </View>
+                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                        </TouchableOpacity>
+                    </View>
 
-                {/* Support Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Support</Text>
-                    <TouchableOpacity style={styles.settingItem} onPress={handleHelp}>
-                        <View style={styles.settingLeft}>
-                            <Feather name="help-circle" size={20} color="#4CAF50" />
-                            <Text style={styles.settingText}>Help & Support</Text>
-                        </View>
-                        <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.settingItem} onPress={handleAbout}>
-                        <View style={styles.settingLeft}>
-                            <Feather name="info" size={20} color="#4CAF50" />
-                            <Text style={styles.settingText}>About</Text>
-                        </View>
-                        <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                    </TouchableOpacity>
-                </View>
+                    {/* Support Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Support</Text>
+                        <TouchableOpacity style={styles.settingItem} onPress={handleHelp}>
+                            <View style={styles.settingLeft}>
+                                <Feather name="help-circle" size={20} color="#4CAF50" />
+                                <Text style={styles.settingText}>Help & Support</Text>
+                            </View>
+                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.settingItem} onPress={handleAbout}>
+                            <View style={styles.settingLeft}>
+                                <Feather name="info" size={20} color="#4CAF50" />
+                                <Text style={styles.settingText}>About</Text>
+                            </View>
+                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                        </TouchableOpacity>
+                    </View>
 
-                {/* Debug Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Debug</Text>
-                    <TouchableOpacity style={styles.settingItem} onPress={handleClearSession}>
-                        <View style={styles.settingLeft}>
-                            <Feather name="refresh-cw" size={20} color="#F39C12" />
-                            <Text style={[styles.settingText, styles.clearSessionText]}>Clear Session</Text>
-                        </View>
-                        <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.settingItem} onPress={handleResetOnboarding}>
-                        <View style={styles.settingLeft}>
-                            <Feather name="play-circle" size={20} color="#9B59B6" />
-                            <Text style={[styles.settingText, styles.clearSessionText]}>Reset Onboarding</Text>
-                        </View>
-                        <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                    </TouchableOpacity>
-                </View>
+                    {/* Debug Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Debug</Text>
+                        <TouchableOpacity style={styles.settingItem} onPress={handleClearSession}>
+                            <View style={styles.settingLeft}>
+                                <Feather name="refresh-cw" size={20} color="#F39C12" />
+                                <Text style={[styles.settingText, styles.clearSessionText]}>Clear Session</Text>
+                            </View>
+                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.settingItem} onPress={handleResetOnboarding}>
+                            <View style={styles.settingLeft}>
+                                <Feather name="play-circle" size={20} color="#9B59B6" />
+                                <Text style={[styles.settingText, styles.clearSessionText]}>Reset Onboarding</Text>
+                            </View>
+                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                        </TouchableOpacity>
+                    </View>
 
-                {/* Logout Section */}
-                <View style={styles.section}>
-                    <TouchableOpacity style={[styles.settingItem, styles.logoutItem]} onPress={handleLogout}>
-                        <View style={styles.settingLeft}>
-                            <Feather name="log-out" size={20} color="#E74C3C" />
-                            <Text style={[styles.settingText, styles.logoutText]}>Logout</Text>
-                        </View>
-                        <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                    </TouchableOpacity>
+                    {/* Logout Section */}
+                    <View style={styles.section}>
+                        <TouchableOpacity style={[styles.settingItem, styles.logoutItem]} onPress={handleLogout}>
+                            <View style={styles.settingLeft}>
+                                <Feather name="log-out" size={20} color="#E74C3C" />
+                                <Text style={[styles.settingText, styles.logoutText]}>Logout</Text>
+                            </View>
+                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </ScrollView>
         </SafeAreaView>
