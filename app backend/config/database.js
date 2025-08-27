@@ -10,9 +10,7 @@ const dbConfig = {
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000, // 5 seconds
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: false
 };
 
 const pool = new Pool(dbConfig);
