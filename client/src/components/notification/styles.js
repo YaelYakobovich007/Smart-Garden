@@ -109,6 +109,33 @@ export const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        marginTop: 40,
+    },
+    loadingSpinner: {
+        marginBottom: 24,
+        // Add rotation animation
+        transform: [{ rotate: '0deg' }],
+    },
+    loadingTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#16A34A',
+        marginBottom: 8,
+        fontFamily: 'Nunito_700Bold',
+    },
+    loadingMessage: {
+        fontSize: 16,
+        color: '#6B7280',
+        textAlign: 'center',
+        paddingHorizontal: 32,
+        fontFamily: 'Nunito_400Regular',
+        marginBottom: 8,
+    },
+    loadingProgress: {
+        fontSize: 14,
+        color: '#4CAF50',
+        fontWeight: '600',
+        fontFamily: 'Nunito_600SemiBold',
     },
     loadingText: {
         fontSize: 16,

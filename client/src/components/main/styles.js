@@ -356,6 +356,54 @@ const styles = StyleSheet.create({
   gardenSettingsButton: {
     padding: 4,
   },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#2C3E50',
+    textAlign: 'center',
+    marginBottom: 24,
+    fontFamily: 'Nunito_700Bold',
+  },
+  modalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginBottom: 12,
+    gap: 12,
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2C3E50',
+    fontFamily: 'Nunito_500Medium',
+  },
+  cancelButton: {
+    backgroundColor: '#FEF2F2',
+    marginTop: 8,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#E74C3C',
+    textAlign: 'center',
+    fontFamily: 'Nunito_500Medium',
+  },
 });
 
 export default styles; 

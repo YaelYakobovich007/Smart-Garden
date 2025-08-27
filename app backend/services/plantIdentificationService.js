@@ -1,7 +1,8 @@
 const axios = require('axios');
+const { getPlantIdentificationWithCare } = require('./plantCareService');
 
 /**
- * Plant identification service using Plant.id API
+ * Plant identification service using Plant.id API with integrated care data
  */
 
 async function identifyPlantFromBase64(imageBase64) {
@@ -33,14 +34,16 @@ async function identifyPlantFromBase64(imageBase64) {
         if (suggestions.length > 0) {
             const top = suggestions[0];
             console.log('✅ Top suggestion:', top.name, 'with', Math.round(top.probability * 100) + '% confidence');
-            return {
-                species: top.name,
-                probability: top.probability
-            };
+
+            // Get comprehensive result with care data
+            const resultWithCare = getPlantIdentificationWithCare(top.name, top.probability);
+            console.log('🌿 Plant care data included:', !!resultWithCare.careData);
+
+            return resultWithCare;
         }
 
         console.log('❌ No suggestions found');
-        return { species: null, probability: null };
+        return { species: null, probability: null, careData: null, hasCareData: false };
     } catch (error) {
         console.log('❌ Plant.id API Error:');
         console.log('Error message:', error.message);

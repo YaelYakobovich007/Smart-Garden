@@ -10,7 +10,6 @@ const CONFIG = {
   // For local development, use 'localhost'
   // For network access, use your computer's IP address
   SERVER_URL: 'ws://192.168.68.74:8080',
-  
   // Alternative configurations
   // LOCAL: 'ws://localhost:8080'
   // NETWORK: 'ws://192.168.68.74:8080'

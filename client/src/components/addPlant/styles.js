@@ -67,6 +67,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 8,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   label: {
     fontSize: 16,
     fontWeight: '500',
@@ -347,6 +353,33 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontFamily: 'Nunito_500Medium',
   },
-}); 
+
+  // Scan Button Styles
+  scanButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  inputWithScan: {
+    flex: 1,
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F9F0',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  scanButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4CAF50',
+    fontFamily: 'Nunito_500Medium',
+  },
+});
 
 export default styles; 
