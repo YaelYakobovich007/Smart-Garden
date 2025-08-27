@@ -11,7 +11,7 @@
  * and provides a comprehensive view for individual plant care.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import IrrigationOverlay from './IrrigationOverlay';
 import SmartIrrigationLoader from './SmartIrrigationLoader';
 import { useIrrigation } from '../../../contexts/IrrigationContext';
@@ -39,6 +39,8 @@ const PlantDetail = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { plant: initialPlant } = route.params || {};
+  // Track if user explicitly requested to stop irrigation to avoid confusing alerts
+  const stoppingRef = useRef(false);
 
   // State for plant data to allow updates
   const [plant, setPlant] = useState(initialPlant);
@@ -355,6 +357,12 @@ const PlantDetail = () => {
     };
 
     const handleFail = (data) => {
+      // Suppress generic failure popup if user just pressed Stop
+      if (stoppingRef.current) {
+        stoppingRef.current = false;
+        console.log('IRRIGATE_FAIL received after stop request, suppressing alert:', data);
+        return;
+      }
       Alert.alert('Irrigation', data?.message || 'Failed to irrigate the plant.');
     };
 
@@ -433,11 +441,14 @@ const PlantDetail = () => {
     const handleStopIrrigationSuccess = (data) => {
       console.log('🛑 Stop irrigation success:', data);
       // No need for alert since IrrigationContext will handle the state
+      stoppingRef.current = false;
+      Alert.alert('Smart Irrigation', 'Smart irrigation has been stopped at your request.');
     };
 
     const handleStopIrrigationFail = (data) => {
       console.log('❌ Stop irrigation failed:', data);
       Alert.alert('Stop Failed', data?.message || 'Failed to stop irrigation. Please try again.');
+      stoppingRef.current = false;
     };
 
     websocketService.onMessage('IRRIGATE_SUCCESS', handleSuccess);
@@ -747,6 +758,7 @@ const PlantDetail = () => {
         timeLeft={wateringTimeLeft}
         onStop={() => {
           // Send single STOP_IRRIGATION message
+          stoppingRef.current = true;
           websocketService.sendMessage({
             type: 'STOP_IRRIGATION',
             plantName: plant.name
