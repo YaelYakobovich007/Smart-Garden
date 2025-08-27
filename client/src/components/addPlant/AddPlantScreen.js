@@ -66,24 +66,38 @@ export default function AddPlantScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
-  // Handle identified plant type from scan
+  // Handle identified plant type from scan with care data
   useEffect(() => {
     if (route.params?.identifiedPlantType) {
-      const { identifiedPlantType, confidence } = route.params;
+      const { identifiedPlantType, confidence, careData } = route.params;
+
+      // Update form data with plant type and care recommendations
       setFormData(prev => ({
         ...prev,
-        plantType: identifiedPlantType
+        plantType: identifiedPlantType,
+        // Auto-fill moisture recommendations if available
+        humidity: careData?.optimalMoisture || prev.humidity,
+        waterLimit: careData?.optimalMoisture ? (careData.optimalMoisture / 100) : prev.waterLimit
       }));
 
-      // Show success message
+      // Show success message with care data if available
+      let message = `Successfully identified as: ${identifiedPlantType} (${Math.round(confidence * 100)}% confidence)`;
+      if (careData) {
+        message += `\n\n🌱 Care Recommendations:\n• Optimal Moisture: ${careData.optimalMoisture}%\n• Watering: ${careData.wateringFrequency}\n• ${careData.wateringTips}`;
+      }
+
       Alert.alert(
         'Plant Identified!',
-        `Successfully identified as: ${identifiedPlantType} (${confidence}% confidence)`,
+        message,
         [{ text: 'OK' }]
       );
 
       // Clear the parameter to prevent setting it again
-      navigation.setParams({ identifiedPlantType: undefined, confidence: undefined });
+      navigation.setParams({
+        identifiedPlantType: undefined,
+        confidence: undefined,
+        careData: undefined
+      });
     }
   }, [route.params?.identifiedPlantType]);
 
