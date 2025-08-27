@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import websocketService from '../services/websocketService';
+import IrrigationToast from '../components/common/IrrigationToast';
 
 const IrrigationContext = createContext();
 
@@ -21,6 +22,17 @@ export const IrrigationProvider = ({ children }) => {
   const wateringPlantsRef = useRef(new Map());
   // Track plants we've already notified as skipped to avoid duplicate alerts
   const skipAlertedPlantIdsRef = useRef(new Set());
+
+  // Toast state for smart irrigation messages
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastType, setToastType] = useState('info');
+  const [toastMessage, setToastMessage] = useState('');
+
+  const showIrrigationToast = (type, message) => {
+    setToastType(type);
+    setToastMessage(message);
+    setToastVisible(true);
+  };
 
   // Update ref whenever state changes
   useEffect(() => {
@@ -362,7 +374,7 @@ export const IrrigationProvider = ({ children }) => {
 
           // Show a clear user message and mark as notified to avoid duplicate alert on IRRIGATE_SKIPPED
           skipAlertedPlantIdsRef.current.add(targetPlantId);
-          Alert.alert('Smart Irrigation', 'Irrigation is not required at this time.');
+          showIrrigationToast('info', 'Irrigation is not required at this time.');
         } else {
           // Will irrigate → stop showing the checking loader; wait for IRRIGATION_STARTED
           updatePlantWateringState(targetPlantId, {
@@ -461,31 +473,38 @@ export const IrrigationProvider = ({ children }) => {
     const handleIrrigationStarted = (data) => {
       // Smart irrigation actually started (backend now only sends this when irrigation really begins)
       console.log('🚰 IrrigationContext: IRRIGATION_STARTED received (irrigation actually began):', data);
-      
-      // Find the plant by name in the watering plants
-      let targetPlantId = null;
-      wateringPlantsRef.current.forEach((state, plantId) => {
-        if (state.pendingIrrigationRequest || state.isSmartMode) {
-          targetPlantId = plantId;
-        }
-      });
-      
-      if (targetPlantId) {
-        console.log('🚰 IrrigationContext: Setting isWateringActive: true for plant ID:', targetPlantId);
-        // First clear the pending request to hide the loader
-        updatePlantWateringState(targetPlantId, {
-          pendingIrrigationRequest: false
+
+      // Prefer explicit plantId from payload
+      let targetPlantId = data?.plantId ?? data?.plant_id ?? null;
+
+      // Fallback 1: match by currentPlant name if provided
+      if (targetPlantId == null && data?.plantName) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (state.currentPlant === data.plantName) {
+            targetPlantId = plantId;
+          }
         });
-        
-        // Then in the next tick, update the irrigation state
-        setTimeout(() => {
-          updatePlantWateringState(targetPlantId, {
-            isSmartMode: true,               // Keep smart mode
-            isWateringActive: true,          // Show irrigation overlay
-            currentPlant: data.plantName     // Store plant name string
-          });
-        }, 0);
-        
+      }
+
+      // Fallback 2: previous heuristic (pending or already smart)
+      if (targetPlantId == null) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (targetPlantId == null && (state.pendingIrrigationRequest || state.isSmartMode)) {
+            targetPlantId = plantId;
+          }
+        });
+      }
+
+      if (targetPlantId != null) {
+        console.log('🚰 IrrigationContext: Activating watering UI for plant ID:', targetPlantId);
+        // Ensure loader is hidden and overlay shows even if pending wasn't set yet
+        updatePlantWateringState(targetPlantId, {
+          pendingIrrigationRequest: false,
+          isSmartMode: true,
+          isWateringActive: true,
+          currentPlant: data?.plantName || wateringPlantsRef.current.get(targetPlantId)?.currentPlant || null
+        });
+
         console.log('🚰 IrrigationContext: Loading indicator should disappear, irrigation overlay should appear');
       } else {
         console.log('🚰 IrrigationContext: No target plant found for IRRIGATION_STARTED');
@@ -521,7 +540,7 @@ export const IrrigationProvider = ({ children }) => {
         });
       }
 
-      Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation completed successfully!');
+      showIrrigationToast('success', data?.message || 'Smart irrigation completed successfully!');
     };
 
     const handleIrrigatePlantFail = (data) => {
@@ -544,7 +563,7 @@ export const IrrigationProvider = ({ children }) => {
         });
       }
       
-      Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation failed.');
+      showIrrigationToast('error', data?.message || 'Smart irrigation failed.');
     };
 
     const handleIrrigatePlantSkipped = (data) => {
@@ -583,9 +602,9 @@ export const IrrigationProvider = ({ children }) => {
           // Cleanup the marker for future cycles
           skipAlertedPlantIdsRef.current.delete(targetPlantId);
         } else {
-          // Show alert for user feedback after a short delay to ensure UI has updated
+          // Show toast for user feedback after a short delay to ensure UI has updated
           setTimeout(() => {
-            Alert.alert('Smart Irrigation', data?.message || 'Irrigation was skipped - not necessary at this time.');
+            showIrrigationToast('info', data?.message || 'Irrigation was skipped - not necessary at this time.');
           }, 100);
         }
       } else {
@@ -630,7 +649,7 @@ export const IrrigationProvider = ({ children }) => {
         });
       }
 
-      Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation completed successfully!');
+      showIrrigationToast('success', data?.message || 'Smart irrigation completed successfully!');
     };
 
     const handleStopIrrigationSuccess = (data) => {
@@ -710,11 +729,20 @@ export const IrrigationProvider = ({ children }) => {
     resumeTimer,
     resetTimer,
     formatTime,
+    // Toast API (if needed by consumers)
+    showIrrigationToast,
   };
 
   return (
     <IrrigationContext.Provider value={value}>
       {children}
+      <IrrigationToast
+        visible={toastVisible}
+        type={toastType}
+        title="Smart Irrigation"
+        message={toastMessage}
+        onHide={() => setToastVisible(false)}
+      />
     </IrrigationContext.Provider>
   );
 };

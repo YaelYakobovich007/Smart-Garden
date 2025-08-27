@@ -378,31 +378,40 @@ class IrrigationAlgorithm:
 
     async def should_irrigate(self, plant: "Plant", current_moisture: float) -> bool:
         """
-        Checks if irrigation is necessary based on desired moisture level.
-        Uses the plant's base target (without hysteresis) to determine if irrigation should start.
+        Decide if irrigation is needed by comparing the current sensor reading
+        against the calibrated target derived from desired_moisture.
+
+        Notes on scale alignment:
+        - Sensor readings: higher values indicate drier soil (e.g., 90 dry, 10 wet).
+        - Desired moisture: user-facing percentage (0-100, higher means wetter target).
+        - Calibrated target: maps desired_moisture to the sensor scale using calibration.
+
+        Therefore, we should irrigate when current_moisture > calibrated_target.
+        We intentionally do not add hysteresis here; hysteresis is applied during the
+        stop condition while irrigating.
         """
-        # Debug logging for irrigation need analysis
         print(f"   📊 CURRENT MOISTURE: {current_moisture}% (type: {type(current_moisture)})")
         print(f"   🎯 DESIRED MOISTURE: {plant.desired_moisture}% (type: {type(plant.desired_moisture)})")
-        
-        # Ensure both values are float
+
         try:
             current_moisture_float = float(current_moisture) if current_moisture is not None else 0.0
             desired_moisture_float = float(plant.desired_moisture) if plant.desired_moisture is not None else 0.0
-            
+
             print(f"   Converted current_moisture: {current_moisture_float} (type: {type(current_moisture_float)})")
             print(f"   Converted desired_moisture: {desired_moisture_float} (type: {type(desired_moisture_float)})")
-            
-            # Use base target for starting irrigation (no hysteresis)
-            result = current_moisture_float < desired_moisture_float
-            print(f"   Should irrigate: {current_moisture_float} < {desired_moisture_float} = {result}")
-            
+
+            calibrated_target = self._get_calibrated_target(plant)
+            print(f"   🔧 CALIBRATED TARGET (sensor units): {calibrated_target}")
+
+            # Irrigate if soil is drier than the target (higher reading means drier)
+            result = current_moisture_float > calibrated_target
+            print(f"   Should irrigate: {current_moisture_float} > {calibrated_target} = {result}")
+
             return result
         except (ValueError, TypeError) as e:
             print(f"❌ ERROR - Failed to convert moisture values to float: {e}")
             print(f"   current_moisture: {current_moisture} (type: {type(current_moisture)})")
             print(f"   plant.desired_moisture: {plant.desired_moisture} (type: {type(plant.desired_moisture)})")
-            # Return False as a safe default
             return False
 
     async def _ensure_valve_closed(self, plant: "Plant") -> None:
