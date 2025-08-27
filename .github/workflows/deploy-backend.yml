@@ -117,7 +117,7 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --service-account smart-garden-run-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
-              --add-cloudsql-instances=smart-garden-463611:europe-west1:smart-garden-db \
+              --add-cloudsql-instances=smart-garden-463611:me-west1:smartgarden-db \
             --set-env-vars="GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }},GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }},DB_HOST=${{ secrets.DB_HOST }},DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},DB_NAME=${{ secrets.DB_NAME }},DB_PORT=${{ secrets.DB_PORT }},GOOGLE_CLOUD_PROJECT_ID=${{ env.PROJECT_ID }},GOOGLE_CLOUD_BUCKET_NAME=smart_garden,GOOGLE_CLOUD_KEY_FILE=${{ secrets.GOOGLE_CLOUD_KEY_FILE }},USE_REAL_EMAIL=${{ secrets.USE_REAL_EMAIL }},EMAIL_SERVICE=${{ secrets.EMAIL_SERVICE }},EMAIL_USER=${{ secrets.EMAIL_USER }},EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }},EMAIL_FROM=${{ secrets.EMAIL_FROM }},RESET_PASSWORD_URL=${{ secrets.RESET_PASSWORD_URL }},HF_TOKEN=${{ secrets.HF_TOKEN }},WEATHER_API_KEY=${{ secrets.WEATHER_API_KEY }},PLANT_ID_API_KEY=${{ secrets.PLANT_ID_API_KEY }}"
 
       - name: Show service URL
