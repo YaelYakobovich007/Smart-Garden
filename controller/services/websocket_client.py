@@ -14,8 +14,8 @@ class SmartGardenPiClient:
     """
 
 
-    #my ip is 192.168.68.74
-    def __init__(self, server_url: str = "ws://192.168.68.74:8080", engine: SmartGardenEngine = None):
+    # For production, use Cloud Run URL
+    def __init__(self, server_url: str = "wss://smart-garden-backend-1088783109508.europe-west1.run.app", engine: SmartGardenEngine = None):
         self.server_url = server_url
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
         self.device_id = "raspberrypi_main_controller"

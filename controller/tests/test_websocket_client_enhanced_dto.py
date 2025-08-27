@@ -21,7 +21,7 @@ async def test_websocket_uses_enhanced_dto():
     mock_websocket = AsyncMock()
     
     # Create WebSocket client
-    client = WebSocketClient("ws://192.168.68.74:8080")
+    client = WebSocketClient("wss://smart-garden-backend-1088783109508.europe-west1.run.app")
     client.websocket = mock_websocket
     client.engine = mock_engine
     client.plant_id_map = {"plant1": 1, "plant2": 2}
