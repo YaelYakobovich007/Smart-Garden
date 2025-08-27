@@ -215,7 +215,6 @@ class SmartGardenEngine:
             current_moisture = current_moisture if current_moisture is not None else 0
             return IrrigationResult.success(
                 plant_id=plant_id,
-                reason="Irrigation stopped by user request",
                 moisture=current_moisture,
                 final_moisture=current_moisture,
                 water_added_liters=0  # We don't track partial water in cancellation
