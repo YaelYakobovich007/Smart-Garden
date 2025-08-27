@@ -54,13 +54,6 @@ class SmartGardenPiClient:
             self.logger.info("Successfully connected to server!")
             self.is_running = True
             
-            # Send PI_CONNECT with family code if available
-            if self.family_code:
-                self.logger.info(f"Sending PI_CONNECT with family code: {self.family_code}")
-                await self.send_pi_connect()
-            else:
-                self.logger.warning("No family code configured - Pi will not sync with any garden")
-            
             return True
         except Exception as e:
             self.logger.error(f"Failed to connect: {e}")
@@ -708,6 +701,17 @@ class SmartGardenPiClient:
             
             # Wait a moment for welcome response
             await asyncio.sleep(1)
+            
+            # Send PI_CONNECT with family code if available
+            if self.family_code:
+                self.logger.info(f"Sending PI_CONNECT with family code: {self.family_code}")
+                await self.send_pi_connect()
+            else:
+                self.logger.warning("No family code configured - Pi will not sync with any garden")
+            
+            # Wait a moment for garden sync response
+            await asyncio.sleep(1)
+            
             self.logger.info("Client is ready and listening for commands...")
             self.logger.info("Supported commands:")
             self.logger.info("  - WELCOME: Server welcome message")
