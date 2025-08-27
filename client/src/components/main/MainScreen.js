@@ -803,15 +803,22 @@ const MainScreen = () => {
 
       // Check if we came from AddPlantScreen
       if (route.params?.fromAddPlant) {
-        // Navigate back to AddPlantScreen with the identified plant type
+        // Navigate back to AddPlantScreen with the identified plant type and care data
         navigation.navigate('AddPlant', {
           identifiedPlantType: data.species,
-          confidence: confidence
+          confidence: data.probability, // Pass the raw probability (0-1)
+          careData: data.careData // Pass the care data if available
         });
       } else {
+        // Show enhanced alert with care data if available
+        let message = `This appears to be a ${data.species} (${confidence}% confidence)`;
+        if (data.careData) {
+          message += `\n\n🌱 Care Tips:\n• Optimal Moisture: ${data.careData.optimalMoisture}%\n• Watering: ${data.careData.wateringFrequency}\n• ${data.careData.wateringTips}`;
+        }
+
         Alert.alert(
           'Plant Identified!',
-          `This appears to be a ${data.species} (${confidence}% confidence)`,
+          message,
           [{ text: 'OK' }]
         );
       }
