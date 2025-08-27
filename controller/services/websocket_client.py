@@ -15,12 +15,15 @@ class SmartGardenPiClient:
 
 
     # For production, use Cloud Run URL
-    def __init__(self, server_url: str = "wss://smart-garden-backend-1088783109508.europe-west1.run.app", engine: SmartGardenEngine = None):
+    def __init__(self, server_url: str = "wss://smart-garden-backend-1088783109508.europe-west1.run.app", 
+                 family_code: str = None, engine: SmartGardenEngine = None):
         self.server_url = server_url
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
         self.device_id = "raspberrypi_main_controller"
+        self.family_code = family_code
         self.is_running = False
         self.active_irrigations = {}
+        self.garden_sync_data = None  # Store garden sync data received from server
         
         # Setup logging first
         logging.basicConfig(
@@ -50,6 +53,14 @@ class SmartGardenPiClient:
             self.websocket = await websockets.connect(self.server_url)
             self.logger.info("Successfully connected to server!")
             self.is_running = True
+            
+            # Send PI_CONNECT with family code if available
+            if self.family_code:
+                self.logger.info(f"Sending PI_CONNECT with family code: {self.family_code}")
+                await self.send_pi_connect()
+            else:
+                self.logger.warning("No family code configured - Pi will not sync with any garden")
+            
             return True
         except Exception as e:
             self.logger.error(f"Failed to connect: {e}")
@@ -95,6 +106,26 @@ class SmartGardenPiClient:
     async def send_hello(self):
         """Send initial HELLO_PI message to identify this device as a Raspberry Pi."""
         return await self.send_message("HELLO_PI")
+    
+    async def send_pi_connect(self):
+        """Send PI_CONNECT message with family code to sync garden data."""
+        if not self.family_code:
+            self.logger.error("No family code configured - cannot connect to garden")
+            return False
+        
+        self.logger.info("=== SENDING PI_CONNECT ===")
+        self.logger.info(f"🔗 Attempting to connect to garden with invite code: {self.family_code}")
+        self.logger.info(f"📤 Sending PI_CONNECT message to server...")
+        
+        success = await self.send_message("PI_CONNECT", {"family_code": self.family_code})
+        
+        if success:
+            self.logger.info(f"✅ PI_CONNECT message sent successfully with family code: {self.family_code}")
+            self.logger.info("⏳ Waiting for GARDEN_SYNC response from server...")
+        else:
+            self.logger.error(f"❌ Failed to send PI_CONNECT message with family code: {self.family_code}")
+        
+        return success
     
 
     
@@ -507,6 +538,72 @@ class SmartGardenPiClient:
             }
             await self.send_message("VALVE_STATUS_RESPONSE", error_response)
     
+    async def handle_garden_sync(self, data: Dict[Any, Any]):
+        """Handle GARDEN_SYNC message from server with garden and plants data."""
+        try:
+            self.logger.info("=== HANDLING GARDEN_SYNC ===")
+            self.logger.info(f"Received garden sync data: {data}")
+            
+            garden_data = data.get("garden", {})
+            plants_data = data.get("plants", [])
+            
+            self.logger.info(f"Garden: {garden_data.get('name', 'Unknown')} (Code: {garden_data.get('invite_code', 'Unknown')})")
+            self.logger.info(f"Plants to sync: {len(plants_data)}")
+            
+            # Store the sync data
+            self.garden_sync_data = data
+            
+            # Add each plant to the engine
+            for plant_data in plants_data:
+                try:
+                    plant_id = plant_data.get("plant_id")
+                    desired_moisture = plant_data.get("desiredMoisture", 60.0)
+                    water_limit = plant_data.get("waterLimit", 1.0)
+                    dripper_type = plant_data.get("dripperType", "2L/h")
+                    schedule_data = plant_data.get("scheduleData")
+                    
+                    self.logger.info(f"Adding plant {plant_id} to engine:")
+                    self.logger.info(f"  - Desired Moisture: {desired_moisture}%")
+                    self.logger.info(f"  - Water Limit: {water_limit}L")
+                    self.logger.info(f"  - Dripper Type: {dripper_type}")
+                    self.logger.info(f"  - Schedule: {schedule_data}")
+                    
+                    # Convert schedule_data to engine format
+                    engine_schedule_data = None
+                    if schedule_data:
+                        irrigation_days = schedule_data.get("irrigation_days")
+                        irrigation_time = schedule_data.get("irrigation_time")
+                        
+                        if irrigation_days and irrigation_time:
+                            engine_schedule_data = []
+                            for day in irrigation_days:
+                                engine_schedule_data.append({
+                                    "day": day.lower(),
+                                    "time": irrigation_time
+                                })
+                    
+                    # Add plant to engine
+                    await self.engine.add_plant(
+                        plant_id=plant_id,
+                        desired_moisture=desired_moisture,
+                        schedule_data=engine_schedule_data,
+                        water_limit=water_limit,
+                        dripper_type=dripper_type
+                    )
+                    
+                    self.logger.info(f"✅ Successfully added plant {plant_id} to engine")
+                    
+                except Exception as e:
+                    self.logger.error(f"❌ Failed to add plant {plant_data.get('plant_id', 'Unknown')}: {e}")
+            
+            self.logger.info(f"=== GARDEN SYNC COMPLETE ===")
+            self.logger.info(f"Total plants in engine: {len(self.engine.plants)}")
+            for plant_id, plant in self.engine.plants.items():
+                self.logger.info(f"  - Plant {plant_id}: {plant.desired_moisture}% target moisture")
+            
+        except Exception as e:
+            self.logger.error(f"Error during garden sync: {e}")
+    
     async def handle_message(self, message: str):
         """Process incoming messages from the server."""
         try:
@@ -573,6 +670,9 @@ class SmartGardenPiClient:
                 self.logger.warning(f"Received UPDATE_PLANT_RESPONSE - this should not happen! This is likely an echo of our own response.")
                 self.logger.warning(f"Full message: {data}")
                 # Ignore this message as it's likely an echo
+            
+            elif message_type == "GARDEN_SYNC":
+                await self.handle_garden_sync(message_data)
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")
