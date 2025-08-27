@@ -21,9 +21,10 @@ class IrrigationAlgorithm:
         self.websocket_client = websocket_client  # For sending logs to server
 
         # Calibrated sensor range constants (fixed)
-        # D (Dry point) = 90, F (Field capacity) = 10
-        self.dry_point_reading: float = 90.0
-        self.field_capacity_reading: float = 10.0
+        # New scale: higher reading = wetter
+        # D (Dry point) = 10, F (Field capacity) = 90
+        self.dry_point_reading: float = 10.0
+        self.field_capacity_reading: float = 90.0
 
     def _normalize_alpha(self, desired_value: float) -> float:
         """Normalize desired moisture to alpha in [0,1]. Accepts 0..1 or 0..100."""
@@ -403,9 +404,9 @@ class IrrigationAlgorithm:
             calibrated_target = self._get_calibrated_target(plant)
             print(f"   🔧 CALIBRATED TARGET (sensor units): {calibrated_target}")
 
-            # Irrigate if soil is drier than the target (higher reading means drier)
-            result = current_moisture_float > calibrated_target
-            print(f"   Should irrigate: {current_moisture_float} > {calibrated_target} = {result}")
+            # New scale: higher reading means wetter → irrigate if current < target
+            result = current_moisture_float < calibrated_target
+            print(f"   Should irrigate: {current_moisture_float} < {calibrated_target} = {result}")
 
             return result
         except (ValueError, TypeError) as e:
