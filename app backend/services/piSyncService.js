@@ -44,8 +44,8 @@ async function getGardenPlantsWithHardware(gardenId) {
 
         // Transform plants to the format expected by the Pi controller (same as ADD_PLANT)
         const transformedPlants = plantsWithHardware.map(plant => ({
-            plant_id: plant.id,  // This is the server plant_id that Pi will use
-            desiredMoisture: parseFloat(plant.target_moisture),
+            plant_id: plant.plant_id,  // This is the server plant_id that Pi will use
+            desiredMoisture: parseFloat(plant.ideal_moisture),
             waterLimit: parseFloat(plant.water_limit || 1.0),
             dripperType: plant.dripper_type || '2L/h',
             scheduleData: {
