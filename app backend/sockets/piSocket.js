@@ -32,55 +32,6 @@ function handlePiSocket(ws) {
       return handleValveAssigned(data, ws);
     }
 
-    // Handle Pi reconnection with family code
-    if (data.type === 'PI_CONNECT') {
-      const connectData = data.data || {};
-      const familyCode = connectData.family_code;
-
-      if (!familyCode) {
-        console.log('❌ Pi connection attempt without family code');
-        return sendError(ws, 'PI_CONNECT_FAIL', 'Family code is required');
-      }
-
-      console.log(`🔄 Pi attempting to connect with family code: ${familyCode}`);
-
-      try {
-        // Get garden by invite code
-        const { getGardenByInviteCode, getGardenPlantsWithHardware } = require('../services/piSyncService');
-        const garden = await getGardenByInviteCode(familyCode);
-
-        if (!garden) {
-          console.log(`❌ Garden not found for family code: ${familyCode}`);
-          return sendError(ws, 'PI_CONNECT_FAIL', 'Garden not found for this family code');
-        }
-
-        // Get all plants for this garden
-        const plants = await getGardenPlantsWithHardware(garden.id);
-
-        // Send garden sync data to Pi
-        console.log(`✅ Pi connected successfully to garden: ${garden.name}`);
-        console.log(`📊 Sending ${plants.length} plants to Pi`);
-
-        sendSuccess(ws, 'GARDEN_SYNC', {
-          garden: { name: garden.name, invite_code: garden.invite_code },
-          plants: plants
-        });
-
-        // Log plant details for debugging
-        plants.forEach(plant => {
-          console.log(`   🌱 Plant: ${plant.name} (ID: ${plant.id})`);
-          console.log(`      Type: ${plant.plant_type}`);
-          console.log(`      Target Moisture: ${plant.target_moisture}%`);
-          console.log(`      Sensor Port: ${plant.sensor_port}`);
-          console.log(`      Valve ID: ${plant.valve_id}`);
-        });
-
-      } catch (error) {
-        console.error('❌ Error during Pi connection:', error);
-        return sendError(ws, 'PI_CONNECT_FAIL', 'Failed to sync garden data');
-      }
-    }
-
     // Handle ADD_PLANT_RESPONSE from Pi
     if (data.type === 'ADD_PLANT_RESPONSE') {
       const responseData = data.data || {};
@@ -152,7 +103,7 @@ function handlePiSocket(ws) {
 
       if (responseData.success) {
         console.log(`Plant ${plantId} updated successfully on Pi: ${responseData.message}`);
-
+        
         // Send success response to frontend
         if (pendingInfo) {
           const { sendSuccess } = require('../utils/wsResponses');
@@ -173,12 +124,12 @@ function handlePiSocket(ws) {
         }
       } else {
         console.warn(`Failed to update plant ${plantId} on Pi: ${responseData.message}`);
-
+        
         // Send error response to frontend
         if (pendingInfo) {
           const { sendError } = require('../utils/wsResponses');
           // Get the updated plant data from the database even on error (in case the update was partially successful)
-          const { getPlantById } = require('../models/plantModel');
+          const { getPlantById } = require('../models/plantModel']);
           try {
             const updatedPlant = await getPlantById(plantId);
             sendError(pendingInfo.ws, 'UPDATE_PLANT_DETAILS_FAIL', {
@@ -199,13 +150,13 @@ function handlePiSocket(ws) {
       console.log('   - Full data:', JSON.stringify(data));
       console.log('   - data.data:', data.data);
       console.log('   - data.data.message:', data.data?.message);
-
+      
       const logData = data.data || {};
       const timestamp = logData.timestamp || new Date().toISOString();
       const message = logData.message || 'No message';
-
+      
       console.log(`🌱 [PI LOG - ${timestamp}] ${message}`);
-
+      
       // You could also broadcast this to connected clients if needed
       // For now, just log to server console
       return;
@@ -216,18 +167,18 @@ function handlePiSocket(ws) {
     if (data.type === 'IRRIGATION_DECISION') {
       const decisionData = data.data || {};
       const plantId = decisionData.plant_id;
-
+      
       console.log(`[IRRIGATION DECISION] Plant ${plantId}`);
       console.log(`Current Moisture: ${decisionData.current_moisture}%`);
       console.log(`Target Moisture: ${decisionData.target_moisture}%`);
       console.log(`Moisture Gap: ${decisionData.moisture_gap}%`);
       console.log(`Will Irrigate: ${decisionData.will_irrigate}`);
       console.log(`Reason: ${decisionData.reason}`);
-
+      
       // Get pending irrigation info to send notification
       const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
       const pendingInfo = getPendingIrrigation(plantId);
-
+      
       if (pendingInfo) {
         // If irrigation will start, notify the client
         if (decisionData.will_irrigate) {
@@ -251,7 +202,7 @@ function handlePiSocket(ws) {
             });
           }
         }
-
+        
         // Send email notification if available
         if (pendingInfo.email) {
           const { notifyUserOfIrrigationStart } = require('../services/userNotifier');
@@ -264,7 +215,7 @@ function handlePiSocket(ws) {
           console.log(`Sent irrigation start notification to user ${pendingInfo.email} for plant ${pendingInfo.plantData.plant_name}`);
         }
       }
-
+      
       return;
     }
 
@@ -274,7 +225,7 @@ function handlePiSocket(ws) {
       const plantId = progressData.plant_id;
       const stage = progressData.stage;
       const timestamp = progressData.timestamp || new Date().toISOString();
-
+      
       console.log(`🚰 [IRRIGATION PROGRESS - ${timestamp}] Plant ${plantId} - ${stage.toUpperCase()}`);
       console.log(`   📊 Current Moisture: ${progressData.current_moisture}%`);
       console.log(`   🎯 Target Moisture: ${progressData.target_moisture}%`);
@@ -284,7 +235,7 @@ function handlePiSocket(ws) {
       console.log(`   🚰 Water Limit: ${progressData.water_limit || 'N/A'}L`);
       console.log(`   📋 Status: ${progressData.status}`);
       console.log(`   📝 Message: ${progressData.message}`);
-
+      
       // Display details object if it exists
       if (progressData.details) {
         console.log(`   🔍 Details:`);
@@ -292,15 +243,15 @@ function handlePiSocket(ws) {
           console.log(`      ${key}: ${value}`);
         });
       }
-
+      
       // Check if this is the first pulse (irrigation actually starting)
       if (stage === 'pulse' && progressData.pulse_number === 1) {
         console.log(`🚀 First pulse detected - irrigation actually started for plant ${plantId}`);
-
+        
         // Get pending irrigation info to send notification
         const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
         const pendingInfo = getPendingIrrigation(plantId);
-
+        
         if (pendingInfo && pendingInfo.email) {
           const { notifyUserOfIrrigationStart } = require('../services/userNotifier');
           notifyUserOfIrrigationStart({
@@ -314,7 +265,7 @@ function handlePiSocket(ws) {
           console.log(`⚠️ No pending irrigation found for plant ${plantId} - cannot send start notification`);
         }
       }
-
+      
       return;
     }
 
@@ -388,7 +339,38 @@ function handlePiSocket(ws) {
           }
         }
 
-      } else if (responseData.status === 'skipped') {
+      } else if (responseData.status === 'cancelled') {
+        console.log(` Plant ${plantId} irrigation cancelled by user`);
+
+        // Save cancelled result to database
+        const irrigationModel = require('../models/irrigationModel');
+
+        try {
+          const irrigationResult = await irrigationModel.addIrrigationResult({
+            plant_id: plantId,
+            status: 'cancelled',
+            reason: responseData.reason || 'Smart irrigation cancelled by user',
+            moisture: responseData.moisture || null,
+            final_moisture: responseData.final_moisture || responseData.moisture || null,
+            water_added_liters: responseData.water_added_liters || 0,
+            irrigation_time: new Date(),
+            event_data: responseData.event_data || {}
+          });
+
+          if (pendingInfo && pendingInfo.ws) {
+            sendSuccess(pendingInfo.ws, 'IRRIGATION_CANCELLED', {
+              message: `Smart irrigation for "${pendingInfo.plantData.plant_name}" was cancelled by user.`,
+              result: irrigationResult,
+              plantName: pendingInfo.plantData.plant_name,
+              plantId: plantId
+            });
+            console.log(` Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation cancelled`);
+          }
+        } catch (err) {
+          console.error(` Failed to save cancelled irrigation result for plant ${plantId}:`, err);
+        }
+
+      } else       if (responseData.status === 'skipped') {
         console.log(`Plant ${plantId} irrigation skipped: ${responseData.reason}`);
 
         // Save skipped result to database
@@ -428,7 +410,7 @@ function handlePiSocket(ws) {
                 plantId: plantId
               });
             }, 500);
-
+            
             console.log(`ℹ️ Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation skipped`);
           }
 
@@ -452,11 +434,11 @@ function handlePiSocket(ws) {
         console.error(`❌ Plant ${plantId} irrigation failed: ${responseData.error_message}`);
 
         // Check if it's a valve blocking error - more specific detection
-        const isValveBlocked = responseData.error_message &&
-          (responseData.error_message.toLowerCase().includes('valve is blocked') ||
-            responseData.error_message.toLowerCase().includes('blocked') ||
-            responseData.error_message.toLowerCase().includes('overwatered') ||
-            responseData.error_message.toLowerCase().includes('water limit reached'));
+        const isValveBlocked = responseData.error_message && 
+          (responseData.error_message.toLowerCase().includes('valve is blocked') || 
+           responseData.error_message.toLowerCase().includes('blocked') ||
+           responseData.error_message.toLowerCase().includes('overwatered') ||
+           responseData.error_message.toLowerCase().includes('water limit reached'));
 
         // Save error result to database
         const irrigationModel = require('../models/irrigationModel');
@@ -485,7 +467,7 @@ function handlePiSocket(ws) {
               } else if (responseData.error_message.includes('valve is blocked')) {
                 userMessage = `Irrigation failed: The valve is physically blocked and cannot be opened. Please check the valve manually and unblock it if needed.`;
               }
-
+              
               sendError(pendingInfo.ws, 'VALVE_BLOCKED', userMessage);
             } else {
               sendError(pendingInfo.ws, 'IRRIGATE_FAIL',
@@ -598,18 +580,18 @@ function handlePiSocket(ws) {
       const plantId = responseData.plant_id;
       const timeMinutes = responseData.time_minutes;
 
-      console.log('🔍 DEBUG - Extracted response data:');
+      console.log(' DEBUG - Extracted response data:');
       console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
       console.log('   - timeMinutes:', timeMinutes, '(type:', typeof timeMinutes, ')');
       console.log('   - status:', responseData.status);
 
       // Get pending irrigation info (websocket + plant data)
-      console.log('🔍 DEBUG - Getting pending irrigation info for plantId:', plantId);
+      console.log(' DEBUG - Getting pending irrigation info for plantId:', plantId);
       const pendingInfo = completePendingIrrigation(plantId);
-      console.log('🔍 DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
+      console.log(' DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
 
       if (responseData.status === 'success') {
-        console.log(`✅ DEBUG - Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
+        console.log(` DEBUG - Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
         console.log(`   - Duration: ${timeMinutes} minutes`);
         console.log(`   - Reason: ${responseData.reason}`);
 
@@ -650,7 +632,7 @@ function handlePiSocket(ws) {
           }
 
         } catch (err) {
-          console.error(`❌ Failed to save valve operation result for plant ${plantId}:`, err);
+          console.error(` Failed to save valve operation result for plant ${plantId}:`, err);
 
           if (pendingInfo && pendingInfo.ws) {
             sendError(pendingInfo.ws, 'OPEN_VALVE_FAIL',
@@ -660,7 +642,7 @@ function handlePiSocket(ws) {
 
       } else {
         // Valve opening failed
-        console.error(`❌ Plant ${plantId} valve opening failed: ${responseData.error_message}`);
+        console.error(` Plant ${plantId} valve opening failed: ${responseData.error_message}`);
 
         // Save error result to database
         const irrigationModel = require('../models/irrigationModel');
@@ -688,7 +670,7 @@ function handlePiSocket(ws) {
           }
 
         } catch (err) {
-          console.error(`❌ Failed to save valve operation error result for plant ${plantId}:`, err);
+          console.error(` Failed to save valve operation error result for plant ${plantId}:`, err);
         }
       }
       return;
@@ -696,23 +678,23 @@ function handlePiSocket(ws) {
 
     // Handle CLOSE_VALVE_RESPONSE from Pi
     if (data.type === 'CLOSE_VALVE_RESPONSE') {
-      console.log('🔍 DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
+      console.log(' DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
       console.log('   - Full data:', JSON.stringify(data));
 
       const responseData = data.data || {};
       const plantId = responseData.plant_id;
 
-      console.log('🔍 DEBUG - Extracted response data:');
+      console.log(' DEBUG - Extracted response data:');
       console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
       console.log('   - status:', responseData.status);
 
       // Get pending irrigation info (websocket + plant data)
-      console.log('🔍 DEBUG - Getting pending irrigation info for plantId:', plantId);
+      console.log(' DEBUG - Getting pending irrigation info for plantId:', plantId);
       const pendingInfo = completePendingIrrigation(plantId);
-      console.log('🔍 DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
+      console.log(' DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
 
       if (responseData.status === 'success') {
-        console.log(`✅ DEBUG - Plant ${plantId} valve closed successfully`);
+        console.log(` DEBUG - Plant ${plantId} valve closed successfully`);
         console.log(`   - Reason: ${responseData.reason}`);
 
         // Save valve operation result to database
@@ -750,7 +732,7 @@ function handlePiSocket(ws) {
           }
 
         } catch (err) {
-          console.error(`❌ Failed to save valve operation result for plant ${plantId}:`, err);
+          console.error(` Failed to save valve operation result for plant ${plantId}:`, err);
 
           if (pendingInfo && pendingInfo.ws) {
             sendError(pendingInfo.ws, 'CLOSE_VALVE_FAIL',
@@ -760,7 +742,7 @@ function handlePiSocket(ws) {
 
       } else {
         // Valve closing failed
-        console.error(`❌ Plant ${plantId} valve closing failed: ${responseData.error_message}`);
+        console.error(` Plant ${plantId} valve closing failed: ${responseData.error_message}`);
 
         // Save error result to database
         const irrigationModel = require('../models/irrigationModel');
@@ -856,11 +838,11 @@ function handlePiSocket(ws) {
         responseData.plants?.forEach(plant => {
           console.log(`   Plant ${plant.plant_id}: moisture=${plant.moisture}%, temperature=${plant.temperature}°C`);
         });
-
+        
         // Broadcast to all connected clients
         const { getAllUserSockets } = require('../models/userSessions');
         const userSockets = getAllUserSockets();
-
+        
         userSockets.forEach(userSocket => {
           try {
             sendSuccess(userSocket, 'ALL_PLANTS_MOISTURE_RESPONSE', responseData);
@@ -868,7 +850,7 @@ function handlePiSocket(ws) {
             console.error('Error sending moisture data to client:', error);
           }
         });
-
+        
         console.log(`📊 Broadcasted moisture data to ${userSockets.length} connected clients`);
       } else {
         console.error(`❌ All plants moisture request failed: ${responseData.error_message}`);
@@ -890,10 +872,10 @@ function handlePiSocket(ws) {
         console.log(`   Is Open: ${responseData.is_open ? 'YES' : 'NO'}`);
         console.log(`   Can Irrigate: ${responseData.can_irrigate ? 'YES' : 'NO'}`);
         console.log(`   User Message: ${responseData.user_message}`);
-
+        
         // Get pending irrigation info to notify client
         const pendingInfo = completePendingIrrigation(plantId);
-
+        
         if (pendingInfo && pendingInfo.ws) {
           if (responseData.is_blocked) {
             sendError(pendingInfo.ws, 'VALVE_BLOCKED', {
