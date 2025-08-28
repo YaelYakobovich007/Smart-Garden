@@ -210,34 +210,30 @@ class SmartGardenPiClient:
     async def handle_remove_plant(self, data: Dict[Any, Any]):
         """Handle remove plant request from server."""
         try:
-            plant_id = data.get("plant_id")
-            if not plant_id:
-                await self.send_message("REMOVE_PLANT_RESPONSE", {
-                    "plant_id": 0,
-                    "status": "error",
-                    "error_message": "Missing plant_id"
-                })
-                return
+            from controller.dto.remove_plant import RemovePlantRequest, RemovePlantResponse
+            request = RemovePlantRequest.from_websocket_data({"data": data} if "data" not in data else data)
+            plant_id = request.plant_id
 
             self.logger.info(f"Received REMOVE_PLANT request for plant {plant_id}")
             result = self.engine.remove_plant(int(plant_id))
             if result:
-                await self.send_message("REMOVE_PLANT_RESPONSE", {
-                    "plant_id": int(plant_id),
-                    "status": "success"
-                })
+                response = RemovePlantResponse.success(int(plant_id))
             else:
-                await self.send_message("REMOVE_PLANT_RESPONSE", {
-                    "plant_id": int(plant_id),
-                    "status": "error",
-                    "error_message": "Plant not found"
-                })
+                response = RemovePlantResponse.error(int(plant_id), "Plant not found")
+
+            await self.send_message("REMOVE_PLANT_RESPONSE", response.to_websocket_data()["data"])
         except Exception as e:
-            await self.send_message("REMOVE_PLANT_RESPONSE", {
-                "plant_id": data.get("plant_id", 0),
-                "status": "error",
-                "error_message": str(e)
-            })
+            try:
+                from controller.dto.remove_plant import RemovePlantResponse
+                plant_id = data.get("plant_id", 0)
+                response = RemovePlantResponse.error(int(plant_id) if isinstance(plant_id, int) or (isinstance(plant_id, str) and plant_id.isdigit()) else 0, str(e))
+                await self.send_message("REMOVE_PLANT_RESPONSE", response.to_websocket_data()["data"])
+            except Exception:
+                await self.send_message("REMOVE_PLANT_RESPONSE", {
+                    "plant_id": data.get("plant_id", 0),
+                    "status": "error",
+                    "error_message": str(e)
+                })
 
     async def handle_irrigate_plant_request(self, data):
         """Handle irrigation request from server."""
