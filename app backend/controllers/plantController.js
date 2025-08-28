@@ -200,8 +200,37 @@ async function handleDeletePlant(data, ws, email) {
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'DELETE_PLANT_FAIL', 'Plant not found');
 
+  // Best-effort: cancel any pending trackers for this plant
+  try {
+    const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
+    const pending = getPendingIrrigation(plant.plant_id);
+    if (pending) {
+      console.log(`Cancelling pending irrigation state for plant ${plant.plant_id}`);
+    }
+  } catch (e) {
+    console.log('Warning clearing pending trackers:', e?.message);
+  }
+
+  // Inform Pi (non-blocking): remove plant and free hardware
+  try {
+    const piResult = piCommunication.removePlant(plant.plant_id);
+    if (!piResult.success) {
+      console.log('Pi not connected or failed to send REMOVE_PLANT, proceeding with server-side delete');
+    }
+  } catch (e) {
+    console.log('Error sending REMOVE_PLANT to Pi:', e?.message);
+  }
+
   // Delete irrigation events first
   await require('../models/irrigationModel').deleteIrrigationResultsByPlantId(plant.plant_id);
+
+  // Best-effort: clear schedule rows if you keep a separate table (ignore if not used)
+  try {
+    const { deleteScheduleByPlantId } = require('../models/plantScheduleModel');
+    if (deleteScheduleByPlantId) {
+      await deleteScheduleByPlantId(plant.plant_id);
+    }
+  } catch {}
 
   // Delete the plant with optimistic locking
   const deleteResult = await deletePlantById(plant.plant_id, user.id);

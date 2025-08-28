@@ -416,6 +416,33 @@ class PiCommunication {
             return { success: false, error: error.message };
         }
     }
+
+    /**
+     * Send REMOVE_PLANT request to Pi (no waiting)
+     */
+    removePlant(plantId) {
+        const piSocket = getPiSocket();
+        if (!piSocket) {
+            console.log('Pi not connected - cannot remove plant');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        try {
+            const request = {
+                type: 'REMOVE_PLANT',
+                data: {
+                    plant_id: plantId
+                }
+            };
+
+            console.log('Sending REMOVE_PLANT to Pi:', JSON.stringify(request));
+            piSocket.send(JSON.stringify(request));
+            return { success: true };
+        } catch (error) {
+            console.error('Error sending REMOVE_PLANT to Pi:', error);
+            return { success: false, error: error.message };
+        }
+    }
 }
 
 // Create single instance

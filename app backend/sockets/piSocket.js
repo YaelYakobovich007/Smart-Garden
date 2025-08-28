@@ -131,7 +131,7 @@ function handlePiSocket(ws) {
         if (pendingInfo) {
           const { sendError } = require('../utils/wsResponses');
           // Get the updated plant data from the database even on error (in case the update was partially successful)
-          const { getPlantById } = require('../models/plantModel']);
+          const { getPlantById } = require('../models/plantModel');
           try {
             const updatedPlant = await getPlantById(plantId);
             sendError(pendingInfo.ws, 'UPDATE_PLANT_DETAILS_FAIL', {
@@ -593,7 +593,6 @@ function handlePiSocket(ws) {
       const plantId = responseData.plant_id;
       const timeMinutes = responseData.time_minutes;
 
-<<<<<<< HEAD
       vLog('DEBUG - Extracted response data:');
       vLog('   - plantId:', plantId, '(type:', typeof plantId, ')');
       vLog('   - timeMinutes:', timeMinutes, '(type:', typeof timeMinutes, ')');
@@ -608,23 +607,6 @@ function handlePiSocket(ws) {
         vLog(`DEBUG - Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
         vLog(`   - Duration: ${timeMinutes} minutes`);
         vLog(`   - Reason: ${responseData.reason}`);
-=======
-      console.log(' DEBUG - Extracted response data:');
-      console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
-      console.log('   - timeMinutes:', timeMinutes, '(type:', typeof timeMinutes, ')');
-      console.log('   - status:', responseData.status);
-
-      // Get pending irrigation info (websocket + plant data)
-      console.log(' DEBUG - Getting pending irrigation info for plantId:', plantId);
-      const pendingInfo = completePendingIrrigation(plantId);
-      console.log(' DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
-
-      if (responseData.status === 'success') {
-        console.log(` DEBUG - Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
-        console.log(`   - Duration: ${timeMinutes} minutes`);
-        console.log(`   - Reason: ${responseData.reason}`);
->>>>>>> dbd3c8f3a044f4bd7309daf7b2aae7703c287475
-
         // Save valve operation result to database
         const irrigationModel = require('../models/irrigationModel');
 
@@ -708,18 +690,12 @@ function handlePiSocket(ws) {
 
     // Handle CLOSE_VALVE_RESPONSE from Pi
     if (data.type === 'CLOSE_VALVE_RESPONSE') {
-<<<<<<< HEAD
       vLog('DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
       vLog('   - Full data:', JSON.stringify(data));
-=======
-      console.log(' DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
-      console.log('   - Full data:', JSON.stringify(data));
->>>>>>> dbd3c8f3a044f4bd7309daf7b2aae7703c287475
 
       const responseData = data.data || {};
       const plantId = responseData.plant_id;
 
-<<<<<<< HEAD
       vLog('DEBUG - Extracted response data:');
       vLog('   - plantId:', plantId, '(type:', typeof plantId, ')');
       vLog('   - status:', responseData.status);
@@ -732,20 +708,6 @@ function handlePiSocket(ws) {
       if (responseData.status === 'success') {
         vLog(`DEBUG - Plant ${plantId} valve closed successfully`);
         vLog(`   - Reason: ${responseData.reason}`);
-=======
-      console.log(' DEBUG - Extracted response data:');
-      console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
-      console.log('   - status:', responseData.status);
-
-      // Get pending irrigation info (websocket + plant data)
-      console.log(' DEBUG - Getting pending irrigation info for plantId:', plantId);
-      const pendingInfo = completePendingIrrigation(plantId);
-      console.log(' DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
-
-      if (responseData.status === 'success') {
-        console.log(` DEBUG - Plant ${plantId} valve closed successfully`);
-        console.log(`   - Reason: ${responseData.reason}`);
->>>>>>> dbd3c8f3a044f4bd7309daf7b2aae7703c287475
 
         // Save valve operation result to database
         const irrigationModel = require('../models/irrigationModel');
@@ -944,6 +906,18 @@ function handlePiSocket(ws) {
             });
           }
         }
+      }
+      return;
+    }
+
+    // Handle REMOVE_PLANT_RESPONSE from Pi
+    if (data.type === 'REMOVE_PLANT_RESPONSE') {
+      const responseData = data.data || {};
+      const plantId = responseData.plant_id;
+      if (responseData.status === 'success') {
+        console.log(`REMOVE_PLANT_RESPONSE: Plant ${plantId} removed on Pi`);
+      } else {
+        console.error(`REMOVE_PLANT_RESPONSE: Failed for plant ${plantId}: ${responseData.error_message}`);
       }
       return;
     }

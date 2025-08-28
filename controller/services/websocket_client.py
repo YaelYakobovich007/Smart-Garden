@@ -207,6 +207,38 @@ class SmartGardenPiClient:
         else:
             self.logger.error(f"Failed to get moisture for all plants: {response_dto.error_message}")
 
+    async def handle_remove_plant(self, data: Dict[Any, Any]):
+        """Handle remove plant request from server."""
+        try:
+            plant_id = data.get("plant_id")
+            if not plant_id:
+                await self.send_message("REMOVE_PLANT_RESPONSE", {
+                    "plant_id": 0,
+                    "status": "error",
+                    "error_message": "Missing plant_id"
+                })
+                return
+
+            self.logger.info(f"Received REMOVE_PLANT request for plant {plant_id}")
+            result = self.engine.remove_plant(int(plant_id))
+            if result:
+                await self.send_message("REMOVE_PLANT_RESPONSE", {
+                    "plant_id": int(plant_id),
+                    "status": "success"
+                })
+            else:
+                await self.send_message("REMOVE_PLANT_RESPONSE", {
+                    "plant_id": int(plant_id),
+                    "status": "error",
+                    "error_message": "Plant not found"
+                })
+        except Exception as e:
+            await self.send_message("REMOVE_PLANT_RESPONSE", {
+                "plant_id": data.get("plant_id", 0),
+                "status": "error",
+                "error_message": str(e)
+            })
+
     async def handle_irrigate_plant_request(self, data):
         """Handle irrigation request from server."""
         try:
@@ -614,7 +646,7 @@ class SmartGardenPiClient:
             # Debug: Check if message_type matches expected values
             expected_types = ["WELCOME", "ADD_PLANT", "GET_PLANT_MOISTURE", "GET_ALL_MOISTURE", 
                             "IRRIGATE_PLANT", "STOP_IRRIGATION", "OPEN_VALVE", "CLOSE_VALVE", 
-                            "GET_VALVE_STATUS", "VALVE_STATUS", "UPDATE_PLANT", "UPDATE_PLANT_RESPONSE", "GARDEN_SYNC"]
+                            "GET_VALVE_STATUS", "VALVE_STATUS", "UPDATE_PLANT", "UPDATE_PLANT_RESPONSE", "GARDEN_SYNC", "REMOVE_PLANT"]
             if message_type not in expected_types:
                 self.logger.warning(f"UNKNOWN MESSAGE TYPE: '{message_type}' (not in expected list)")
                 self.logger.warning(f"Expected types: {expected_types}")
@@ -667,6 +699,9 @@ class SmartGardenPiClient:
             
             elif message_type == "GARDEN_SYNC":
                 await self.handle_garden_sync(data)
+            
+            elif message_type == "REMOVE_PLANT":
+                await self.handle_remove_plant(message_data)
             
             else:
                 self.logger.warning(f"Unknown message type: {message_type}")

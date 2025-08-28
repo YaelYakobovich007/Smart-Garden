@@ -53,6 +53,7 @@ const PlantDetail = () => {
   // Local state for UI
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   // Global irrigation state
   const {
@@ -108,29 +109,21 @@ const PlantDetail = () => {
     websocketService.onMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
     websocketService.onMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
 
-<<<<<<< HEAD
     // Live algorithm progress → update moisture/temperature circles in real time
     const handleIrrigationProgress = (msg) => {
       const data = msg?.data || msg;
-      if (data?.plant_id !== plant?.id) return;
+      const progressPlantId = data?.plant_id;
+      const matchesId = progressPlantId != null && plant?.id != null && Number(progressPlantId) === Number(plant.id);
+      const matchesName = data?.plantName && plant?.name && data.plantName === plant.name;
+      if (!matchesId && !matchesName) return;
       console.log('IRRIGATION_PROGRESS → PlantDetail:', data);
-      if (typeof data?.current_moisture === 'number') {
-        setCurrentMoisture(roundSensorValue(data.current_moisture));
+      if (data?.current_moisture != null) {
+        setCurrentMoisture(roundSensorValue(Number(data.current_moisture)));
       }
-      if (typeof data?.temperature === 'number') {
-        setCurrentTemperature(roundSensorValue(data.temperature));
-      }
-    };
-=======
-    // Handle real-time irrigation progress updates
-    const handleIrrigationProgress = (data) => {
-      console.log('🌿 Irrigation progress:', data);
-      if (data?.current_moisture !== undefined) {
-        setCurrentMoisture(roundSensorValue(data.current_moisture));
+      if (data?.temperature != null) {
+        setCurrentTemperature(roundSensorValue(Number(data.temperature)));
       }
     };
-
->>>>>>> dbd3c8f3a044f4bd7309daf7b2aae7703c287475
     websocketService.onMessage('IRRIGATION_PROGRESS', handleIrrigationProgress);
 
     return () => {
@@ -167,6 +160,50 @@ const PlantDetail = () => {
 
   // Available irrigation times (in minutes)
   const irrigationTimes = [0, 5, 10, 15, 20, 30, 45, 60];
+
+  // Render schedule content for the modal
+  const renderScheduleContent = (p) => {
+    const mode = p?.watering_mode;
+    const days = p?.schedule_days;
+    const time = p?.schedule_time;
+
+    if (!mode || mode === 'smart' || !days || !time || days.length === 0) {
+      return (
+        <View>
+          <Text style={styles.scheduleSubtitle}>
+            Smart irrigation is enabled. Watering times are decided automatically based on soil
+            moisture and conditions. No fixed schedule is configured.
+          </Text>
+        </View>
+      );
+    }
+
+    // Format days and time
+    const dayMap = {
+      0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat'
+    };
+    const dayLabels = Array.isArray(days)
+      ? days.map(d => (dayMap[d] || d)).join(', ')
+      : String(days);
+
+    return (
+      <View>
+        <Text style={styles.scheduleSubtitle}>Scheduled irrigation:</Text>
+        <View style={styles.scheduleChipsRow}>
+          {dayLabels.split(',').map((d, idx) => (
+            <View key={`${d}-${idx}`} style={styles.scheduleChip}>
+              <Text style={styles.scheduleChipText}>{d.trim()}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={styles.scheduleTimeRow}>
+          <Feather name="clock" size={16} color="#059669" />
+          <Text style={styles.scheduleTimeText}>{time}</Text>
+        </View>
+        <Text style={styles.scheduleNote}>Times shown are in your device's timezone.</Text>
+      </View>
+    );
+  };
 
   // Smart irrigation handler
   const handleSmartIrrigation = () => {
@@ -757,18 +794,15 @@ const PlantDetail = () => {
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Additional Actions</Text>
 
-          <TouchableOpacity style={styles.secondaryButton}>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => setShowScheduleModal(true)}
+          >
             <Feather name="calendar" size={20} color="#4CAF50" />
             <Text style={styles.secondaryButtonText}>View Schedule</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={handleDeletePlant}
-          >
-            <Feather name="trash-2" size={20} color="#FFFFFF" />
-            <Text style={styles.deleteButtonText}>Delete Plant</Text>
-          </TouchableOpacity>
+          {/* Delete Plant moved into Settings modal */}
         </View>
       </ScrollView>
 
@@ -905,6 +939,60 @@ const PlantDetail = () => {
                 </View>
                 <Feather name="chevron-right" size={20} color="#C7C7CC" />
               </TouchableOpacity>
+
+              {/* Delete Plant moved into Settings */}
+              <TouchableOpacity
+                style={styles.settingsItem}
+                onPress={() => {
+                  setShowSettingsModal(false);
+                  handleDeletePlant();
+                }}
+              >
+                <View style={styles.settingsItemIcon}>
+                  <Feather name="trash-2" size={20} color="#EF4444" />
+                </View>
+                <View style={styles.settingsItemContent}>
+                  <Text style={styles.settingsItemTitle}>Delete Plant</Text>
+                  <Text style={styles.settingsItemSubtitle}>Remove this plant from your garden</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* 10. Schedule Modal */}
+      <Modal
+        visible={showScheduleModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowScheduleModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          {/* Modal Header */}
+          <View style={styles.modalHeader}>
+            <TouchableOpacity 
+              onPress={() => setShowScheduleModal(false)} 
+              style={styles.modalCloseButton}
+            >
+              <Feather name="x" size={24} color="#2C3E50" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Irrigation Schedule</Text>
+            <View style={styles.modalSpacer} />
+          </View>
+
+          {/* Modal Content */}
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.scheduleCard}>
+              <View style={styles.scheduleHeader}>
+                <View style={styles.scheduleHeaderLeft}>
+                  <Feather name="calendar" size={18} color="#059669" />
+                </View>
+                <Text style={styles.scheduleTitle}>This Plant's Irrigation</Text>
+              </View>
+
+              {renderScheduleContent(plant)}
             </View>
           </ScrollView>
         </SafeAreaView>

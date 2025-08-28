@@ -288,24 +288,75 @@ class SmartGardenEngine:
             print(f"ERROR: Failed to close valve: {e}")
             return False
 
-    def remove_plant(self, plant_id: int) -> None:
+    def remove_plant(self, plant_id: int) -> bool:
         """
-        Remove a plant from the system.
+        Safely remove a plant from the system: cancel irrigation, close valve,
+        release hardware, and remove all references.
         
         Args:
             plant_id (int): ID of the plant to remove
+
+        Returns:
+            bool: True if removal steps completed (best-effort), False if plant not found
         """
-        if plant_id in self.plants:
-            plant = self.plants[plant_id]
-            # Release valve and sensor back to managers using proper methods
-            try:
-                self.valves_manager.release_valve(plant_id)
-                self.sensor_manager.release_sensor(str(plant_id))
-            except ValueError as e:
-                print(f"Warning: {e}")
-            
-            del self.plants[plant_id]
-            print(f"Plant {plant_id} removed")
+        if plant_id not in self.plants:
+            print(f"remove_plant: Plant {plant_id} not found")
+            return False
+
+        plant = self.plants[plant_id]
+
+        # 1) Cancel running irrigation task (best-effort; non-blocking in sync context)
+        try:
+            task = self.irrigation_tasks.get(plant_id)
+            if task and not task.done():
+                print(f"remove_plant: Cancelling irrigation task for plant {plant_id}...")
+                task.cancel()
+                # Best-effort cleanup when it finishes
+                def _cleanup_task(_):
+                    self.irrigation_tasks.pop(plant_id, None)
+                    print(f"remove_plant: Irrigation task for plant {plant_id} cancelled and cleaned up")
+                task.add_done_callback(_cleanup_task)
+            else:
+                # Ensure the task map doesn't retain stale entries
+                self.irrigation_tasks.pop(plant_id, None)
+        except Exception as e:
+            print(f"remove_plant: Failed cancelling irrigation task for plant {plant_id}: {e}")
+
+        # 2) Force-close valve (best-effort)
+        try:
+            if hasattr(plant, 'valve') and plant.valve:
+                print(f"remove_plant: Forcing valve close for plant {plant_id}")
+                plant.valve.request_close()
+        except Exception as e:
+            print(f"remove_plant: Error while forcing valve close for plant {plant_id}: {e}")
+
+        # 3) Release hardware from managers
+        try:
+            self.valves_manager.release_valve(plant_id)
+        except Exception as e:
+            print(f"remove_plant: Warning releasing valve for plant {plant_id}: {e}")
+        try:
+            self.sensor_manager.release_sensor(str(plant_id))
+        except Exception as e:
+            print(f"remove_plant: Warning releasing sensor for plant {plant_id}: {e}")
+
+        # 4) Null references on the plant object (defensive)
+        try:
+            if hasattr(plant, 'sensor'):
+                plant.sensor = None
+            if hasattr(plant, 'valve'):
+                plant.valve = None
+        except Exception as e:
+            print(f"remove_plant: Warning nulling references for plant {plant_id}: {e}")
+
+        # 5) Remove plant from registry
+        try:
+            self.plants.pop(plant_id, None)
+            print(f"remove_plant: Plant {plant_id} removed from registry")
+        except Exception as e:
+            print(f"remove_plant: Error removing plant {plant_id} from registry: {e}")
+
+        return True
 
     async def update_all_moisture(self) -> None:
         """
