@@ -129,7 +129,7 @@ function handlePiSocket(ws) {
         if (pendingInfo) {
           const { sendError } = require('../utils/wsResponses');
           // Get the updated plant data from the database even on error (in case the update was partially successful)
-          const { getPlantById } = require('../models/plantModel');
+          const { getPlantById } = require('../models/plantModel']);
           try {
             const updatedPlant = await getPlantById(plantId);
             sendError(pendingInfo.ws, 'UPDATE_PLANT_DETAILS_FAIL', {
