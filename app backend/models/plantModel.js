@@ -106,6 +106,15 @@ async function getPlants(userId) {
   return result.rows;
 }
 
+// Get all plants by garden ID (for Pi sync)
+async function getPlantsByGardenId(gardenId) {
+  const result = await pool.query(
+    'SELECT * FROM plants WHERE garden_id = $1 ORDER BY created_at DESC',
+    [gardenId]
+  );
+  return result.rows;
+}
+
 // Update irrigation schedule for a plant
 async function updatePlantSchedule(plantId, days, time) {
   await pool.query(
@@ -306,6 +315,7 @@ module.exports = {
   checkDuplicatePlantNameInGarden,
   getUserGardenId,
   getPlants,
+  getPlantsByGardenId,
   getPlantById,
   getPlantByName,
   updatePlantSchedule,

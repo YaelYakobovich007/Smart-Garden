@@ -131,7 +131,7 @@ function handlePiSocket(ws) {
         if (pendingInfo) {
           const { sendError } = require('../utils/wsResponses');
           // Get the updated plant data from the database even on error (in case the update was partially successful)
-          const { getPlantById } = require('../models/plantModel');
+          const { getPlantById } = require('../models/plantModel']);
           try {
             const updatedPlant = await getPlantById(plantId);
             sendError(pendingInfo.ws, 'UPDATE_PLANT_DETAILS_FAIL', {
@@ -352,6 +352,37 @@ function handlePiSocket(ws) {
           }
         }
 
+      } else if (responseData.status === 'cancelled') {
+        console.log(` Plant ${plantId} irrigation cancelled by user`);
+
+        // Save cancelled result to database
+        const irrigationModel = require('../models/irrigationModel');
+
+        try {
+          const irrigationResult = await irrigationModel.addIrrigationResult({
+            plant_id: plantId,
+            status: 'cancelled',
+            reason: responseData.reason || 'Smart irrigation cancelled by user',
+            moisture: responseData.moisture || null,
+            final_moisture: responseData.final_moisture || responseData.moisture || null,
+            water_added_liters: responseData.water_added_liters || 0,
+            irrigation_time: new Date(),
+            event_data: responseData.event_data || {}
+          });
+
+          if (pendingInfo && pendingInfo.ws) {
+            sendSuccess(pendingInfo.ws, 'IRRIGATION_CANCELLED', {
+              message: `Smart irrigation for "${pendingInfo.plantData.plant_name}" was cancelled by user.`,
+              result: irrigationResult,
+              plantName: pendingInfo.plantData.plant_name,
+              plantId: plantId
+            });
+            console.log(` Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation cancelled`);
+          }
+        } catch (err) {
+          console.error(` Failed to save cancelled irrigation result for plant ${plantId}:`, err);
+        }
+
       } else       if (responseData.status === 'skipped') {
         console.log(`Plant ${plantId} irrigation skipped: ${responseData.reason}`);
 
@@ -562,6 +593,7 @@ function handlePiSocket(ws) {
       const plantId = responseData.plant_id;
       const timeMinutes = responseData.time_minutes;
 
+<<<<<<< HEAD
       vLog('DEBUG - Extracted response data:');
       vLog('   - plantId:', plantId, '(type:', typeof plantId, ')');
       vLog('   - timeMinutes:', timeMinutes, '(type:', typeof timeMinutes, ')');
@@ -576,6 +608,22 @@ function handlePiSocket(ws) {
         vLog(`DEBUG - Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
         vLog(`   - Duration: ${timeMinutes} minutes`);
         vLog(`   - Reason: ${responseData.reason}`);
+=======
+      console.log(' DEBUG - Extracted response data:');
+      console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
+      console.log('   - timeMinutes:', timeMinutes, '(type:', typeof timeMinutes, ')');
+      console.log('   - status:', responseData.status);
+
+      // Get pending irrigation info (websocket + plant data)
+      console.log(' DEBUG - Getting pending irrigation info for plantId:', plantId);
+      const pendingInfo = completePendingIrrigation(plantId);
+      console.log(' DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
+
+      if (responseData.status === 'success') {
+        console.log(` DEBUG - Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
+        console.log(`   - Duration: ${timeMinutes} minutes`);
+        console.log(`   - Reason: ${responseData.reason}`);
+>>>>>>> dbd3c8f3a044f4bd7309daf7b2aae7703c287475
 
         // Save valve operation result to database
         const irrigationModel = require('../models/irrigationModel');
@@ -614,7 +662,7 @@ function handlePiSocket(ws) {
           }
 
         } catch (err) {
-          console.error(`❌ Failed to save valve operation result for plant ${plantId}:`, err);
+          console.error(` Failed to save valve operation result for plant ${plantId}:`, err);
 
           if (pendingInfo && pendingInfo.ws) {
             sendError(pendingInfo.ws, 'OPEN_VALVE_FAIL',
@@ -624,7 +672,7 @@ function handlePiSocket(ws) {
 
       } else {
         // Valve opening failed
-        console.error(`❌ Plant ${plantId} valve opening failed: ${responseData.error_message}`);
+        console.error(` Plant ${plantId} valve opening failed: ${responseData.error_message}`);
 
         // Save error result to database
         const irrigationModel = require('../models/irrigationModel');
@@ -652,7 +700,7 @@ function handlePiSocket(ws) {
           }
 
         } catch (err) {
-          console.error(`❌ Failed to save valve operation error result for plant ${plantId}:`, err);
+          console.error(` Failed to save valve operation error result for plant ${plantId}:`, err);
         }
       }
       return;
@@ -660,12 +708,18 @@ function handlePiSocket(ws) {
 
     // Handle CLOSE_VALVE_RESPONSE from Pi
     if (data.type === 'CLOSE_VALVE_RESPONSE') {
+<<<<<<< HEAD
       vLog('DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
       vLog('   - Full data:', JSON.stringify(data));
+=======
+      console.log(' DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
+      console.log('   - Full data:', JSON.stringify(data));
+>>>>>>> dbd3c8f3a044f4bd7309daf7b2aae7703c287475
 
       const responseData = data.data || {};
       const plantId = responseData.plant_id;
 
+<<<<<<< HEAD
       vLog('DEBUG - Extracted response data:');
       vLog('   - plantId:', plantId, '(type:', typeof plantId, ')');
       vLog('   - status:', responseData.status);
@@ -678,6 +732,20 @@ function handlePiSocket(ws) {
       if (responseData.status === 'success') {
         vLog(`DEBUG - Plant ${plantId} valve closed successfully`);
         vLog(`   - Reason: ${responseData.reason}`);
+=======
+      console.log(' DEBUG - Extracted response data:');
+      console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
+      console.log('   - status:', responseData.status);
+
+      // Get pending irrigation info (websocket + plant data)
+      console.log(' DEBUG - Getting pending irrigation info for plantId:', plantId);
+      const pendingInfo = completePendingIrrigation(plantId);
+      console.log(' DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
+
+      if (responseData.status === 'success') {
+        console.log(` DEBUG - Plant ${plantId} valve closed successfully`);
+        console.log(`   - Reason: ${responseData.reason}`);
+>>>>>>> dbd3c8f3a044f4bd7309daf7b2aae7703c287475
 
         // Save valve operation result to database
         const irrigationModel = require('../models/irrigationModel');
@@ -714,7 +782,7 @@ function handlePiSocket(ws) {
           }
 
         } catch (err) {
-          console.error(`❌ Failed to save valve operation result for plant ${plantId}:`, err);
+          console.error(` Failed to save valve operation result for plant ${plantId}:`, err);
 
           if (pendingInfo && pendingInfo.ws) {
             sendError(pendingInfo.ws, 'CLOSE_VALVE_FAIL',
@@ -724,7 +792,7 @@ function handlePiSocket(ws) {
 
       } else {
         // Valve closing failed
-        console.error(`❌ Plant ${plantId} valve closing failed: ${responseData.error_message}`);
+        console.error(` Plant ${plantId} valve closing failed: ${responseData.error_message}`);
 
         // Save error result to database
         const irrigationModel = require('../models/irrigationModel');

@@ -36,7 +36,7 @@ async function identifyPlantFromBase64(imageBase64) {
             console.log('✅ Top suggestion:', top.name, 'with', Math.round(top.probability * 100) + '% confidence');
 
             // Get comprehensive result with care data
-            const resultWithCare = getPlantIdentificationWithCare(top.name, top.probability);
+            const resultWithCare = await getPlantIdentificationWithCare(top.name, top.probability);
             console.log('🌿 Plant care data included:', !!resultWithCare.careData);
 
             return resultWithCare;

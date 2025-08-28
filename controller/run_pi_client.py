@@ -38,8 +38,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class PiClientRunner:
-    def __init__(self, server_url: str = "wss://smart-garden-backend-1088783109508.europe-west1.run.app", total_valves: int = 2, total_sensors: int = 2):
+    def __init__(self, server_url: str = "wss://smart-garden-backend-1088783109508.europe-west1.run.app", 
+                 family_code: str = None, total_valves: int = 2, total_sensors: int = 2):
         self.server_url = server_url
+        self.family_code = family_code
         self.total_valves = total_valves
         self.total_sensors = total_sensors
         self.client = None
@@ -51,6 +53,11 @@ class PiClientRunner:
         self.engine = SmartGardenEngine(total_valves=total_valves, total_sensors=total_sensors)
         logger.info(f"Smart Garden Engine initialized and ready")
         
+        if family_code:
+            logger.info(f"Family code configured: {family_code}")
+        else:
+            logger.warning("No family code configured - Pi will not sync with any garden")
+        
     async def start(self):
         """Start the Pi client and handle reconnections"""
         self.running = True
@@ -61,7 +68,7 @@ class PiClientRunner:
                 logger.info(f"Connecting to server using existing engine instance")
                 
                 # Create WebSocket client with the SAME engine instance (no recreation)
-                self.client = SmartGardenPiClient(self.server_url, self.engine)
+                self.client = SmartGardenPiClient(self.server_url, family_code=self.family_code, engine=self.engine)
                 
                 # Update the engine's websocket client reference for logging
                 if hasattr(self.engine, 'websocket_client'):
@@ -143,15 +150,17 @@ async def main():
     
     # Override with environment variable if set
     server_url = os.getenv('SMART_GARDEN_SERVER_URL', server_url)
+    family_code = os.getenv('SMART_GARDEN_FAMILY_CODE', None)
     total_valves = int(os.getenv('SMART_GARDEN_TOTAL_VALVES', '2'))
     total_sensors = int(os.getenv('SMART_GARDEN_TOTAL_SENSORS', '2'))
     
     logger.info(f"Smart Garden Pi Client starting...")
     logger.info(f"Server URL: {server_url}")
+    logger.info(f"Family Code: {family_code or 'Not configured'}")
     logger.info(f"Total Valves: {total_valves}")
     logger.info(f"Total Sensors: {total_sensors}")
     
-    client_runner = PiClientRunner(server_url, total_valves, total_sensors)
+    client_runner = PiClientRunner(server_url, family_code=family_code, total_valves=total_valves, total_sensors=total_sensors)
     
     try:
         await client_runner.start()

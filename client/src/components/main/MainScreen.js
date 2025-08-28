@@ -183,6 +183,7 @@ const MainScreen = () => {
    * @param {Object} data - Server plant data
    */
   const handlePlantsReceived = (data) => {
+    console.log('🌿 GET_MY_PLANTS_RESPONSE:', data);
     if (data.plants) {
       // Transform server data to match our plant format
       // Preserve existing sensor data to prevent flicker
@@ -190,19 +191,25 @@ const MainScreen = () => {
         const transformedPlants = data.plants.map(plant => {
           // Find existing plant data to preserve sensor values
           const existingPlant = prevPlants.find(p => p.id === plant.plant_id);
+          console.log(`🌿 Transforming plant ${plant.name}:`, plant);
 
           const transformed = {
             id: plant.plant_id,
             name: plant.name,
             type: plant.plant_type || 'Unknown',
-            image_url: plant.image_url, // Add image_url from server
-            location: 'Garden', // Default location
-            moisture: existingPlant?.moisture ?? null, // Preserve existing moisture or use null
-            temperature: existingPlant?.temperature ?? null, // Preserve existing temperature or use null
-            lightLevel: existingPlant?.lightLevel ?? 0, // Preserve existing light level or use 0
-            isHealthy: true, // Default to healthy
-            valve_blocked: plant.valve_blocked || false, // Include valve blocked status
+            image_url: plant.image_url,
+            location: 'Garden',
+            moisture: existingPlant?.moisture ?? null,
+            temperature: existingPlant?.temperature ?? null,
+            lightLevel: existingPlant?.lightLevel ?? 0,
+            isHealthy: true,
+            valve_blocked: plant.valve_blocked || false,
+            // Include config fields for PlantDetail
+            ideal_moisture: plant.ideal_moisture,
+            water_limit: plant.water_limit,
+            dripper_type: plant.dripper_type,
           };
+          console.log(`🌿 Transformed plant ${plant.name}:`, transformed);
           return transformed;
         });
         return transformedPlants;
