@@ -8,7 +8,7 @@ class IrrigationResult(BaseModel):
     Used by the Pi to notify the server about irrigation results from the Smart Garden Engine.
     """
     plant_id: int                                # ID of the plant that was irrigated
-    status: str                                  # "success", "skipped", or "error"
+    status: str                                  # "success", "skipped", "cancelled", or "error"
     reason: Optional[str] = None                 # Reason for skipping or error
     moisture: Optional[float] = None             # Moisture at the beginning of irrigation
     final_moisture: Optional[float] = None       # Moisture at the end (after watering)
@@ -58,6 +58,20 @@ class IrrigationResult(BaseModel):
             water_added_liters=water_added_liters,
             error_message=error_message,
             reason=error_message
+        )
+    
+    @classmethod
+    def cancelled(cls, plant_id: int, moisture: Optional[float] = None,
+                  final_moisture: Optional[float] = None, water_added_liters: float = 0.0,
+                  reason: str = "Smart irrigation cancelled by user") -> "IrrigationResult":
+        """Create a cancelled notification for when irrigation is stopped by user."""
+        return cls(
+            plant_id=plant_id,
+            status="cancelled",
+            moisture=moisture,
+            final_moisture=final_moisture if final_moisture is not None else moisture,
+            water_added_liters=water_added_liters,
+            reason=reason
         )
     
     def to_websocket_data(self) -> dict:

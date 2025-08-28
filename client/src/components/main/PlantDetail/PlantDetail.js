@@ -12,6 +12,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import IrrigationOverlay from './IrrigationOverlay';
 import SmartIrrigationLoader from './SmartIrrigationLoader';
 import { useIrrigation } from '../../../contexts/IrrigationContext';
@@ -82,32 +83,55 @@ const PlantDetail = () => {
     return Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
   };
 
-  // Request latest sensor data when component mounts
-  useEffect(() => {
-    if (plant?.name && websocketService.isConnected()) {
-      websocketService.sendMessage({
-        type: 'GET_PLANT_MOISTURE',
-        plantName: plant.name
-      });
-    }
-  }, [plant?.name]);
+  // Refresh plant data (including target humidity) when screen gains focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (plant?.name && websocketService.isConnected()) {
+        // Get fresh moisture data
+        websocketService.sendMessage({
+          type: 'GET_PLANT_MOISTURE',
+          plantName: plant.name
+        });
 
-  // Set up WebSocket message handlers for plant updates
+        // Get fresh plant details to ensure target humidity is current
+        websocketService.sendMessage({
+          type: 'GET_PLANT_DETAILS',
+          plantName: plant.name
+        });
+      }
+    }, [plant?.name])
+  );
+
+  // Set up WebSocket message handlers for plant updates and irrigation progress
   useEffect(() => {
     websocketService.onMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
     websocketService.onMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
 
+    // Handle real-time irrigation progress updates
+    const handleIrrigationProgress = (data) => {
+      console.log('🌿 Irrigation progress:', data);
+      if (data?.current_moisture !== undefined) {
+        setCurrentMoisture(roundSensorValue(data.current_moisture));
+      }
+    };
+
+    websocketService.onMessage('IRRIGATION_PROGRESS', handleIrrigationProgress);
+
     return () => {
       websocketService.offMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
       websocketService.offMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
+      websocketService.offMessage('IRRIGATION_PROGRESS', handleIrrigationProgress);
     };
   }, []);
 
   // Handle successful plant update
   const handlePlantUpdateSuccess = (data) => {
+    console.log('🌿 Plant update success:', data);
+    console.log('🌿 Current plant state:', plant);
     Alert.alert('Success', data.message || 'Plant updated successfully');
     // Update the plant data to refresh the UI
     if (data.plant) {
+      console.log('🌿 Updating to new plant data:', data.plant);
       // Update the plant data in the route params
       navigation.setParams({ plant: data.plant });
       // Update the local state to trigger re-render
