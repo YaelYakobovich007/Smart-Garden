@@ -6,6 +6,8 @@ const { completePendingMoistureRequest } = require('../services/pendingMoistureT
 const { broadcastPlantAdded, broadcastMoistureUpdate } = require('../services/gardenBroadcaster');
 
 let piSocket = null;
+const VERBOSE_LOGS = process.env.VERBOSE_LOGS === 'true';
+const vLog = (...args) => { if (VERBOSE_LOGS) console.log(...args); };
 
 function handlePiSocket(ws) {
   piSocket = ws;
@@ -264,6 +266,17 @@ function handlePiSocket(ws) {
         } else {
           console.log(`⚠️ No pending irrigation found for plant ${plantId} - cannot send start notification`);
         }
+      }
+
+      // Forward live progress to the requesting client so the app can update the UI in real-time
+      try {
+        const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
+        const pendingInfo = getPendingIrrigation(plantId);
+        if (pendingInfo && pendingInfo.ws) {
+          sendSuccess(pendingInfo.ws, 'IRRIGATION_PROGRESS', progressData);
+        }
+      } catch (err) {
+        console.error('Failed to forward IRRIGATION_PROGRESS to client:', err);
       }
       
       return;
@@ -542,27 +555,27 @@ function handlePiSocket(ws) {
 
     // Handle OPEN_VALVE_RESPONSE from Pi
     if (data.type === 'OPEN_VALVE_RESPONSE') {
-      console.log('🔍 DEBUG - Received OPEN_VALVE_RESPONSE from Pi:');
-      console.log('   - Full data:', JSON.stringify(data));
+      vLog('DEBUG - Received OPEN_VALVE_RESPONSE from Pi:');
+      vLog('   - Full data:', JSON.stringify(data));
 
       const responseData = data.data || {};
       const plantId = responseData.plant_id;
       const timeMinutes = responseData.time_minutes;
 
-      console.log('🔍 DEBUG - Extracted response data:');
-      console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
-      console.log('   - timeMinutes:', timeMinutes, '(type:', typeof timeMinutes, ')');
-      console.log('   - status:', responseData.status);
+      vLog('DEBUG - Extracted response data:');
+      vLog('   - plantId:', plantId, '(type:', typeof plantId, ')');
+      vLog('   - timeMinutes:', timeMinutes, '(type:', typeof timeMinutes, ')');
+      vLog('   - status:', responseData.status);
 
       // Get pending irrigation info (websocket + plant data)
-      console.log('🔍 DEBUG - Getting pending irrigation info for plantId:', plantId);
+      vLog('DEBUG - Getting pending irrigation info for plantId:', plantId);
       const pendingInfo = completePendingIrrigation(plantId);
-      console.log('🔍 DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
+      vLog('DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
 
       if (responseData.status === 'success') {
-        console.log(`✅ DEBUG - Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
-        console.log(`   - Duration: ${timeMinutes} minutes`);
-        console.log(`   - Reason: ${responseData.reason}`);
+        vLog(`DEBUG - Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
+        vLog(`   - Duration: ${timeMinutes} minutes`);
+        vLog(`   - Reason: ${responseData.reason}`);
 
         // Save valve operation result to database
         const irrigationModel = require('../models/irrigationModel');
@@ -647,24 +660,24 @@ function handlePiSocket(ws) {
 
     // Handle CLOSE_VALVE_RESPONSE from Pi
     if (data.type === 'CLOSE_VALVE_RESPONSE') {
-      console.log('🔍 DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
-      console.log('   - Full data:', JSON.stringify(data));
+      vLog('DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
+      vLog('   - Full data:', JSON.stringify(data));
 
       const responseData = data.data || {};
       const plantId = responseData.plant_id;
 
-      console.log('🔍 DEBUG - Extracted response data:');
-      console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
-      console.log('   - status:', responseData.status);
+      vLog('DEBUG - Extracted response data:');
+      vLog('   - plantId:', plantId, '(type:', typeof plantId, ')');
+      vLog('   - status:', responseData.status);
 
       // Get pending irrigation info (websocket + plant data)
-      console.log('🔍 DEBUG - Getting pending irrigation info for plantId:', plantId);
+      vLog('DEBUG - Getting pending irrigation info for plantId:', plantId);
       const pendingInfo = completePendingIrrigation(plantId);
-      console.log('🔍 DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
+      vLog('DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
 
       if (responseData.status === 'success') {
-        console.log(`✅ DEBUG - Plant ${plantId} valve closed successfully`);
-        console.log(`   - Reason: ${responseData.reason}`);
+        vLog(`DEBUG - Plant ${plantId} valve closed successfully`);
+        vLog(`   - Reason: ${responseData.reason}`);
 
         // Save valve operation result to database
         const irrigationModel = require('../models/irrigationModel');

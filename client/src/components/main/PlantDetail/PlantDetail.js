@@ -74,6 +74,7 @@ const PlantDetail = () => {
     isSmartMode,
     selectedTime,
     pendingIrrigationRequest,
+    pendingValveRequest,
   } = plantWateringState;
 
   // Helper function to round sensor values
@@ -97,11 +98,26 @@ const PlantDetail = () => {
     websocketService.onMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
     websocketService.onMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
 
+    // Live algorithm progress → update moisture/temperature circles in real time
+    const handleIrrigationProgress = (msg) => {
+      const data = msg?.data || msg;
+      if (data?.plant_id !== plant?.id) return;
+      console.log('IRRIGATION_PROGRESS → PlantDetail:', data);
+      if (typeof data?.current_moisture === 'number') {
+        setCurrentMoisture(roundSensorValue(data.current_moisture));
+      }
+      if (typeof data?.temperature === 'number') {
+        setCurrentTemperature(roundSensorValue(data.temperature));
+      }
+    };
+    websocketService.onMessage('IRRIGATION_PROGRESS', handleIrrigationProgress);
+
     return () => {
       websocketService.offMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
       websocketService.offMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
+      websocketService.offMessage('IRRIGATION_PROGRESS', handleIrrigationProgress);
     };
-  }, []);
+  }, [plant?.id]);
 
   // Handle successful plant update
   const handlePlantUpdateSuccess = (data) => {
@@ -501,8 +517,8 @@ const PlantDetail = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Irrigation Control Bar - Shows when watering is active */}
-      {(isWateringActive || isManualMode) && (
+      {/* Irrigation Control Bar - hidden when overlay is active to avoid layered green background */}
+      {(isWateringActive || isManualMode) && !(isWateringActive && !pendingIrrigationRequest && (isManualMode || isSmartMode)) && (
         <View style={styles.irrigationControlBar}>
           <View style={styles.irrigationStatus}>
             <View style={styles.wateringIndicator}>
@@ -677,16 +693,20 @@ const PlantDetail = () => {
 
           <View style={styles.valveButtonsContainer}>
             <TouchableOpacity 
-              style={[styles.primaryButton, styles.halfButton, (isWateringActive || plant.valve_blocked) && styles.disabledButton]} 
+              style={[
+                styles.primaryButton,
+                styles.halfButton,
+                (isWateringActive || isManualMode || pendingValveRequest || plant.valve_blocked) && styles.disabledButton
+              ]} 
               onPress={() => {
                 // Open Valve button pressed
                 handleManualIrrigation();
               }}
-              disabled={isWateringActive || plant.valve_blocked}
+              disabled={isWateringActive || isManualMode || pendingValveRequest || plant.valve_blocked}
             >
               <Feather name="droplet" size={20} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>
-                {plant.valve_blocked ? 'Valve Blocked' : (wateringTimeLeft > 0 ? 'Change Timer' : 'Open Valve')}
+                Open Valve
               </Text>
             </TouchableOpacity>
 
@@ -706,17 +726,7 @@ const PlantDetail = () => {
           </View>
         </View>
 
-        {/* 4. Active Watering Status */}
-        {isWateringActive && (
-          <View style={styles.wateringStatusContainer}>
-            <Text style={styles.sectionTitle}>Active Watering</Text>
-            <View style={styles.wateringIndicator}>
-              <View style={styles.wateringDot} />
-              <Text style={styles.wateringText}>Watering in progress</Text>
-            </View>
-            <Text style={styles.countdownText}>{formatTime(wateringTimeLeft)}</Text>
-          </View>
-        )}
+        {/* 4. Active Watering Status - removed (overlay already shows status) */}
 
 
         {/* 5. Additional Actions */}
@@ -757,14 +767,7 @@ const PlantDetail = () => {
         isActive={isWateringActive && !pendingIrrigationRequest && (isManualMode || isSmartMode)}
         timeLeft={wateringTimeLeft}
         onStop={() => {
-          // Send single STOP_IRRIGATION message
-          stoppingRef.current = true;
-          websocketService.sendMessage({
-            type: 'STOP_IRRIGATION',
-            plantName: plant.name
-          });
-          
-          // Update local state
+          // Delegate to context stop; it routes CLOSE_VALVE for manual and STOP_IRRIGATION for smart
           handleStopWatering(plant.id);
         }}
       />

@@ -175,10 +175,10 @@ export const IrrigationProvider = ({ children }) => {
 
     const plantId = plant.id; // Assuming plant object has an 'id' property
     updatePlantWateringState(plantId, {
-      isManualMode: true,
+      isManualMode: false, // set true only after valve actually opens
       selectedTime: timeMinutes,
       pendingValveRequest: true,
-      currentPlant: plant // Store the plant reference
+      currentPlant: plant.name // Store the plant name string for consistent stop handling
     });
 
     // Starting manual irrigation for plant

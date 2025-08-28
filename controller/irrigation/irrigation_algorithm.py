@@ -88,6 +88,8 @@ class IrrigationAlgorithm:
                 if current_moisture is not None:
                     progress = IrrigationProgress(
                         plant_id=plant.plant_id,
+                        stage="update",
+                        status="in_progress",
                         current_moisture=current_moisture,
                         target_moisture=self._get_calibrated_target(plant)
                     )

@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     top: 100, // Position below the header
     left: 20,
     right: 20,
-    backgroundColor: '#E8F5E8', // Green background
+    backgroundColor: '#E8F5E8', // Original green card background
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 16,
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
     borderWidth: 1,
-    borderColor: '#4CAF50', // Green border
+    borderColor: '#4CAF50', // Original green border
   },
   statusSection: {
     flexDirection: 'row',
