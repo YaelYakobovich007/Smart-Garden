@@ -133,6 +133,7 @@ export const IrrigationProvider = ({ children }) => {
           timerStartTime: startAt,
           timerEndTime: endAt,
           pendingValveRequest: false,
+          currentPlant: p?.name || null,
         });
       } else if (mode === 'smart') {
         updatePlantWateringState(plantId, {
@@ -140,6 +141,7 @@ export const IrrigationProvider = ({ children }) => {
           isSmartMode: true,
           isWateringActive: true,
           pendingIrrigationRequest: false,
+          currentPlant: p?.name || null,
         });
       }
     });
@@ -437,25 +439,29 @@ export const IrrigationProvider = ({ children }) => {
 
     const handleOpenValveSuccess = (data) => {
       // Valve opened successfully
-      
-      // Find the plant by name in the watering plants
-      let targetPlantId = null;
-      wateringPlantsRef.current.forEach((state, plantId) => {
-        if (state.pendingValveRequest) {
-          targetPlantId = plantId;
-        }
-      });
+      // Prefer explicit plantId from payload
+      const payload = data?.data || data;
+      let targetPlantId = payload?.plantId != null ? Number(payload.plantId) : null;
+      // Fallback: find any plant with pendingValveRequest
+      if (targetPlantId == null) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (state.pendingValveRequest) {
+            targetPlantId = plantId;
+          }
+        });
+      }
       
       if (targetPlantId) {
         const state = wateringPlantsRef.current.get(targetPlantId);
         if (state && state.pendingValveRequest) {
           const now = Date.now();
-          const durationMs = state.selectedTime * 60 * 1000; // Convert minutes to milliseconds
+          const durationMinutes = Number(payload?.valve_data?.duration_minutes || state.selectedTime || 0);
+          const durationMs = durationMinutes * 60 * 1000;
           
           updatePlantWateringState(targetPlantId, {
             timerStartTime: now,
             timerEndTime: now + durationMs,
-            wateringTimeLeft: state.selectedTime * 60,
+            wateringTimeLeft: durationMinutes * 60,
             pendingValveRequest: false,
             isManualMode: true,
             isWateringActive: true

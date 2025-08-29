@@ -240,14 +240,17 @@ const MainScreen = () => {
           console.log(`🌿 Transformed plant ${plant.name}:`, transformed);
           return transformed;
         });
-        // After transforming, rehydrate irrigation state from persisted fields
-        try {
-          rehydrateFromPlants(transformedPlants);
-        } catch (e) {
-          console.log('rehydrateFromPlants error:', e?.message);
-        }
         return transformedPlants;
       });
+
+      // Rehydrate irrigation state from persisted fields AFTER plants state update commits
+      try {
+        setTimeout(() => {
+          rehydrateFromPlants(data.plants);
+        }, 0);
+      } catch (e) {
+        console.log('rehydrateFromPlants error:', e?.message);
+      }
     }
   };
 

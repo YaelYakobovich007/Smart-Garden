@@ -109,10 +109,17 @@ const PlantDetail = () => {
   useEffect(() => {
     const handlePlantDetailsResponse = (message) => {
       const data = message?.data || message;
-      if (data?.plant) {
-        setPlant(data.plant);
+      const incoming = data?.plant;
+      if (incoming) {
+        const normalized = {
+          ...incoming,
+          id: incoming.plant_id != null ? Number(incoming.plant_id) : (plant?.id ?? incoming.id),
+          type: incoming.plant_type || incoming.type || plant?.type,
+          image_url: incoming.image_url != null ? incoming.image_url : plant?.image_url,
+        };
+        setPlant(normalized);
         try {
-          rehydrateFromPlants([data.plant]);
+          rehydrateFromPlants([normalized]);
         } catch {}
       }
     };

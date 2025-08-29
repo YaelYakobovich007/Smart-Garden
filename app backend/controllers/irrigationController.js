@@ -116,6 +116,14 @@ async function handleStopIrrigation(data, ws, email) {
   console.log('🛑 DEBUG - Plant found:', plant.plant_id, plant.name);
   console.log('🛑 DEBUG - Calling piCommunication.stopIrrigation');
 
+  // Best-effort: immediately clear persisted irrigation state
+  try {
+    const { updateIrrigationState } = require('../models/plantModel');
+    await updateIrrigationState(plant.plant_id, { mode: 'none', startAt: null, endAt: null, sessionId: null });
+  } catch (e) {
+    console.log('Warning: failed to optimistically clear irrigation state on STOP request:', e?.message);
+  }
+
   // Send stop irrigation request to Pi controller
   const piResult = piCommunication.stopIrrigation(plant.plant_id);
 
@@ -248,6 +256,14 @@ async function handleCloseValve(data, ws, email) {
 
   console.log('🔍 DEBUG - Calling piCommunication.closeValve with:');
   console.log('   - plant_id:', plant.plant_id);
+
+  // Best-effort: immediately clear persisted irrigation state
+  try {
+    const { updateIrrigationState } = require('../models/plantModel');
+    await updateIrrigationState(plant.plant_id, { mode: 'none', startAt: null, endAt: null, sessionId: null });
+  } catch (e) {
+    console.log('Warning: failed to optimistically clear irrigation state on CLOSE request:', e?.message);
+  }
 
   // Send close valve request to Pi controller
   const piResult = piCommunication.closeValve(plant.plant_id);
