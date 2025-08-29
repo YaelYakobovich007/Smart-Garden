@@ -34,7 +34,7 @@ module.exports = {
   addUserSession,
   removeUserSession,
   getEmailBySocket,
-  getSocketByEmail,      
+  getSocketByEmail,
   getAllSessions,
   getAllUserSockets
 };

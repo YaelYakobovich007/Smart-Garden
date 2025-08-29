@@ -2,7 +2,7 @@ const { handleAuthMessage } = require('../controllers/authController');
 const { handlePlantMessage } = require('../controllers/plantController');
 const { handleGetWeather } = require('../controllers/weatherController');
 const { sendError, sendSuccess } = require('../utils/wsResponses');
-const { removeUserSession } = require('../models/userSessions');
+const { removeUserSession, getEmailBySocket } = require('../models/userSessions');
 const { handleIrrigationMessage } = require('../controllers/irrigationController');
 const { handleUserMessage } = require('../controllers/userController');
 const { handlePlantIdentify } = require('../controllers/plantIdentificationController');
@@ -13,9 +13,12 @@ const { handleArticleMessage } = require('../controllers/articleController');
 function handleUserSocket(ws) {
   console.log('New USER connected');
   ws.clientType = 'USER';
+  ws.connectionId = Date.now(); // Add unique connection ID
 
   // Send confirmation that user connection is established
   sendSuccess(ws, 'CONNECTION_SUCCESS', 'User connection established');
+
+  console.log(`🔗 User connected with ID: ${ws.connectionId}`);
 
   ws.on('message', (msg) => {
     let data;
@@ -48,8 +51,10 @@ function handleUserSocket(ws) {
     }
   });
 
-  ws.on('close', () => {
-    console.log('USER disconnected');
+  ws.on('close', (code, reason) => {
+    const email = getEmailBySocket ? getEmailBySocket(ws) : undefined;
+    const reasonText = typeof reason === 'string' && reason.length ? reason : '';
+    console.log(`🔌 WebSocket closed: type=USER id=${ws.connectionId} email=${email || 'unknown'} code=${code}${reasonText ? ` reason=${reasonText}` : ''}`);
     removeUserSession(ws);
   });
 }

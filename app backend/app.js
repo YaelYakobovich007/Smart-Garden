@@ -31,8 +31,17 @@ wss.on('connection', (ws) => {
     }
   });
 
-  ws.on('close', () => {
-    console.log('WebSocket connection closed');
+  ws.on('close', (code, reason) => {
+    const type = ws.clientType || 'UNKNOWN';
+    const id = ws.connectionId || 'n/a';
+    let email;
+    try {
+      // Lazy import to avoid circular require before first message
+      const { getEmailBySocket } = require('./models/userSessions');
+      email = getEmailBySocket(ws);
+    } catch { }
+    const reasonText = typeof reason === 'string' && reason.length ? reason : '';
+    console.log(`WebSocket connection closed: type=${type}${email ? ` email=${email}` : ''} id=${id} code=${code}${reasonText ? ` reason=${reasonText}` : ''}`);
   });
 });
 

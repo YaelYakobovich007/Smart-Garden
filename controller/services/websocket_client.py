@@ -24,6 +24,9 @@ class SmartGardenPiClient:
         self.is_running = False
         self.active_irrigations = {}
         self.garden_sync_data = None  # Store garden sync data received from server
+        self._heartbeat_task: Optional[asyncio.Task] = None
+        self._heartbeat_interval_seconds: int = 20
+        self._heartbeat_timeout_seconds: int = 10
         
         # Setup logging first
         logging.basicConfig(
@@ -62,6 +65,7 @@ class SmartGardenPiClient:
     async def disconnect(self):
         """Gracefully disconnect from the server."""
         self.is_running = False
+        await self._stop_heartbeat()
         if self.websocket:
             await self.websocket.close()
             self.logger.info("Disconnected from server")
@@ -719,6 +723,42 @@ class SmartGardenPiClient:
             self.logger.error(f"Error listening for messages: {e}")
             self.is_running = False
     
+    async def _heartbeat_loop(self):
+        """Periodically ping the server and ensure we get a pong within timeout."""
+        try:
+            while self.is_running and self.websocket:
+                await asyncio.sleep(self._heartbeat_interval_seconds)
+                try:
+                    self.logger.debug("Sending heartbeat ping")
+                    pong_waiter = await self.websocket.ping()
+                    await asyncio.wait_for(pong_waiter, timeout=self._heartbeat_timeout_seconds)
+                    self.logger.debug("Heartbeat pong received")
+                except Exception as e:
+                    self.logger.warning(f"Heartbeat failed ({type(e).__name__}: {e}). Closing socket to trigger reconnect...")
+                    self.is_running = False
+                    try:
+                        await self.websocket.close()
+                    except Exception:
+                        pass
+                    break
+        except asyncio.CancelledError:
+            # Normal on shutdown
+            pass
+
+    def _start_heartbeat(self):
+        if not self._heartbeat_task or self._heartbeat_task.done():
+            self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+            self.logger.info(f"Heartbeat started (interval={self._heartbeat_interval_seconds}s, timeout={self._heartbeat_timeout_seconds}s)")
+
+    async def _stop_heartbeat(self):
+        if self._heartbeat_task and not self._heartbeat_task.done():
+            self._heartbeat_task.cancel()
+            try:
+                await self._heartbeat_task
+            except Exception:
+                pass
+        self._heartbeat_task = None
+
     async def run(self):
         """Main client loop."""
         self.logger.info("Smart Garden Pi Client Starting...")
@@ -758,7 +798,8 @@ class SmartGardenPiClient:
             self.logger.info("  - UPDATE_PLANT: Update an existing plant's configuration")
             self.logger.info("  - GARDEN_SYNC: Sync garden and plants data from server")
             
-            # Start listening for messages
+            # Start heartbeat and listening for messages
+            self._start_heartbeat()
             await self.listen_for_messages()
             
         except KeyboardInterrupt:
