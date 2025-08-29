@@ -196,8 +196,8 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
       case 'sansevieria':
         return require('../../../data/plants/sansevieria_plant.png');
       default:
-        // Fallback to the original image if plant type doesn't match
-        return require('../../../../assets/images/Branch_With_Leafs.png');
+        // Default fallback image
+        return require('../../../data/plants/rose_plant.png');
     }
   };
 
@@ -373,6 +373,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
 
             {/* Plant Information */}
             <View style={styles.plantContent}>
+              <View style={styles.plantImageSpacer} />
               <Text style={styles.plantName}>{plant.name}</Text>
               <Text style={styles.plantType}>{plant.type}</Text>
               
@@ -397,16 +398,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
               </View>
             </View>
 
-            {/* Moisture Request Button */}
-            <View style={styles.moistureButtonContainer}>
-              <TouchableOpacity
-                style={styles.moistureButton}
-                onPress={() => handleMoistureRequest(plant.id)}
-              >
-                <Feather name="refresh-cw" size={16} color="#2563EB" />
-                <Text style={styles.moistureButtonText}>Get Moisture</Text>
-              </TouchableOpacity>
-            </View>
+            {/* Moisture Request Button removed as requested */}
           </TouchableOpacity>
         )}
       />

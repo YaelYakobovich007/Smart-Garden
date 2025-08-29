@@ -27,6 +27,10 @@ export const styles = StyleSheet.create({
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
   },
+  // Add a spacer under image to increase gap before name
+  plantImageSpacer: {
+    height: 12,
+  },
   plantImage: {
     width: '100%',
     height: '100%',
@@ -94,18 +98,19 @@ export const styles = StyleSheet.create({
     paddingTop: 0,
   },
   plantHeader: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   plantName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   plantType: {
     fontSize: 12,
     color: '#6B7280',
     fontStyle: 'italic',
+    marginBottom: -8,
   },
   valveBlockedWarning: {
     flexDirection: 'row',
@@ -128,13 +133,14 @@ export const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#E5E7EB',
     marginHorizontal: 16,
-    marginVertical: 8,
+    marginVertical: 12,
   },
   plantStats: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingTop: 2,
+    paddingBottom: 12,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
     gap: 40,
@@ -218,27 +224,7 @@ export const styles = StyleSheet.create({
   },
   plantsSection: {
     marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 8,
   },
-  moistureButtonContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  moistureButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    gap: 6,
-  },
-  moistureButtonText: {
-    color: '#2563EB',
-    fontSize: 12,
-    fontWeight: '500',
-  },
+  // moisture button styles removed
 }); 

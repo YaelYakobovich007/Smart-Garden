@@ -114,6 +114,37 @@ export const IrrigationProvider = ({ children }) => {
       .map(([plantId, state]) => ({ plantId, ...state }));
   };
 
+  // Rehydrate irrigation state for a list of plants fetched from server
+  const rehydrateFromPlants = (plantsArray) => {
+    if (!Array.isArray(plantsArray)) return;
+    plantsArray.forEach((p) => {
+      const plantId = p?.id ?? p?.plant_id;
+      if (!plantId) return;
+      const mode = (p?.irrigation_mode || '').toLowerCase();
+      const startAt = p?.irrigation_start_at ? new Date(p.irrigation_start_at).getTime() : null;
+      const endAt = p?.irrigation_end_at ? new Date(p.irrigation_end_at).getTime() : null;
+      if (mode === 'manual' && endAt && Date.now() < endAt) {
+        const remainingSeconds = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+        updatePlantWateringState(plantId, {
+          isManualMode: true,
+          isSmartMode: false,
+          isWateringActive: true,
+          wateringTimeLeft: remainingSeconds,
+          timerStartTime: startAt,
+          timerEndTime: endAt,
+          pendingValveRequest: false,
+        });
+      } else if (mode === 'smart') {
+        updatePlantWateringState(plantId, {
+          isManualMode: false,
+          isSmartMode: true,
+          isWateringActive: true,
+          pendingIrrigationRequest: false,
+        });
+      }
+    });
+  };
+
   // Timer accuracy improvements
   const [timerStartTime, setTimerStartTime] = useState(null);
   const [timerEndTime, setTimerEndTime] = useState(null);
@@ -835,6 +866,7 @@ export const IrrigationProvider = ({ children }) => {
     resumeTimer,
     resetTimer,
     formatTime,
+    rehydrateFromPlants,
   };
 
   return (

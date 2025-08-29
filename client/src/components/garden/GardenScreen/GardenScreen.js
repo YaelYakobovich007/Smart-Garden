@@ -316,7 +316,9 @@ const GardenScreen = () => {
                 {/* Garden Info Card */}
                 <View style={styles.gardenInfoCard}>
                     <View style={styles.gardenHeader}>
-                        <Feather name="users" size={32} color="#4CAF50" />
+                        <View style={styles.gardenIconContainer}>
+                            <Feather name="users" size={20} color="#22C55E" />
+                        </View>
                         <View style={styles.gardenTitleContainer}>
                             <Text style={styles.gardenTitle}>{gardenData.name}</Text>
                             <Text style={styles.gardenSubtitle}>
@@ -338,23 +340,28 @@ const GardenScreen = () => {
                             </View>
                         </View>
                     </View>
-                </View>
 
-                {/* Quick Actions */}
-                <View style={styles.quickActionsSection}>
-                    <Text style={styles.sectionTitle}>Quick Actions</Text>
-                    <View style={styles.quickActionsGrid}>
-                        <TouchableOpacity style={styles.quickActionCard} onPress={handleViewPlants}>
-                            <Feather name="grid" size={24} color="#4CAF50" />
-                            <Text style={styles.quickActionText}>View Plants</Text>
-                        </TouchableOpacity>
+                    {/* Quick Actions (same design as section below) */}
+                    <View style={styles.quickActionsSection}>
+                        <Text style={styles.sectionTitle}>Quick Actions</Text>
+                        <View style={styles.quickActionsGrid}>
+                            <TouchableOpacity style={styles.quickActionCard} onPress={handleViewPlants}>
+                                <View style={styles.quickActionIcon}>
+                                    <Feather name="grid" size={18} color="#22C55E" />
+                                </View>
+                                <Text style={styles.quickActionText}>View Plants</Text>
+                            </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.quickActionCard} onPress={handleShareInviteCode}>
-                            <Feather name="share" size={24} color="#4CAF50" />
-                            <Text style={styles.quickActionText}>Invite Friends</Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity style={styles.quickActionCard} onPress={handleShareInviteCode}>
+                                <View style={styles.quickActionIcon}>
+                                    <Feather name="share" size={18} color="#22C55E" />
+                                </View>
+                                <Text style={styles.quickActionText}>Invite Friends</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
+
 
                 {/* Members Section */}
                 <View style={styles.membersSection}>
@@ -373,12 +380,12 @@ const GardenScreen = () => {
                                 <View key={member.id || index} style={styles.memberCard}>
                                     <View style={styles.memberInfo}>
                                         <View style={styles.memberAvatar}>
-                                            <Feather name="user" size={20} color="#FFFFFF" />
+                                            <Feather name="user" size={18} color="#22C55E" />
                                         </View>
                                         <View style={styles.memberDetails}>
                                             <Text style={styles.memberName}>{member.full_name || 'Unknown User'}</Text>
                                             <Text style={styles.memberRole}>
-                                                {member.role === 'admin' ? '👑 Admin' : '👤 Member'}
+                                                {member.role === 'admin' ? 'Admin' : 'Member'}
                                             </Text>
                                         </View>
                                     </View>

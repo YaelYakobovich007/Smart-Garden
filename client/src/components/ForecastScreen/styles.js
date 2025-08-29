@@ -80,62 +80,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_700Bold',
   },
   
-  simulationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Simulation controls
-  simulationControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    marginHorizontal: 20,
-    borderRadius: 15,
-    marginTop: -10,
-    zIndex: 10,
-  },
-
-  timeControlButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    marginHorizontal: 4,
-  },
-
-  activeButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-  },
-
-  controlButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontFamily: 'Nunito_500Medium',
-    marginLeft: 4,
-  },
-
-  timeDisplay: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-
-  timeDisplayText: {
-    color: 'white',
-    fontSize: 14,
-    fontFamily: 'Nunito_700Bold',
-    textAlign: 'center',
-  },
+  // Simulation styles removed
 
   // Weather card container - fills most of the screen
   weatherCardContainer: {

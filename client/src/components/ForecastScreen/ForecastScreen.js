@@ -39,35 +39,22 @@ const ForecastScreen = ({ navigation, route }) => {
   // Get weather data from navigation params
   const { weatherData } = route.params || {};
   
-  // Simulation state
-  const [simulationMode, setSimulationMode] = useState(false);
-  const [simulatedHour, setSimulatedHour] = useState(12); // Start at noon
-  const [autoCycle, setAutoCycle] = useState(false);
+  // Removed simulation mode UI/state
 
   /**
    * Toggle simulation mode on/off
    */
-  const toggleSimulation = () => {
-    setSimulationMode(!simulationMode);
-    setAutoCycle(false); // Stop auto-cycle when toggling
-    if (!simulationMode) {
-      setSimulatedHour(12); // Reset to noon when starting simulation
-    }
-  };
+  const toggleSimulation = () => {};
 
   /**
    * Toggle auto-cycle mode
    */
-  const toggleAutoCycle = () => {
-    setAutoCycle(!autoCycle);
-  };
+  const toggleAutoCycle = () => {};
 
   /**
    * Cycle to next hour in simulation
    */
-  const nextHour = () => {
-    setSimulatedHour(prev => (prev + 1) % 24);
-  };
+  const nextHour = () => {};
 
   /**
    * Get sunrise/sunset times from weather API data
@@ -148,15 +135,11 @@ const ForecastScreen = ({ navigation, route }) => {
    */
   useEffect(() => {
     let interval;
-    if (simulationMode && autoCycle) {
-      interval = setInterval(() => {
-        setSimulatedHour(prev => (prev + 1) % 24);
-      }, 1500); // Change every 1.5 seconds
-    }
+    // Simulation removed
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [simulationMode, autoCycle]);
+  }, []);
   
   /**
    * Calculate time-based gradient colors
@@ -166,22 +149,10 @@ const ForecastScreen = ({ navigation, route }) => {
     let currentTime;
     let sunrise, sunset;
     
-    if (simulationMode) {
-      // Create simulated time based on selected hour
-      const today = new Date();
-      const simulatedTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), simulatedHour, 0, 0);
-      currentTime = simulatedTime.getTime() / 1000;
-      
-      // Use real astronomical calculation for simulation too
-      const sunTimes = getSunTimes();
-      sunrise = sunTimes.sunrise;
-      sunset = sunTimes.sunset;
-    } else {
-      currentTime = Date.now() / 1000;
-      const sunTimes = getSunTimes();
-      sunrise = sunTimes.sunrise;
-      sunset = sunTimes.sunset;
-    }
+    currentTime = Date.now() / 1000;
+    const sunTimes = getSunTimes();
+    sunrise = sunTimes.sunrise;
+    sunset = sunTimes.sunset;
     
     // Calculate time periods
     const earlyMorning = sunrise - 1800; // 30 min before sunrise
@@ -225,22 +196,10 @@ const ForecastScreen = ({ navigation, route }) => {
     let currentTime;
     let sunrise, sunset;
     
-    if (simulationMode) {
-      // Create simulated time based on selected hour
-      const today = new Date();
-      const simulatedTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), simulatedHour, 0, 0);
-      currentTime = simulatedTime.getTime() / 1000;
-      
-      // Use real astronomical calculation for simulation too
-      const sunTimes = getSunTimes();
-      sunrise = sunTimes.sunrise;
-      sunset = sunTimes.sunset;
-    } else {
-      currentTime = Date.now() / 1000;
-      const sunTimes = getSunTimes();
-      sunrise = sunTimes.sunrise;
-      sunset = sunTimes.sunset;
-    }
+    currentTime = Date.now() / 1000;
+    const sunTimes = getSunTimes();
+    sunrise = sunTimes.sunrise;
+    sunset = sunTimes.sunset;
     
     // Before sunrise - dot at left (0)
     if (currentTime < sunrise) return 0;
@@ -327,20 +286,10 @@ const ForecastScreen = ({ navigation, route }) => {
   // Check if it's night time for stars
   let currentTime, sunrise, sunset;
   
-  if (simulationMode) {
-    const today = new Date();
-    const simulatedTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), simulatedHour, 0, 0);
-    currentTime = simulatedTime.getTime() / 1000;
-    
-    const sunTimes = getSunTimes();
-    sunrise = sunTimes.sunrise;
-    sunset = sunTimes.sunset;
-  } else {
-    currentTime = Date.now() / 1000;
-    const sunTimes = getSunTimes();
-    sunrise = sunTimes.sunrise;
-    sunset = sunTimes.sunset;
-  }
+  currentTime = Date.now() / 1000;
+  const sunTimesTop = getSunTimes();
+  sunrise = sunTimesTop.sunrise;
+  sunset = sunTimesTop.sunset;
   
   const isNightTime = currentTime < sunrise || currentTime > sunset + 1800;
   
@@ -431,41 +380,10 @@ const ForecastScreen = ({ navigation, route }) => {
             <Feather name="arrow-left" size={24} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Weather Forecast</Text>
-          <TouchableOpacity 
-            style={styles.simulationButton}
-            onPress={toggleSimulation}
-          >
-            <Feather name={simulationMode ? "pause" : "play"} size={20} color="white" />
-          </TouchableOpacity>
+          <View style={{ width: 32 }} />
         </View>
 
-        {/* Simulation Controls */}
-        {simulationMode && (
-          <View style={styles.simulationControls}>
-            <TouchableOpacity 
-              style={[styles.timeControlButton, !autoCycle && styles.activeButton]} 
-              onPress={nextHour}
-              disabled={autoCycle}
-            >
-              <Feather name="skip-forward" size={16} color="white" />
-              <Text style={styles.controlButtonText}>Next</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.timeControlButton, autoCycle && styles.activeButton]} 
-              onPress={toggleAutoCycle}
-            >
-              <Feather name={autoCycle ? "pause" : "play"} size={16} color="white" />
-              <Text style={styles.controlButtonText}>Auto</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.timeDisplay}>
-              <Text style={styles.timeDisplayText}>
-                {getTimePeriodName(simulatedHour)}
-              </Text>
-            </View>
-          </View>
-        )}
+        {/* Simulation controls removed */}
 
         {/* Beautiful Weather Card Content */}
         <View style={styles.weatherCardContainer}>

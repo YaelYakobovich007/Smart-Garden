@@ -31,26 +31,19 @@ import styles from './styles';
  * @param {string|number} sensorPort - The sensor port (e.g., "/dev/ttyUSB0") or sensor ID
  * @returns {number} The valve number (1 for ttyUSB0, 2 for ttyUSB1, etc.)
  */
-const getValveNumber = (sensorPort) => {
-  if (typeof sensorPort === 'number') {
-    return sensorPort;
-  }
-  
+const getValveNumber = (valveId, sensorPort) => {
+  // Prefer explicit valveId from server
+  if (typeof valveId === 'number' && valveId > 0) return valveId;
+  if (typeof valveId === 'string' && /^\d+$/.test(valveId)) return parseInt(valveId);
+
+  // Fallback to deriving from sensor port pattern
+  if (typeof sensorPort === 'number') return sensorPort;
   if (typeof sensorPort === 'string') {
-    // Extract number from port string (e.g., "/dev/ttyUSB0" -> 1, "/dev/ttyUSB1" -> 2)
     const match = sensorPort.match(/ttyUSB(\d+)/);
-    if (match) {
-      return parseInt(match[1]) + 1; // Convert 0-based to 1-based
-    }
-    
-    // Try to extract any number from the string
+    if (match) return parseInt(match[1]) + 1; // 0-based -> 1-based
     const numberMatch = sensorPort.match(/(\d+)/);
-    if (numberMatch) {
-      return parseInt(numberMatch[1]);
-    }
+    if (numberMatch) return parseInt(numberMatch[1]);
   }
-  
-  // Default fallback
   return 2;
 };
 
@@ -145,10 +138,10 @@ function ManifoldSVG({ width = 320, activeIndex = 2 }) {
 }
 
 /** ===== Tap Placement Animation Component ===== */
-function TapPlacementAnimation({ sensorPort, onConfirm }) {
+function TapPlacementAnimation({ sensorPort, valveId, onConfirm }) {
   const [confirmed, setConfirmed] = useState(false);
   const [stage, setStage] = useState({ w: 0, h: 0 });
-  const valveNumber = getValveNumber(sensorPort);
+  const valveNumber = getValveNumber(valveId, sensorPort);
 
   const handleConfirm = () => { 
     setConfirmed(true); 
@@ -249,7 +242,7 @@ export default function TapPlacementScreen() {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {!done ? (
-          <TapPlacementAnimation sensorPort={sensorPort} onConfirm={handleConfirm} />
+          <TapPlacementAnimation sensorPort={sensorPort} valveId={route.params?.valveId} onConfirm={handleConfirm} />
         ) : (
           <View style={[styles.section, { alignItems: "center" }]}>
             <View style={styles.successIcon}>
