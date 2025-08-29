@@ -345,7 +345,8 @@ function handlePiSocket(ws) {
                 water_added_liters: responseData.water_added_liters,
                 final_moisture: responseData.final_moisture,
                 initial_moisture: responseData.moisture
-              }
+              },
+              reason: responseData.reason || null
             });
             console.log(`Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation successful!`);
           } else {
@@ -510,7 +511,11 @@ function handlePiSocket(ws) {
 
           // Notify client of irrigation failure with appropriate message
           if (pendingInfo && pendingInfo.ws) {
-            if (isValveBlocked) {
+            if (responseData.error_message === 'water_limit_reached_target_not_met') {
+              // Specific problem message and block state already handled in DB updates below
+              const userMessage = `Water limit reached but desired moisture was not achieved. The valve has been blocked to prevent overwatering. Please check sensor placement/readings or possible leaks.`;
+              sendError(pendingInfo.ws, 'IRRIGATE_FAIL', userMessage);
+            } else if (isValveBlocked) {
               // For valve blocking, send a more specific message
               let userMessage = responseData.error_message;
               if (responseData.error_message.includes('Water limit reached')) {
@@ -540,7 +545,7 @@ function handlePiSocket(ws) {
           }
 
           // Update valve status in database if it's a valve blocking error
-          if (isValveBlocked) {
+          if (isValveBlocked || responseData.error_message === 'water_limit_reached_target_not_met') {
             const { updateValveStatus } = require('../models/plantModel');
             try {
               await updateValveStatus(plantId, true);

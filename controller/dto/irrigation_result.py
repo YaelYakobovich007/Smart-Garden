@@ -24,14 +24,15 @@ class IrrigationResult(BaseModel):
     
     @classmethod
     def success(cls, plant_id: int, moisture: float, final_moisture: float, 
-                water_added_liters: float) -> "IrrigationResult":
+                water_added_liters: float, reason: Optional[str] = None) -> "IrrigationResult":
         """Create a success notification for when irrigation completes successfully."""
         return cls(
             plant_id=plant_id,
             status="success",
             moisture=moisture,
             final_moisture=final_moisture,
-            water_added_liters=water_added_liters
+            water_added_liters=water_added_liters,
+            reason=reason
         )
     
     @classmethod  

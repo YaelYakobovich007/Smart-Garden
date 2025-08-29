@@ -304,14 +304,23 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                     styles.wateringDot,
                     getPlantWateringState(plant.id).isSmartMode && styles.smartWateringDot
                   ]}>
-                    <Feather 
-                      name={getPlantWateringState(plant.id).isSmartMode ? "zap" : "droplet"} 
-                      size={12} 
-                      color="#FFFFFF" 
-                    />
+                    <Animated.View
+                      style={{
+                        opacity: wateringAnimations[plant.id]?.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.4, 1],
+                        }) || 1,
+                      }}
+                    >
+                      <Feather 
+                        name={getPlantWateringState(plant.id).isSmartMode ? "zap" : "droplet"} 
+                        size={12} 
+                        color="#FFFFFF" 
+                      />
+                    </Animated.View>
                   </View>
                   
-                  {/* Multiple expanding ripple circles - animate for both modes identically */}
+                  {/* Multiple expanding ripple circles - animate; blue for manual, purple for smart */}
                   <Animated.View 
                     style={[
                       styles.rippleCircle,
