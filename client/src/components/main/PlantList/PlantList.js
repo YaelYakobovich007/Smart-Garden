@@ -168,7 +168,6 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
    */
   const isPlantBeingWatered = (plant) => {
     const plantWateringState = getPlantWateringState(plant.id);
-    console.log(`💧 PlantList: Checking watering state for plant ${plant.name} (ID: ${plant.id}):`, plantWateringState);
     return plantWateringState.isWateringActive;
   };
 

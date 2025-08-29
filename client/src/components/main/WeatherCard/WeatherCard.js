@@ -37,7 +37,6 @@ const WeatherCard = ({
   compact = false 
 }) => {
   const navigation = useNavigation();
-  console.log('WeatherCard props:', { city, country, temp, feels_like, description, weatherId, humidity, wind_speed, pressure, uv_index });
   /**
    * Get weather animation source based on weather ID
    * Maps OpenWeatherMap weather codes to Lottie animation files

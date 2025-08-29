@@ -676,6 +676,7 @@ function handlePiSocket(ws) {
           if (pendingInfo && pendingInfo.ws) {
             sendSuccess(pendingInfo.ws, 'OPEN_VALVE_SUCCESS', {
               message: `Plant "${pendingInfo.plantData.plant_name}" valve opened successfully for ${timeMinutes} minutes!`,
+              plantId: plantId,
               result: irrigationResult,
               valve_data: {
                 duration_minutes: timeMinutes,
@@ -785,6 +786,7 @@ function handlePiSocket(ws) {
           if (pendingInfo && pendingInfo.ws) {
             sendSuccess(pendingInfo.ws, 'CLOSE_VALVE_SUCCESS', {
               message: `Plant "${pendingInfo.plantData.plant_name}" valve closed successfully!`,
+              plantId: plantId,
               result: irrigationResult,
               valve_data: {
                 operation: 'close'
