@@ -308,6 +308,29 @@ async function updateValveStatus(plantId, isBlocked) {
   );
 }
 
+// Update irrigation state persistence (best-effort; if columns missing, logs warning)
+async function updateIrrigationState(plantId, {
+  mode = 'none',
+  startAt = null,
+  endAt = null,
+  sessionId = null,
+} = {}) {
+  try {
+    await pool.query(
+      `UPDATE plants 
+       SET irrigation_mode = $1, 
+           irrigation_start_at = $2, 
+           irrigation_end_at = $3,
+           irrigation_session_id = $4,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE plant_id = $5`,
+      [mode, startAt, endAt, sessionId, plantId]
+    );
+  } catch (e) {
+    console.warn('updateIrrigationState skipped (columns may be missing):', e.message);
+  }
+}
+
 
 module.exports = {
   addPlant,
@@ -325,4 +348,5 @@ module.exports = {
   updatePlantDetails,
   updatePlantHardware,
   updateValveStatus,
+  updateIrrigationState,
 };

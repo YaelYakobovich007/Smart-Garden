@@ -304,11 +304,12 @@ export default function SensorPlacementScreen() {
   
   // Get sensor port from route params or use default
   const sensorPort = route.params?.sensorId || route.params?.sensorPort || "/dev/ttyUSB0";
+  const valveId = route.params?.valveId;
 
   const handleConfirm = () => {
     // Navigate to tap placement screen after successful sensor placement
     setTimeout(() => {
-      navigation.navigate('TapPlacement', { sensorPort });
+      navigation.navigate('TapPlacement', { sensorPort, valveId });
     }, 1000);
   };
 

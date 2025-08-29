@@ -10,7 +10,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 8,
+    paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#ECF0F1',
@@ -160,6 +161,11 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     flex: 1,
     fontFamily: 'Nunito_400Regular',
+  },
+  boldEmphasis: {
+    fontFamily: 'Nunito_700Bold',
+    fontWeight: '700',
+    color: '#2C3E50',
   },
   paragraphSpacing: {
     height: 16,

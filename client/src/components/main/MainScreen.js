@@ -47,7 +47,7 @@ const MainScreen = () => {
   const route = useRoute();
 
   // Get irrigation state from context
-  const { getPlantWateringState, getWateringPlants } = useIrrigation();
+  const { getPlantWateringState, getWateringPlants, rehydrateFromPlants } = useIrrigation();
 
   // State management for screen data and UI
   const [plants, setPlants] = useState([]);
@@ -193,6 +193,23 @@ const MainScreen = () => {
           const existingPlant = prevPlants.find(p => p.id === plant.plant_id);
           console.log(`🌿 Transforming plant ${plant.name}:`, plant);
 
+          // Normalize schedule fields from backend (DB columns: irrigation_days, irrigation_time)
+          let normalizedDays = null;
+          if (plant.irrigation_days) {
+            if (Array.isArray(plant.irrigation_days)) {
+              normalizedDays = plant.irrigation_days;
+            } else {
+              try {
+                const parsed = JSON.parse(plant.irrigation_days);
+                normalizedDays = Array.isArray(parsed) ? parsed : null;
+              } catch (e) {
+                normalizedDays = null;
+              }
+            }
+          }
+          const normalizedTime = plant.irrigation_time || null;
+          const inferredMode = (normalizedDays && normalizedDays.length > 0 && normalizedTime) ? 'scheduled' : 'smart';
+
           const transformed = {
             id: plant.plant_id,
             name: plant.name,
@@ -204,14 +221,31 @@ const MainScreen = () => {
             lightLevel: existingPlant?.lightLevel ?? 0,
             isHealthy: true,
             valve_blocked: plant.valve_blocked || false,
+            sensor_port: plant.sensor_port || null,
+            valve_id: plant.valve_id || null,
             // Include config fields for PlantDetail
             ideal_moisture: plant.ideal_moisture,
             water_limit: plant.water_limit,
             dripper_type: plant.dripper_type,
+            // Schedule-related fields
+            watering_mode: plant.watering_mode || inferredMode,
+            schedule_days: normalizedDays,
+            schedule_time: normalizedTime,
+            // Persisted irrigation state (for rehydration)
+            irrigation_mode: plant.irrigation_mode || 'none',
+            irrigation_start_at: plant.irrigation_start_at || null,
+            irrigation_end_at: plant.irrigation_end_at || null,
+            irrigation_session_id: plant.irrigation_session_id || null,
           };
           console.log(`🌿 Transformed plant ${plant.name}:`, transformed);
           return transformed;
         });
+        // After transforming, rehydrate irrigation state from persisted fields
+        try {
+          rehydrateFromPlants(transformedPlants);
+        } catch (e) {
+          console.log('rehydrateFromPlants error:', e?.message);
+        }
         return transformedPlants;
       });
     }
@@ -981,19 +1015,23 @@ const MainScreen = () => {
               {garden ? (
                 <View style={styles.gardenActiveBanner}>
                   <View style={styles.gardenInfo}>
-                    <Feather name="users" size={16} color="#4CAF50" />
+                    <View style={styles.gardenIconContainerActive}>
+                      <Feather name="users" size={18} color="#22C55E" />
+                    </View>
                     <Text style={styles.gardenStatusText}>
                       Garden: {garden.name} • {garden.member_count || 1} member{garden.member_count !== 1 ? 's' : ''}
                     </Text>
                   </View>
                   <TouchableOpacity onPress={handleGardenSettings} style={styles.gardenSettingsButton}>
-                    <Feather name="settings" size={16} color="#4CAF50" />
+                    <Feather name="settings" size={18} color="#22C55E" />
                   </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.gardenInactiveBanner}>
                   <TouchableOpacity onPress={handleCreateOrJoinGarden} style={styles.gardenInfo}>
-                    <Feather name="plus-circle" size={16} color="#FF9800" />
+                    <View style={styles.gardenIconContainerInactive}>
+                      <Feather name="plus" size={18} color="#F59E0B" />
+                    </View>
                     <Text style={styles.gardenStatusTextClickable}>
                       Join a garden to start managing plants
                     </Text>

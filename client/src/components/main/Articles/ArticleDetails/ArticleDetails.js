@@ -6,6 +6,7 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  SafeAreaView,
 } from 'react-native';
 
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -16,6 +17,27 @@ const ArticleDetails = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { article } = route.params;
+
+  // Render inline markdown-like bold (**text**)
+  const renderInline = (text, baseStyle) => {
+    // Split by **...** while keeping the delimiters' content
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return (
+      <Text style={baseStyle}>
+        {parts.map((part, idx) => {
+          if (/^\*\*[^*]+\*\*$/.test(part)) {
+            const inner = part.slice(2, -2);
+            return (
+              <Text key={idx} style={styles.boldEmphasis}>
+                {inner}
+              </Text>
+            );
+          }
+          return <Text key={idx}>{part}</Text>;
+        })}
+      </Text>
+    );
+  };
 
   const formatContent = (content) => {
     // Simple markdown-like formatting
@@ -43,23 +65,23 @@ const ArticleDetails = () => {
         return (
           <View key={index} style={styles.bulletPoint}>
             <Text style={styles.bullet}>•</Text>
-            <Text style={styles.bulletText}>{line.substring(2)}</Text>
+            {renderInline(line.substring(2), styles.bulletText)}
           </View>
         );
       } else if (line.trim() === '') {
         return <View key={index} style={styles.paragraphSpacing} />;
       } else {
         return (
-          <Text key={index} style={styles.paragraph}>
-            {line}
-          </Text>
+          <View key={index}>
+            {renderInline(line, styles.paragraph)}
+          </View>
         );
       }
     });
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -108,7 +130,7 @@ const ArticleDetails = () => {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 

@@ -193,6 +193,13 @@ function handlePiSocket(ws) {
               targetMoisture: decisionData.target_moisture
             });
           }
+          // Persist irrigation state: smart started
+          try {
+            const { updateIrrigationState } = require('../models/plantModel');
+            await updateIrrigationState(Number(plantId), { mode: 'smart', startAt: new Date(), endAt: null, sessionId: null });
+          } catch (e) {
+            console.warn('Failed to persist smart irrigation start:', e.message);
+          }
         } else {
           // If irrigation will be skipped, notify the client
           if (pendingInfo.ws) {
@@ -352,6 +359,14 @@ function handlePiSocket(ws) {
           }
         }
 
+        // Persist irrigation state: clear smart mode on success
+        try {
+          const { updateIrrigationState } = require('../models/plantModel');
+          await updateIrrigationState(Number(plantId), { mode: 'none', startAt: null, endAt: null, sessionId: null });
+        } catch (e) {
+          console.warn('Failed to clear smart irrigation state on success:', e.message);
+        }
+
       } else if (responseData.status === 'cancelled') {
         console.log(` Plant ${plantId} irrigation cancelled by user`);
 
@@ -381,6 +396,14 @@ function handlePiSocket(ws) {
           }
         } catch (err) {
           console.error(` Failed to save cancelled irrigation result for plant ${plantId}:`, err);
+        }
+
+        // Persist irrigation state: clear smart mode
+        try {
+          const { updateIrrigationState } = require('../models/plantModel');
+          await updateIrrigationState(Number(plantId), { mode: 'none', startAt: null, endAt: null, sessionId: null });
+        } catch (e) {
+          console.warn('Failed to clear smart irrigation state on cancel:', e.message);
         }
 
       } else       if (responseData.status === 'skipped') {
@@ -571,6 +594,14 @@ function handlePiSocket(ws) {
           }
         }
 
+        // Persist irrigation state: clear smart mode on stop
+        try {
+          const { updateIrrigationState } = require('../models/plantModel');
+          await updateIrrigationState(Number(plantId), { mode: 'none', startAt: null, endAt: null, sessionId: null });
+        } catch (e) {
+          console.warn('Failed to clear smart irrigation state on stop:', e.message);
+        }
+
       } else {
         // Stop irrigation failed
         console.error(`❌ Plant ${plantId} stop irrigation failed: ${responseData.error_message}`);
@@ -607,6 +638,17 @@ function handlePiSocket(ws) {
         vLog(`DEBUG - Plant ${plantId} valve opened successfully for ${timeMinutes} minutes`);
         vLog(`   - Duration: ${timeMinutes} minutes`);
         vLog(`   - Reason: ${responseData.reason}`);
+        // Persist irrigation state: manual mode started
+        try {
+          const { updateIrrigationState } = require('../models/plantModel');
+          const now = new Date();
+          const minutes = Number(responseData.time_minutes || responseData.timeMinutes || 0);
+          const endAt = minutes > 0 ? new Date(now.getTime() + (minutes * 60 * 1000)) : null;
+          await updateIrrigationState(Number(plantId), { mode: 'manual', startAt: now, endAt, sessionId: null });
+        } catch (e) {
+          console.warn('Failed to persist manual irrigation state:', e.message);
+        }
+
         // Save valve operation result to database
         const irrigationModel = require('../models/irrigationModel');
 
@@ -708,6 +750,14 @@ function handlePiSocket(ws) {
       if (responseData.status === 'success') {
         vLog(`DEBUG - Plant ${plantId} valve closed successfully`);
         vLog(`   - Reason: ${responseData.reason}`);
+
+        // Persist irrigation state: manual mode cleared
+        try {
+          const { updateIrrigationState } = require('../models/plantModel');
+          await updateIrrigationState(Number(plantId), { mode: 'none', startAt: null, endAt: null, sessionId: null });
+        } catch (e) {
+          console.warn('Failed to clear manual irrigation state:', e.message);
+        }
 
         // Save valve operation result to database
         const irrigationModel = require('../models/irrigationModel');

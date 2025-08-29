@@ -178,6 +178,12 @@ async function handleGetPlantDetails(data, ws, email) {
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'GET_PLANT_DETAILS_FAIL', 'Plant not found');
 
+  // Ensure schedule fields are normalized for client
+  try {
+    if (plant && plant.irrigation_days && typeof plant.irrigation_days === 'string') {
+      try { plant.irrigation_days = JSON.parse(plant.irrigation_days); } catch {}
+    }
+  } catch {}
   sendSuccess(ws, 'GET_PLANT_DETAILS_RESPONSE', { plant });
 }
 
@@ -185,8 +191,14 @@ async function handleGetMyPlants(data, ws, email) {
   const user = await getUser(email);
   if (!user) return sendError(ws, 'GET_MY_PLANTS_FAIL', 'User not found');
   const plants = await getPlants(user.id);
-
-  sendSuccess(ws, 'GET_MY_PLANTS_RESPONSE', { plants });
+  // Best-effort: normalize schedule array for client
+  const normalized = (plants || []).map(p => {
+    if (p && p.irrigation_days && typeof p.irrigation_days === 'string') {
+      try { p.irrigation_days = JSON.parse(p.irrigation_days); } catch {}
+    }
+    return p;
+  });
+  sendSuccess(ws, 'GET_MY_PLANTS_RESPONSE', { plants: normalized });
 }
 
 // Delete plant (and its irrigation events)

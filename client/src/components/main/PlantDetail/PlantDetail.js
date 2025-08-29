@@ -65,6 +65,7 @@ const PlantDetail = () => {
     resumeTimer,
     resetTimer,
     formatTime,
+    rehydrateFromPlants,
   } = useIrrigation();
 
   // Get this plant's specific watering state
@@ -106,6 +107,17 @@ const PlantDetail = () => {
 
   // Set up WebSocket message handlers for plant updates and irrigation progress
   useEffect(() => {
+    const handlePlantDetailsResponse = (message) => {
+      const data = message?.data || message;
+      if (data?.plant) {
+        setPlant(data.plant);
+        try {
+          rehydrateFromPlants([data.plant]);
+        } catch {}
+      }
+    };
+
+    websocketService.onMessage('GET_PLANT_DETAILS_RESPONSE', handlePlantDetailsResponse);
     websocketService.onMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
     websocketService.onMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
 
@@ -127,6 +139,7 @@ const PlantDetail = () => {
     websocketService.onMessage('IRRIGATION_PROGRESS', handleIrrigationProgress);
 
     return () => {
+      websocketService.offMessage('GET_PLANT_DETAILS_RESPONSE', handlePlantDetailsResponse);
       websocketService.offMessage('UPDATE_PLANT_DETAILS_SUCCESS', handlePlantUpdateSuccess);
       websocketService.offMessage('UPDATE_PLANT_DETAILS_FAIL', handlePlantUpdateError);
       websocketService.offMessage('IRRIGATION_PROGRESS', handleIrrigationProgress);
@@ -167,7 +180,10 @@ const PlantDetail = () => {
     const days = p?.schedule_days;
     const time = p?.schedule_time;
 
-    if (!mode || mode === 'smart' || !days || !time || days.length === 0) {
+    const hasSchedule = Array.isArray(days) ? days.length > 0 : !!days;
+    const isScheduledMode = (mode && typeof mode === 'string' && mode.toLowerCase() === 'scheduled') || (hasSchedule && !!time);
+
+    if (!isScheduledMode) {
       return (
         <View>
           <Text style={styles.scheduleSubtitle}>
@@ -415,7 +431,8 @@ const PlantDetail = () => {
       'Rose': require('../../../data/plants/rose_plant.png'),
       'Sansevieria': require('../../../data/plants/sansevieria_plant.png'),
     };
-    return plantImages[plantType] || plantImages['Basil'];
+    // Default to Rose image if none or unknown type
+    return plantImages[plantType] || plantImages['Rose'];
   };
 
   if (!plant) {

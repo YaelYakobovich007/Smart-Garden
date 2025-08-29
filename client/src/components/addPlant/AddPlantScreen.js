@@ -113,10 +113,11 @@ export default function AddPlantScreen() {
      */
     const handleSuccess = (data) => {
       setIsSaving(false);
-      // Navigate directly to sensor placement screen with sensor port from response
-      // The server sends sensor_port in the hardware object
-      const sensorPort = data?.hardware?.sensor_port || data?.sensor_port || route.params?.sensorId || "/dev/ttyUSB0";
-      navigation.navigate('SensorPlacement', { sensorId: sensorPort });
+      // Server sends { plant: { sensor_port, valve_id, ... } }
+      const plant = data?.plant || {};
+      const sensorPort = plant.sensor_port || data?.sensor_port || route.params?.sensorId || "/dev/ttyUSB0";
+      const valveId = plant.valve_id || data?.valve_id || 1;
+      navigation.navigate('SensorPlacement', { sensorId: sensorPort, valveId });
     };
 
     /**
@@ -752,16 +753,39 @@ export default function AddPlantScreen() {
         </View>
       </Modal>
 
-      {/* Time Picker Component */}
-      {showTimePicker && (
-        <DateTimePicker
-          value={formData.schedule.time}
-          mode="time"
-          is24Hour={true}
-          display="default"
-          onChange={handleTimeChange}
-        />
-      )}
+      {/* Time Picker Modal (centered) */}
+      <Modal
+        visible={showTimePicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowTimePicker(false)}
+      >
+        <View style={styles.centerModalOverlay}>
+          <View style={styles.centerModalContent}>
+            <Text style={styles.modalTitle}>Choose Time</Text>
+            <View style={styles.timePickerContainer}>
+              <DateTimePicker
+                value={formData.schedule.time}
+                mode="time"
+                is24Hour={true}
+                display={Platform.OS === 'ios' ? 'spinner' : 'clock'}
+                onChange={handleTimeChange}
+              />
+            </View>
+            <View style={styles.modalActionsRow}>
+              <TouchableOpacity style={styles.modalActionButton} onPress={() => setShowTimePicker(false)}>
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalActionButton, styles.primaryActionButton]}
+                onPress={() => setShowTimePicker(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
