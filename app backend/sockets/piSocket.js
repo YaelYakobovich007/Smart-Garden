@@ -97,7 +97,8 @@ function handlePiSocket(ws) {
     // Handle UPDATE_PLANT_RESPONSE from Pi
     if (data.type === 'UPDATE_PLANT_RESPONSE') {
       const responseData = data.data || {};
-      const plantId = responseData.plant_id;
+      const rawPlantId = responseData.plant_id;
+      const plantId = Number(rawPlantId);
 
       // Get pending update info
       const { getPendingUpdate } = require('../services/pendingUpdateTracker');
@@ -292,7 +293,8 @@ function handlePiSocket(ws) {
     // Handle IRRIGATE_PLANT_RESPONSE from Pi
     if (data.type === 'IRRIGATE_PLANT_RESPONSE') {
       const responseData = data.data || {};
-      const plantId = responseData.plant_id;
+      const rawPlantId = responseData.plant_id;
+      const plantId = Number(rawPlantId);
 
       // Get pending irrigation info (websocket + plant data)
       const pendingInfo = completePendingIrrigation(plantId);
