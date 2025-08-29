@@ -201,6 +201,21 @@ function handlePiSocket(ws) {
           } catch (e) {
             console.warn('Failed to persist smart irrigation start:', e.message);
           }
+          // Broadcast to other garden members that irrigation started (smart)
+          try {
+            const { getPlantById } = require('../models/plantModel');
+            const plant = await getPlantById(Number(plantId));
+            if (plant?.garden_id) {
+              const { broadcastToGarden } = require('../services/gardenBroadcaster');
+              await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STARTED', {
+                plantId: Number(plantId),
+                plantName: plant.name || pendingInfo.plantData.plant_name,
+                mode: 'smart'
+              }, pendingInfo.email);
+            }
+          } catch (e) {
+            console.warn('Broadcast GARDEN_IRRIGATION_STARTED failed:', e.message);
+          }
         } else {
           // If irrigation will be skipped, notify the client
           if (pendingInfo.ws) {
@@ -604,6 +619,21 @@ function handlePiSocket(ws) {
           console.warn('Failed to clear smart irrigation state on stop:', e.message);
         }
 
+        // Broadcast stop to garden members
+        try {
+          const { getPlantById } = require('../models/plantModel');
+          const plant = await getPlantById(Number(plantId));
+          if (plant?.garden_id) {
+            const { broadcastToGarden } = require('../services/gardenBroadcaster');
+            await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STOPPED', {
+              plantId: Number(plantId),
+              plantName: plant.name || pendingInfo?.plantData?.plant_name
+            }, pendingInfo?.email);
+          }
+        } catch (e) {
+          console.warn('Broadcast GARDEN_IRRIGATION_STOPPED failed:', e.message);
+        }
+
       } else {
         // Stop irrigation failed
         console.error(`❌ Plant ${plantId} stop irrigation failed: ${responseData.error_message}`);
@@ -686,6 +716,23 @@ function handlePiSocket(ws) {
             console.log(`Notified client: Plant ${pendingInfo.plantData.plant_name} valve opened successfully!`);
           } else {
             console.log(`No pending client found for plant ${plantId} valve operation - result saved but client not notified`);
+          }
+
+          // Broadcast manual irrigation start to other garden members
+          try {
+            const { getPlantById } = require('../models/plantModel');
+            const plant = await getPlantById(Number(plantId));
+            if (plant?.garden_id) {
+              const { broadcastToGarden } = require('../services/gardenBroadcaster');
+              await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STARTED', {
+                plantId: Number(plantId),
+                plantName: plant.name || pendingInfo?.plantData?.plant_name,
+                mode: 'manual',
+                duration_minutes: timeMinutes
+              }, pendingInfo?.email);
+            }
+          } catch (e) {
+            console.warn('Broadcast GARDEN_IRRIGATION_STARTED (manual) failed:', e.message);
           }
 
         } catch (err) {
@@ -795,6 +842,21 @@ function handlePiSocket(ws) {
             console.log(`Notified client: Plant ${pendingInfo.plantData.plant_name} valve closed successfully!`);
           } else {
             console.log(`No pending client found for plant ${plantId} valve operation - result saved but client not notified`);
+          }
+
+          // Broadcast manual irrigation stop to other garden members
+          try {
+            const { getPlantById } = require('../models/plantModel');
+            const plant = await getPlantById(Number(plantId));
+            if (plant?.garden_id) {
+              const { broadcastToGarden } = require('../services/gardenBroadcaster');
+              await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STOPPED', {
+                plantId: Number(plantId),
+                plantName: plant.name || pendingInfo?.plantData?.plant_name
+              }, pendingInfo?.email);
+            }
+          } catch (e) {
+            console.warn('Broadcast GARDEN_IRRIGATION_STOPPED (manual) failed:', e.message);
           }
 
         } catch (err) {

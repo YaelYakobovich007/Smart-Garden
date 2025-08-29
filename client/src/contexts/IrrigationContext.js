@@ -147,6 +147,50 @@ export const IrrigationProvider = ({ children }) => {
     });
   };
 
+  // Programmatically mark a plant as started watering (used by broadcasts)
+  const rehydrateIrrigationStarted = (plantId, mode = 'smart', durationMinutes = null) => {
+    if (plantId == null) return;
+    const now = Date.now();
+    if (String(mode).toLowerCase() === 'manual') {
+      const minutes = Number(durationMinutes || 0);
+      const endAt = minutes > 0 ? now + minutes * 60 * 1000 : null;
+      const remainingSeconds = endAt ? Math.max(0, Math.ceil((endAt - now) / 1000)) : 0;
+      updatePlantWateringState(Number(plantId), {
+        isManualMode: true,
+        isSmartMode: false,
+        isWateringActive: true,
+        wateringTimeLeft: remainingSeconds,
+        timerStartTime: now,
+        timerEndTime: endAt,
+        pendingValveRequest: false,
+        pendingIrrigationRequest: false,
+      });
+    } else {
+      updatePlantWateringState(Number(plantId), {
+        isManualMode: false,
+        isSmartMode: true,
+        isWateringActive: true,
+        pendingIrrigationRequest: false,
+      });
+    }
+  };
+
+  // Programmatically mark a plant as stopped watering (used by broadcasts)
+  const rehydrateIrrigationStopped = (plantId) => {
+    if (plantId == null) return;
+    updatePlantWateringState(Number(plantId), {
+      isManualMode: false,
+      isSmartMode: false,
+      isWateringActive: false,
+      pendingIrrigationRequest: false,
+      wateringTimeLeft: 0,
+      timerStartTime: null,
+      timerEndTime: null,
+      timerInterval: null,
+      currentPlant: null,
+    });
+  };
+
   // Timer accuracy improvements
   const [timerStartTime, setTimerStartTime] = useState(null);
   const [timerEndTime, setTimerEndTime] = useState(null);
@@ -873,6 +917,8 @@ export const IrrigationProvider = ({ children }) => {
     resetTimer,
     formatTime,
     rehydrateFromPlants,
+    rehydrateIrrigationStarted,
+    rehydrateIrrigationStopped,
   };
 
   return (

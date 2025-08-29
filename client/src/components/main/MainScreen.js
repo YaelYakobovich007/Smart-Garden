@@ -472,6 +472,26 @@ const MainScreen = () => {
     websocketService.onMessage('JOIN_GARDEN_SUCCESS', handleGardenJoined);
     websocketService.onMessage('LEAVE_GARDEN_SUCCESS', handleGardenLeft);
     websocketService.onMessage('VALVE_BLOCKED', handleValveBlocked);
+    // Garden-wide irrigation broadcasts
+    const handleGardenIrrigationStarted = (message) => {
+      const payload = message?.data || message;
+      const pid = payload?.plantId != null ? Number(payload.plantId) : null;
+      const mode = payload?.mode || 'smart';
+      const duration = payload?.duration_minutes || null;
+      try {
+        // Immediate local UI update without waiting for DB fetch
+        rehydrateIrrigationStarted(pid, mode, duration);
+      } catch {}
+    };
+    const handleGardenIrrigationStopped = (message) => {
+      const payload = message?.data || message;
+      const pid = payload?.plantId != null ? Number(payload.plantId) : null;
+      try {
+        rehydrateIrrigationStopped(pid);
+      } catch {}
+    };
+    websocketService.onMessage('GARDEN_IRRIGATION_STARTED', handleGardenIrrigationStarted);
+    websocketService.onMessage('GARDEN_IRRIGATION_STOPPED', handleGardenIrrigationStopped);
 
 
     /**
@@ -530,6 +550,8 @@ const MainScreen = () => {
       websocketService.offMessage('JOIN_GARDEN_SUCCESS', handleGardenJoined);
       websocketService.offMessage('LEAVE_GARDEN_SUCCESS', handleGardenLeft);
       websocketService.offMessage('VALVE_BLOCKED', handleValveBlocked);
+      websocketService.offMessage('GARDEN_IRRIGATION_STARTED', handleGardenIrrigationStarted);
+      websocketService.offMessage('GARDEN_IRRIGATION_STOPPED', handleGardenIrrigationStopped);
       websocketService.offConnectionChange(handleConnectionChange);
     };
   }, []);
