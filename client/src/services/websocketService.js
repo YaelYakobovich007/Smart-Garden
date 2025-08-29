@@ -6,7 +6,7 @@ const BACKEND_URL = Constants.expoConfig.extra.BACKEND_URL;
  */
 // Configuration for WebSocket connection
 
-const CONFIG = { 
+const CONFIG = {
   SERVER_URL: 'wss://smart-garden-backend-1088783109508.europe-west1.run.app',
 };
 
@@ -71,7 +71,7 @@ class WebSocketService {
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('Received message:', data);
+        //console.log('Received message:', data);
 
         // Handle connection success confirmation from server
         if (data.type === 'CONNECTION_SUCCESS') {
