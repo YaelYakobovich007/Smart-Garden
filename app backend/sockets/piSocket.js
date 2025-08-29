@@ -956,6 +956,50 @@ function handlePiSocket(ws) {
       return;
     }
 
+    // Handle RESTART_VALVE_RESPONSE from Pi
+    if (data.type === 'RESTART_VALVE_RESPONSE') {
+      const responseData = data.data || data;
+      const plantId = Number(responseData.plant_id);
+
+      // Get pending irrigation info (websocket + plant data)
+      const pendingInfo = completePendingIrrigation(plantId);
+
+      if (responseData.status === 'success') {
+        // Clear blocked flag in DB
+        try {
+          const { updateValveStatus } = require('../models/plantModel');
+          await updateValveStatus(plantId, false);
+        } catch (e) {
+          console.warn('Failed to clear valve_blocked after restart:', e.message);
+        }
+
+        if (pendingInfo?.ws) {
+          sendSuccess(pendingInfo.ws, 'RESTART_VALVE_SUCCESS', {
+            plantId,
+            message: `Valve for "${pendingInfo?.plantData?.plant_name || plantId}" restarted successfully.`
+          });
+        }
+
+        // Optional broadcast: unblocked
+        try {
+          const { getPlantById } = require('../models/plantModel');
+          const plant = await getPlantById(plantId);
+          if (plant?.garden_id) {
+            const { broadcastToGarden } = require('../services/gardenBroadcaster');
+            await broadcastToGarden(plant.garden_id, 'GARDEN_VALVE_UNBLOCKED', { plantId }, pendingInfo?.email);
+          }
+        } catch {}
+
+      } else {
+        // Keep blocked; notify initiator
+        if (pendingInfo?.ws) {
+          const reason = responseData.error_message || 'Restart failed';
+          sendError(pendingInfo.ws, 'RESTART_VALVE_FAIL', reason);
+        }
+      }
+      return;
+    }
+
     // Handle PLANT_MOISTURE_RESPONSE from Pi
     if (data.type === 'PLANT_MOISTURE_RESPONSE') {
       const responseData = data.data || {};

@@ -694,6 +694,53 @@ class SmartGardenEngine:
                 print(f"❌ ERROR - Error closing valve for plant {plant_id}: {e}")
                 return False
 
+    async def restart_valve(self, plant_id: int) -> bool:
+        """Attempt a brief open/close reset on the valve. Unblocks on success, blocks on failure."""
+        print(f"🔧 DEBUG - SmartGardenEngine.restart_valve() called: plant_id={plant_id}")
+        if plant_id not in self.plants:
+            print(f"❌ ERROR - Plant {plant_id} not found")
+            return False
+
+        # Disallow restart if irrigation is active
+        if plant_id in self.irrigation_tasks and not self.irrigation_tasks[plant_id].done():
+            print(f"❌ ERROR - Cannot restart valve while irrigation is active for plant {plant_id}")
+            return False
+
+        plant = self.plants[plant_id]
+        async with self._lock:
+            try:
+                # Ensure closed
+                print("🔒 Ensuring valve closed before restart...")
+                plant.valve.request_close()
+
+                # Pulse open briefly then close
+                print("🔄 Brief open/close pulse...")
+                plant.valve.request_open()
+                await asyncio.sleep(0.6)
+                plant.valve.request_close()
+
+                # Unblock if previously blocked
+                try:
+                    plant.valve.unblock()
+                except Exception:
+                    # Fallback if valve object uses attribute
+                    if hasattr(plant.valve, 'is_blocked'):
+                        plant.valve.is_blocked = False
+                print("✅ Valve restart succeeded")
+                return True
+            except Exception as e:
+                print(f"❌ Valve restart failed for plant {plant_id}: {e}")
+                # Keep (or set) blocked state and ensure closed
+                try:
+                    plant.valve.request_close()
+                except Exception:
+                    pass
+                try:
+                    plant.valve.block()
+                except Exception:
+                    pass
+                return False
+
     async def _close_valve_after_duration(self, plant_id: int, duration_seconds: int) -> None:
         """
         Background task to close valve after specified duration.

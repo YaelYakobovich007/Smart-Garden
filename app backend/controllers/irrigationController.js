@@ -17,6 +17,7 @@ const irrigationHandlers = {
   STOP_IRRIGATION: handleStopIrrigation,
   OPEN_VALVE: handleOpenValve,
   CLOSE_VALVE: handleCloseValve,
+  RESTART_VALVE: handleRestartValve,
   GET_IRRIGATION_RESULT: handleGetIrrigationResult,
   GET_VALVE_STATUS: handleGetValveStatus,
   UNBLOCK_VALVE: handleUnblockValve,
@@ -288,6 +289,27 @@ async function handleCloseValve(data, ws, email) {
     return sendError(ws, 'CLOSE_VALVE_FAIL',
       'Pi controller not connected. Cannot close valve. Please try again when Pi is online.');
   }
+}
+
+// Restart valve (attempt to unblock and test)
+async function handleRestartValve(data, ws, email) {
+  const { plantName } = data;
+  if (!plantName) return sendError(ws, 'RESTART_VALVE_FAIL', 'Missing plantName');
+  const user = await getUser(email);
+  if (!user) return sendError(ws, 'RESTART_VALVE_FAIL', 'User not found');
+  const plant = await require('../models/plantModel').getPlantByName(user.id, plantName);
+  if (!plant) return sendError(ws, 'RESTART_VALVE_FAIL', 'Plant not found');
+
+  // Disallow during active irrigation (best-effort check is on Pi too)
+  // Forward to Pi
+  const result = require('../services/piCommunication').restartValve(plant.plant_id);
+  if (!result.success) {
+    return sendError(ws, 'RESTART_VALVE_FAIL', result.error || 'Pi not connected');
+  }
+
+  // Track pending using irrigation tracker to route response
+  const { addPendingIrrigation } = require('../services/pendingIrrigationTracker');
+  addPendingIrrigation(plant.plant_id, ws, email, { plant_id: plant.plant_id, plant_name: plant.name });
 }
 
 // Get irrigation result for a specific plant
