@@ -311,11 +311,11 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                     />
                   </View>
                   
-                  {/* Multiple expanding ripple circles - only these animate */}
+                  {/* Multiple expanding ripple circles - animate for both modes identically */}
                   <Animated.View 
                     style={[
                       styles.rippleCircle,
-                      getPlantWateringState(plant.id).isSmartMode && styles.smartRippleCircle,
+                      getPlantWateringState(plant.id).isSmartMode ? styles.smartRippleCircle : null,
                       {
                         transform: [{
                           scale: wateringAnimations[plant.id]?.interpolate({
@@ -333,7 +333,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                   <Animated.View 
                     style={[
                       styles.rippleCircle,
-                      getPlantWateringState(plant.id).isSmartMode && styles.smartRippleCircle,
+                      getPlantWateringState(plant.id).isSmartMode ? styles.smartRippleCircle : null,
                       {
                         transform: [{
                           scale: wateringAnimations[plant.id]?.interpolate({
@@ -351,7 +351,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                   <Animated.View 
                     style={[
                       styles.rippleCircle,
-                      getPlantWateringState(plant.id).isSmartMode && styles.smartRippleCircle,
+                      getPlantWateringState(plant.id).isSmartMode ? styles.smartRippleCircle : null,
                       {
                         transform: [{
                           scale: wateringAnimations[plant.id]?.interpolate({

@@ -87,6 +87,10 @@ export const styles = StyleSheet.create({
     backgroundColor: '#8B5CF6', // Purple for smart irrigation
     shadowColor: '#8B5CF6',
   },
+  manualWateringDot: {
+    backgroundColor: '#3B82F6', // Blue for manual irrigation
+    shadowColor: '#3B82F6',
+  },
   smartRippleCircle: {
     backgroundColor: '#8B5CF6', // Purple for smart irrigation
     borderColor: '#8B5CF6',
