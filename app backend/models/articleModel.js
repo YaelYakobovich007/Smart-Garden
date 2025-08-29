@@ -27,7 +27,7 @@ async function getAllArticles() {
         created_at,
         updated_at
       FROM articles 
-      ORDER BY created_at DESC
+      ORDER BY article_id ASC
     `);
         return result.rows;
     } catch (error) {

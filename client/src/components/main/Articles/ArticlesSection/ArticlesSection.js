@@ -12,20 +12,70 @@
  * gardening tips and best practices.
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Image,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
-import { articles } from '../../../../data/articles';
+import { getAllArticles, cleanupArticleHandlers } from '../../../../services/articleService';
+import websocketService from '../../../../services/websocketService';
 
 const ArticlesSection = () => {
   const navigation = useNavigation();
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  // Fetch articles from backend on component mount
+  useEffect(() => {
+    console.log('📱 ArticlesSection: useEffect triggered');
+    const fetchArticles = () => {
+      console.log('📱 ArticlesSection: fetchArticles called, WebSocket connected:', websocketService.isConnected());
+      // Check if WebSocket is connected before sending request
+      if (!websocketService.isConnected()) {
+        console.log('📱 ArticlesSection: WebSocket not connected, retry count:', retryCount);
+        // Prevent infinite retries
+        if (retryCount >= 10) {
+          setError('Failed to connect to server. Please check your internet connection.');
+          setLoading(false);
+          return;
+        }
+
+        // Wait for connection and retry
+        setRetryCount(prev => prev + 1);
+        setTimeout(fetchArticles, 1000);
+        return;
+      }
+
+      console.log('📱 ArticlesSection: WebSocket connected, calling getAllArticles');
+      getAllArticles(
+        (data) => {
+          console.log('📱 ArticlesSection: Success callback, data length:', data ? data.length : 0);
+          setArticles(data);
+          setLoading(false);
+        },
+        (error) => {
+          console.log('📱 ArticlesSection: Error callback:', error);
+          setError(error);
+          setLoading(false);
+        }
+      );
+    };
+
+    fetchArticles();
+
+    // Cleanup handlers on unmount
+    return () => {
+      cleanupArticleHandlers();
+    };
+  }, []);
 
   /**
    * Handle article card press
@@ -69,8 +119,8 @@ const ArticlesSection = () => {
       onPress={() => handleArticlePress(item)}
     >
       {/* Article Image */}
-      <Image source={item.image} style={{ width: '100%', height: 160 }} />
-      
+      <Image source={{ uri: item.image_url }} style={{ width: '100%', height: 160 }} />
+
       {/* Article Content */}
       <View style={{ padding: 16, flex: 1 }}>
         {/* Article Header with Category Badge */}
@@ -89,7 +139,7 @@ const ArticlesSection = () => {
               letterSpacing: 0.5,
             }}>{item.category}</Text>
           </View>
-          <Text style={{ fontSize: 12, color: '#7F8C8D' }}>{item.readTime}</Text>
+          <Text style={{ fontSize: 12, color: '#7F8C8D' }}>{item.read_time}</Text>
         </View>
 
         {/* Article Title */}
@@ -150,15 +200,38 @@ const ArticlesSection = () => {
       </View>
 
       {/* Articles Horizontal List */}
-      <FlatList
-        data={articles.slice(0, 5)} // Show first 5 articles
-        renderItem={renderArticleCard}
-        keyExtractor={(item) => item.id.toString()}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
-        ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
-      />
+      {loading ? (
+        <View style={{ paddingHorizontal: 20, paddingVertical: 20 }}>
+          <ActivityIndicator size="large" color="#4CAF50" />
+          <Text style={{ textAlign: 'center', marginTop: 10, color: '#7F8C8D' }}>
+            Loading articles...
+          </Text>
+        </View>
+      ) : error ? (
+        <View style={{ paddingHorizontal: 20, paddingVertical: 20 }}>
+          <Text style={{ textAlign: 'center', color: '#E74C3C' }}>
+            {error}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={articles.slice(0, 5)} // Show first 5 articles
+          renderItem={renderArticleCard}
+          keyExtractor={(item) => item.article_id.toString()}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+          ListEmptyComponent={() => (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#7F8C8D' }}>No articles available</Text>
+              <Text style={{ color: '#7F8C8D', fontSize: 12, marginTop: 5 }}>
+                Articles count: {articles.length}
+              </Text>
+            </View>
+          )}
+        />
+      )}
     </View>
   );
 };

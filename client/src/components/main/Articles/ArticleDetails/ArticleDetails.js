@@ -99,7 +99,7 @@ const ArticleDetails = () => {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Article Image */}
         <View style={styles.imageContainer}>
-          <Image source={article.image} style={styles.articleImage} />
+          <Image source={{ uri: article.image_url }} style={styles.articleImage} />
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryText}>{article.category}</Text>
           </View>
@@ -111,11 +111,11 @@ const ArticleDetails = () => {
           <View style={styles.articleHeader}>
             <Text style={styles.articleTitle}>{article.title}</Text>
             <Text style={styles.articleDescription}>{article.description}</Text>
-            
+
             <View style={styles.articleMeta}>
               <View style={styles.readTimeContainer}>
                 <Feather name="clock" size={16} color="#7F8C8D" />
-                <Text style={styles.readTimeText}>{article.readTime}</Text>
+                <Text style={styles.readTimeText}>{article.read_time}</Text>
               </View>
               <View style={styles.categoryContainer}>
                 <Feather name="tag" size={16} color="#4CAF50" />
