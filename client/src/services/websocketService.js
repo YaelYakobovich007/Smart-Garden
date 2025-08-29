@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { AppState } from 'react-native';
 const BACKEND_URL = Constants.expoConfig.extra.BACKEND_URL;
 /**
  * WebSocket Service for Smart Garden Client
@@ -28,6 +29,20 @@ class WebSocketService {
     // Auto-reconnect settings
     this.autoReconnect = true;
     this.reconnectInterval = null;
+
+    // Heartbeat
+    this.heartbeatTimer = null;
+    this.heartbeatIntervalMs = 25000; // 25s keep-alive
+    this.lastPongTs = 0;
+
+    // App state listener to force reconnect on resume
+    this._appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        if (!this.isConnected()) {
+          this.connect();
+        }
+      }
+    });
   }
 
   /**
@@ -62,6 +77,9 @@ class WebSocketService {
       this.ws.send(JSON.stringify({ type: 'HELLO_USER' }));
       // Notify connection handlers immediately
       this.connectionHandlers.forEach(handler => handler(true));
+
+      // Start heartbeat
+      this.startHeartbeat();
     };
 
     /**
@@ -78,6 +96,12 @@ class WebSocketService {
           this.connected = true;
           this.connectionHandlers.forEach(handler => handler(true));
           console.log('User connection confirmed by server');
+        }
+
+        // Heartbeat response
+        if (data.type === 'PONG') {
+          this.lastPongTs = Date.now();
+          return;
         }
 
         // Call registered message handlers for specific message types
@@ -108,6 +132,9 @@ class WebSocketService {
       console.log('WebSocket disconnected, code:', event.code, 'reason:', event.reason);
       this.connected = false;
       this.connectionHandlers.forEach(handler => handler(false));
+
+      // Stop heartbeat
+      this.stopHeartbeat();
 
       // Only attempt to reconnect if not a clean close and we haven't reached max attempts
       if (event.code !== 1000 && !this.isReconnecting && this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -157,6 +184,9 @@ class WebSocketService {
 
     this.isReconnecting = false;
     this.reconnectAttempts = 0;
+
+    // Stop heartbeat
+    this.stopHeartbeat();
 
     if (this.ws) {
       this.ws.close(1000, 'User initiated disconnect');
@@ -256,6 +286,25 @@ class WebSocketService {
       data: {}
     };
     this.send(message);
+  }
+
+  // Heartbeat management
+  startHeartbeat() {
+    this.stopHeartbeat();
+    this.lastPongTs = Date.now();
+    this.heartbeatTimer = setInterval(() => {
+      if (!this.isConnected()) return;
+      try {
+        this.ws.send(JSON.stringify({ type: 'PING', ts: Date.now() }));
+      } catch {}
+    }, this.heartbeatIntervalMs);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
   }
 }
 

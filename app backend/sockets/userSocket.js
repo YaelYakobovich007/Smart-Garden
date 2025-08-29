@@ -25,6 +25,11 @@ function handleUserSocket(ws) {
       return sendError(ws, 'ERROR', 'Invalid JSON format');
     }
 
+    // Heartbeat
+    if (data.type === 'PING') {
+      return sendSuccess(ws, 'PONG', { ts: Date.now() });
+    }
+
     if (['REGISTER', 'LOGIN', 'LOGIN_GOOGLE'].includes(data.type)) {
       handleAuthMessage(data, ws);
     } else if (data.type === 'GET_WEATHER') {
