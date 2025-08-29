@@ -98,6 +98,8 @@ async function setupDatabase() {
       CREATE INDEX IF NOT EXISTS idx_plants_valve_id ON plants(valve_id)
     `);
 
+
+
     // User sessions table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_sessions (
