@@ -642,7 +642,7 @@ class SmartGardenPiClient:
             # Debug: Check if message_type matches expected values
             expected_types = ["WELCOME", "ADD_PLANT", "GET_PLANT_MOISTURE", "GET_ALL_MOISTURE", 
                             "IRRIGATE_PLANT", "STOP_IRRIGATION", "OPEN_VALVE", "CLOSE_VALVE", 
-                            "GET_VALVE_STATUS", "VALVE_STATUS", "UPDATE_PLANT", "UPDATE_PLANT_RESPONSE", "GARDEN_SYNC", "REMOVE_PLANT"]
+                            "GET_VALVE_STATUS", "VALVE_STATUS", "UPDATE_PLANT", "UPDATE_PLANT_RESPONSE", "GARDEN_SYNC", "REMOVE_PLANT", "RESTART_VALVE"]
             if message_type not in expected_types:
                 self.logger.warning(f"UNKNOWN MESSAGE TYPE: '{message_type}' (not in expected list)")
                 self.logger.warning(f"Expected types: {expected_types}")
@@ -678,6 +678,12 @@ class SmartGardenPiClient:
             
             elif message_type == "CLOSE_VALVE":
                 await self.handle_close_valve_request(message_data)
+            
+            elif message_type == "RESTART_VALVE":
+                await self.handle_restart_valve_request(message_data)
+            
+            elif message_type == "RESTART_VALVE":
+                await self.handle_restart_valve_request(message_data)
             
             elif message_type == "GET_VALVE_STATUS":
                 await self.handle_get_valve_status_request(message_data)

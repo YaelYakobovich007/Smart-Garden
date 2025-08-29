@@ -349,6 +349,33 @@ class PiCommunication {
     }
 
     /**
+     * Send RESTART_VALVE request to Pi (no waiting)
+     */
+    restartValve(plantId) {
+        const piSocket = getPiSocket();
+        if (!piSocket) {
+            console.log('Pi not connected - cannot restart valve');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        try {
+            const request = {
+                type: 'RESTART_VALVE',
+                data: {
+                    plant_id: plantId
+                }
+            };
+
+            console.log('Sending RESTART_VALVE to Pi:', JSON.stringify(request));
+            piSocket.send(JSON.stringify(request));
+            return { success: true };
+        } catch (error) {
+            console.error('Error sending RESTART_VALVE to Pi:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
      * Send UPDATE_PLANT request to Pi (no waiting)
      */
     updatePlant(plant) {

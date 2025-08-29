@@ -435,6 +435,21 @@ export const IrrigationProvider = ({ children }) => {
     handleStopWatering(plantId);
   };
 
+  // Restart valve for a plant (attempt to clear blocked state)
+  const restartValve = (plant) => {
+    if (!plant?.name || plant?.valve_blocked == null) {
+      Alert.alert('Restart Valve', 'Invalid plant selection');
+      return;
+    }
+    if (!websocketService.isConnected()) {
+      Alert.alert('Restart Valve', 'Not connected to server. Please try again.');
+      return;
+    }
+    // Mark pending to disable actions (store in watering state map)
+    updatePlantWateringState(plant.id, { pendingValveRequest: true });
+    websocketService.sendMessage({ type: 'RESTART_VALVE', plantName: plant.name });
+  };
+
   // WebSocket message handlers
   useEffect(() => {
     const handleIrrigationDecision = (data) => {
@@ -686,8 +701,11 @@ export const IrrigationProvider = ({ children }) => {
 
     const handleIrrigatePlantFail = (data) => {
       // Smart irrigation failed
-      // Suppress fail popup if a STOP_IRRIGATION just succeeded
-      // Try to resolve a target plant (pending request). After a stop, this may already be cleared.
+      // Prefer reason over message (server sendError uses 'reason')
+      const failureMessage = data?.message || data?.reason || 'Smart irrigation failed.';
+
+      // Try to identify a specific plant; if not, clear any active smart watering
+      let anyCleared = false;
       let targetPlantId = null;
       wateringPlantsRef.current.forEach((state, plantId) => {
         if (state.pendingIrrigationRequest) {
@@ -700,16 +718,39 @@ export const IrrigationProvider = ({ children }) => {
         return;
       }
 
-      if (targetPlantId) {
+      if (targetPlantId != null) {
         updatePlantWateringState(targetPlantId, {
           isSmartMode: false,
           isWateringActive: false,
           pendingIrrigationRequest: false,
+          wateringTimeLeft: 0,
+          timerStartTime: null,
+          timerEndTime: null,
+          timerInterval: null,
           currentPlant: null
+        });
+        anyCleared = true;
+      }
+
+      // Failsafe: ensure no overlays/icons remain if we couldn't map the plant
+      if (!anyCleared) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (state.isSmartMode || state.isWateringActive || state.pendingIrrigationRequest) {
+            updatePlantWateringState(plantId, {
+              isSmartMode: false,
+              isWateringActive: false,
+              pendingIrrigationRequest: false,
+              wateringTimeLeft: 0,
+              timerStartTime: null,
+              timerEndTime: null,
+              timerInterval: null,
+              currentPlant: null
+            });
+          }
         });
       }
 
-      Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation failed.');
+      Alert.alert('Smart Irrigation', failureMessage);
     };
 
     const handleIrrigatePlantSkipped = (data) => {
@@ -884,6 +925,41 @@ export const IrrigationProvider = ({ children }) => {
     websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
     websocketService.onMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
 
+    // Restart valve responses
+    const handleRestartValveSuccess = (msg) => {
+      const payload = msg?.data || msg;
+      const pid = payload?.plantId != null ? Number(payload.plantId) : null;
+      if (pid != null) {
+        updatePlantWateringState(pid, {
+          pendingValveRequest: false,
+          // ensure any overlay is not shown
+          isManualMode: false,
+          isSmartMode: false,
+          isWateringActive: false,
+          wateringTimeLeft: 0,
+          timerStartTime: null,
+          timerEndTime: null,
+          timerInterval: null,
+          currentPlant: null
+        });
+      }
+      Alert.alert('Restart Valve', payload?.message || 'Valve restarted successfully.');
+    };
+
+    const handleRestartValveFail = (msg) => {
+      const reason = msg?.reason || msg?.message || 'Failed to restart valve';
+      // Clear pending on any plant that was marked
+      wateringPlantsRef.current.forEach((state, plantId) => {
+        if (state.pendingValveRequest) {
+          updatePlantWateringState(plantId, { pendingValveRequest: false });
+        }
+      });
+      Alert.alert('Restart Valve', reason);
+    };
+
+    websocketService.onMessage('RESTART_VALVE_SUCCESS', handleRestartValveSuccess);
+    websocketService.onMessage('RESTART_VALVE_FAIL', handleRestartValveFail);
+
     return () => {
       websocketService.offMessage('OPEN_VALVE_SUCCESS', handleOpenValveSuccess);
       websocketService.offMessage('OPEN_VALVE_FAIL', handleOpenValveFail);
@@ -898,6 +974,8 @@ export const IrrigationProvider = ({ children }) => {
       websocketService.offMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
       websocketService.offMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
       websocketService.offMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
+      websocketService.offMessage('RESTART_VALVE_SUCCESS', handleRestartValveSuccess);
+      websocketService.offMessage('RESTART_VALVE_FAIL', handleRestartValveFail);
     };
   }, []); // Empty dependency array - no infinite loop
 
