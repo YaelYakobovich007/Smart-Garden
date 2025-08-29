@@ -223,6 +223,7 @@ class IrrigationAlgorithm:
                 name=f"updater_plant_{plant.plant_id}"
             )
             
+            water_limit_stop = False
             try:
                     while True:
                         # Check moisture and target
@@ -241,6 +242,7 @@ class IrrigationAlgorithm:
                         if total_water + expected_water > plant.valve.water_limit:
                             print(f"Water limit would be exceeded - stopping")
                             print(f"Current: {total_water:.2f}L, Next cycle: {expected_water:.2f}L, Limit: {plant.valve.water_limit:.2f}L")
+                            water_limit_stop = True
                             break
                             
                         # Simple watering cycle
@@ -295,17 +297,35 @@ class IrrigationAlgorithm:
                 final_moisture = current_moisture
                 raise
             
-            print("\n=== Irrigation completed successfully ===")
-            print(f"Total cycles: {cycle_count}")
-            print(f"Total water used: {total_water:.2f}L")
-            print(f"Moisture change: {initial_moisture:.1f}% → {final_moisture:.1f}%")
-            
-            return IrrigationResult.success(
-                plant_id=plant.plant_id,
-                moisture=initial_moisture,
-                final_moisture=final_moisture,
-                water_added_liters=total_water
-            )
+            # Branch based on water limit stop and target achievement
+            target_value = self._get_calibrated_target(plant)
+            if water_limit_stop and final_moisture < target_value:
+                # Fault: limit reached (pre-check) but target not met → block valve and error
+                print("\n=== Water limit stop without reaching target → blocking valve and reporting error ===")
+                plant.valve.block()
+                return IrrigationResult.error(
+                    plant_id=plant.plant_id,
+                    error_message="water_limit_reached_target_not_met",
+                    moisture=initial_moisture,
+                    final_moisture=final_moisture,
+                    water_added_liters=total_water
+                )
+            else:
+                # Success (either target reached, or limit stop with target met, or normal exit)
+                print("\n=== Irrigation completed successfully ===")
+                print(f"Total cycles: {cycle_count}")
+                print(f"Total water used: {total_water:.2f}L")
+                print(f"Moisture change: {initial_moisture:.1f}% → {final_moisture:.1f}%")
+                reason = None
+                if water_limit_stop and final_moisture >= target_value:
+                    reason = "limit_reached_target_met"
+                return IrrigationResult.success(
+                    plant_id=plant.plant_id,
+                    moisture=initial_moisture,
+                    final_moisture=final_moisture,
+                    water_added_liters=total_water,
+                    reason=reason
+                )
             
         except asyncio.CancelledError:
             print(f"\n=== Irrigation cancelled for plant {plant.plant_id} ===")
