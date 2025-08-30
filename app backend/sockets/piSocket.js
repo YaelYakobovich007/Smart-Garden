@@ -1104,7 +1104,7 @@ function handlePiSocket(ws) {
       const responseData = data.data || {};
 
       if (responseData.status === 'success') {
-        console.log(`[pi] All plants moisture: ${responseData.total_plants} plants received`);]
+        console.log(`[PI] Message received: ALL_MOISTURE_RESPONSE`);
         responseData.plants?.forEach(plant => {
           console.log(`[PI] Plant ${plant.plant_id}: moisture=${plant.moisture}%, temperature=${plant.temperature}°C`);
         });
