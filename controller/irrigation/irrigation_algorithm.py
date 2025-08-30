@@ -72,7 +72,7 @@ class IrrigationAlgorithm:
             except Exception as e:
                 print(f"Failed to send progress update to server: {e}")
 
-    async def _session_updater(self, plant: "Plant"):
+    async def _session_updater(self, plant: "Plant", session_id: str = None):
         """Single task to handle progress updates for entire session"""
         print(f"\n=== Starting session updater for plant {plant.plant_id} ===")
         try:
@@ -91,7 +91,8 @@ class IrrigationAlgorithm:
                         stage="update",
                         status="in_progress",
                         current_moisture=current_moisture,
-                        target_moisture=self._get_calibrated_target(plant)
+                        target_moisture=self._get_calibrated_target(plant),
+                        session_id=session_id
                     )
                     print(f"Updater: Sending progress update - moisture: {current_moisture:.1f}%")
                     await self.send_progress_update(progress)
@@ -102,7 +103,7 @@ class IrrigationAlgorithm:
             print(f"\n=== Session updater cancelled for plant {plant.plant_id} ===")
             raise
 
-    async def irrigate(self, plant: "Plant") -> IrrigationResult:
+    async def irrigate(self, plant: "Plant", session_id: str = None) -> IrrigationResult:
         """
         Main entry point for smart irrigation with proper cancellation handling.
         Performs initial checks and then runs irrigation with a session-level updater task.
@@ -139,6 +140,7 @@ class IrrigationAlgorithm:
                 progress = IrrigationProgress.initial_check(
                     plant.plant_id, current_moisture, calibrated_target
                 )
+                progress.session_id = session_id
                 await self.send_progress_update(progress)
                 
                 # Check for rain
@@ -203,7 +205,8 @@ class IrrigationAlgorithm:
                         "target_moisture": calibrated_target,
                         "moisture_gap": calibrated_target - current_moisture if current_moisture is not None else 0,
                         "will_irrigate": True,
-                        "reason": "moisture_below_target"
+                        "reason": "moisture_below_target",
+                        "session_id": session_id
                     })
                 
             except Exception as e:
@@ -219,7 +222,7 @@ class IrrigationAlgorithm:
             # Create single session-level updater task
             print("Starting session updater...")
             update_task = asyncio.create_task(
-                self._session_updater(plant),
+                self._session_updater(plant, session_id=session_id),
                 name=f"updater_plant_{plant.plant_id}"
             )
             
@@ -308,7 +311,8 @@ class IrrigationAlgorithm:
                     error_message="water_limit_reached_target_not_met",
                     moisture=initial_moisture,
                     final_moisture=final_moisture,
-                    water_added_liters=total_water
+                    water_added_liters=total_water,
+                    session_id=session_id
                 )
             else:
                 # Success (either target reached, or limit stop with target met, or normal exit)
@@ -324,7 +328,8 @@ class IrrigationAlgorithm:
                     moisture=initial_moisture,
                     final_moisture=final_moisture,
                     water_added_liters=total_water,
-                    reason=reason
+                    reason=reason,
+                    session_id=session_id
                 )
             
         except asyncio.CancelledError:
@@ -364,7 +369,8 @@ class IrrigationAlgorithm:
                 plant_id=plant.plant_id,
                 moisture=initial_moisture or 0,  # Handle early cancellation
                 final_moisture=final_moisture or 0,  # Handle early cancellation
-                water_added_liters=total_water
+                water_added_liters=total_water,
+                session_id=session_id
             )
 
     async def is_overwatered(self, plant: "Plant", moisture: float) -> bool:
@@ -491,7 +497,7 @@ class IrrigationAlgorithm:
         print(f"   - Break cycles: Fixed {self.break_duration_seconds}s duration (measure only at end)")
 
     async def _generate_irrigation_result(self, plant: "Plant", initial_moisture: float, 
-                                         total_water: float, cycle_count: int) -> IrrigationResult:
+                                         total_water: float, cycle_count: int, session_id: str) -> IrrigationResult:
         """Generate final irrigation result"""
         print(f"Taking final moisture measurements...")
         final_moisture = await self._get_averaged_moisture(plant, 5)
@@ -502,6 +508,7 @@ class IrrigationAlgorithm:
             plant.plant_id, initial_moisture, final_moisture,
             self._get_calibrated_target(plant), total_water, cycle_count, target_reached
         )
+        progress.session_id = session_id
         await self.send_progress_update(progress)
         
         # Log results
@@ -522,6 +529,7 @@ class IrrigationAlgorithm:
                 plant.plant_id, final_moisture, self._get_calibrated_target(plant), 
                 total_water, plant.valve.water_limit
             )
+            progress.session_id = session_id
             await self.send_progress_update(progress)
             plant.valve.block()
             return IrrigationResult.error(
@@ -529,7 +537,8 @@ class IrrigationAlgorithm:
                 error_message="Water limit reached but desired moisture not achieved.",
                 moisture=initial_moisture,
                 final_moisture=final_moisture,
-                water_added_liters=total_water
+                water_added_liters=total_water,
+                session_id=session_id
             )
 
         # Success
@@ -544,7 +553,8 @@ class IrrigationAlgorithm:
             plant_id=plant.plant_id,
             moisture=initial_moisture,
             final_moisture=final_moisture,
-            water_added_liters=total_water
+            water_added_liters=total_water,
+            session_id=session_id
         )
 
 

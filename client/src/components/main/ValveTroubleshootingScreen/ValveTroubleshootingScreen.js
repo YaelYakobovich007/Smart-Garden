@@ -80,24 +80,30 @@ const ValveTroubleshootingScreen = () => {
     
     try {
       if (websocketService.isConnected()) {
-        websocketService.sendMessage('UNBLOCK_VALVE', { plantName });
-        
-        Alert.alert(
-          'Valve Unblocked',
-          `The valve for "${plantName}" has been unblocked successfully! You can now use irrigation features.`,
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack()
-            }
-          ]
-        );
+        // Listen once for success/fail, then navigate back
+        const onSuccess = (msg) => {
+          websocketService.offMessage('RESTART_VALVE_SUCCESS', onSuccess);
+          websocketService.offMessage('RESTART_VALVE_FAIL', onFail);
+          setIsUnblocking(false);
+          navigation.goBack();
+        };
+        const onFail = (msg) => {
+          websocketService.offMessage('RESTART_VALVE_SUCCESS', onSuccess);
+          websocketService.offMessage('RESTART_VALVE_FAIL', onFail);
+          setIsUnblocking(false);
+          navigation.goBack();
+        };
+        websocketService.onMessage('RESTART_VALVE_SUCCESS', onSuccess);
+        websocketService.onMessage('RESTART_VALVE_FAIL', onFail);
+        // Use RESTART_VALVE flow to clear blocked state via Pi
+        websocketService.sendMessage({ type: 'RESTART_VALVE', plantName });
       } else {
         Alert.alert(
           'Connection Error',
           'Unable to connect to the system. Please check your connection and try again.',
           [{ text: 'OK' }]
         );
+        setIsUnblocking(false);
       }
     } catch (error) {
       Alert.alert(
@@ -105,7 +111,6 @@ const ValveTroubleshootingScreen = () => {
         'Failed to unblock valve. Please try again.',
         [{ text: 'OK' }]
       );
-    } finally {
       setIsUnblocking(false);
     }
   };
@@ -186,7 +191,7 @@ const ValveTroubleshootingScreen = () => {
         >
           <Feather name="arrow-left" size={24} color="#374151" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Valve Troubleshooting</Text>
+        <Text style={styles.headerTitle}>System Diagnostics</Text>
         <View style={styles.headerSpacer} />
       </View>
 

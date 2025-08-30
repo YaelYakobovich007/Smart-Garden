@@ -103,7 +103,7 @@ class PiCommunication {
     /**
      * Send IRRIGATE_PLANT request to Pi (no waiting)
      */
-    irrigatePlant(plantId) {
+    irrigatePlant(plantId, sessionId) {
         const piSocket = getPiSocket();
         if (!piSocket) {
             console.log('[PI] Not connected - cannot irrigate plant');
@@ -114,11 +114,15 @@ class PiCommunication {
             const request = {
                 type: 'IRRIGATE_PLANT',
                 data: {
-                    plant_id: plantId
+                    plant_id: plantId,
+                    session_id: sessionId
                 }
             };
 
-            console.log(`[PI] Sending IRRIGATE_PLANT: id=${plantId}`);
+            console.log('Sending IRRIGATE_PLANT to Pi:');
+            console.log(`   - Plant ID: ${plantId} (type: ${typeof plantId})`);
+            console.log(`   - session_id: ${sessionId}`);
+            console.log(`   - Full JSON: ${JSON.stringify(request)}`);
 
             piSocket.send(JSON.stringify(request));
             return { success: true };

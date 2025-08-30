@@ -308,6 +308,13 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                 style={styles.plantImage}
               />
 
+              {/* Tap Blocked Badge over image */}
+              {plant.valve_blocked && (
+                <View style={styles.blockedBadge}>
+                  <Feather name="alert-triangle" size={14} color="#F59E0B" />
+                  <Text style={styles.blockedBadgeText}>Tap Blocked</Text>
+                </View>
+              )}
               {/* Watering Indicator */}
               {isPlantBeingWatered(plant) && (
                 <View style={styles.wateringIndicator}>
@@ -396,15 +403,9 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
               <View style={styles.plantImageSpacer} />
               <Text style={styles.plantName}>{plant.name}</Text>
               <Text style={styles.plantType}>{plant.type}</Text>
-
-              {/* Valve Blocked Warning */}
-              {plant.valve_blocked && (
-                <View style={styles.valveBlockedWarning}>
-                  <Feather name="alert-triangle" size={14} color="#F59E0B" />
-                  <Text style={styles.valveBlockedText}>Tap Blocked</Text>
-                </View>
-              )}
-
+              
+              {/* Valve Blocked Warning moved to image badge */}
+              
 
             </View>
 

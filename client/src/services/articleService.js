@@ -15,7 +15,6 @@ const messageHandlers = new Map();
  */
 export const getAllArticles = (onSuccess, onError) => {
     const messageId = `get_all_articles_${Date.now()}`;
-    console.log('📤 ArticleService: getAllArticles called with messageId:', messageId);
 
     // Store the success handler
     messageHandlers.set(messageId, {
@@ -29,7 +28,6 @@ export const getAllArticles = (onSuccess, onError) => {
         type: 'GET_ALL_ARTICLES',
         messageId
     };
-    console.log('📤 ArticleService: Sending message:', message);
     websocketService.sendMessage(message);
 };
 
@@ -108,15 +106,14 @@ export const getArticleCategories = (onSuccess, onError) => {
  * @param {Object} message - The message from WebSocket
  */
 export const handleArticleMessage = (message) => {
-    console.log('📨 ArticleService: handleArticleMessage called with:', message);
+    // handle article message
 
     // The server sends response with type and articles directly
     // We need to find the handler by checking all handlers
     for (const [messageId, handler] of messageHandlers.entries()) {
         if (handler.type === 'GET_ALL_ARTICLES' && message.type === 'GET_ALL_ARTICLES_SUCCESS') {
-            console.log('📨 ArticleService: Found handler for GET_ALL_ARTICLES');
             if (handler.onSuccess) {
-                console.log('📨 ArticleService: Calling success handler with articles:', message.articles ? message.articles.length : 0);
+                // call success with articles
                 handler.onSuccess(message.articles);
             }
             messageHandlers.delete(messageId);
@@ -124,7 +121,7 @@ export const handleArticleMessage = (message) => {
         }
     }
 
-    console.log('📨 ArticleService: No handler found for message type:', message.type);
+    // no handler found for message type
 };
 
 /**

@@ -13,9 +13,10 @@ class SmartGardenPiClient:
     Handles only essential functionality: connection, add plant, and moisture requests.
     """
 
+#str = "wss://smart-garden-backend-1088783109508.europe-west1.run.app"
 
     # For production, use Cloud Run URL
-    def __init__(self, server_url: str = "wss://smart-garden-backend-1088783109508.europe-west1.run.app", 
+    def __init__(self, server_url: str = "ws://192.168.68.64:8080", 
                  family_code: str = None, engine: SmartGardenEngine = None):
         self.server_url = server_url
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
@@ -239,6 +240,7 @@ class SmartGardenPiClient:
         """Handle irrigation request from server."""
         try:
             plant_id = data.get("plant_id")
+            session_id = data.get("session_id")
             if not plant_id:
                 self.logger.error("No plant_id provided in irrigation request")
                 return
@@ -246,7 +248,7 @@ class SmartGardenPiClient:
             self.logger.info(f"Received IRRIGATE_PLANT request for plant {plant_id}")
             
             # Start irrigation as a background task
-            task = self.engine.start_irrigation(plant_id)
+            task = self.engine.start_irrigation(plant_id, session_id=session_id)
             if not task:
                 error_result = IrrigationResult.error(
                     plant_id=plant_id,
@@ -255,11 +257,11 @@ class SmartGardenPiClient:
                 await self.send_message("IRRIGATE_PLANT_RESPONSE", error_result.to_websocket_data())
                 return
             
-            # Store the task for tracking
-            self.active_irrigations[plant_id] = task
+            # Store the task and session for tracking
+            self.active_irrigations[plant_id] = {"task": task, "session_id": session_id}
             
             # Send immediate acceptance to free up the handler
-            await self.send_message("IRRIGATE_PLANT_ACCEPTED", {"plant_id": plant_id})
+            await self.send_message("IRRIGATE_PLANT_ACCEPTED", {"plant_id": plant_id, "session_id": session_id})
             
             # Set up callback for when irrigation completes
             task.add_done_callback(
@@ -280,6 +282,13 @@ class SmartGardenPiClient:
         """Send the result of a completed irrigation task to the server."""
         try:
             result = task.result()
+            # Attach session_id if we tracked it
+            try:
+                tracked = self.active_irrigations.get(plant_id)
+                if tracked and getattr(result, 'session_id', None) is None:
+                    result.session_id = tracked.get('session_id')
+            except Exception:
+                pass
             await self.send_message("IRRIGATE_PLANT_RESPONSE", result.to_websocket_data())
             self.logger.info(f"Sent irrigation result for plant {plant_id}: {result.status}")
         except Exception as e:

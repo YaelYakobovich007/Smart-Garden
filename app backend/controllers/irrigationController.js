@@ -67,20 +67,45 @@ async function handleIrrigatePlant(data, ws, email) {
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'IRRIGATE_FAIL', 'Plant not found in your garden');
 
-  // Send irrigation request to Pi controller (let Pi decide if irrigation is needed)
-  const piResult = piCommunication.irrigatePlant(plant.plant_id);
+  // Generate sessionId for this irrigation run
+  const { v4: uuidv4 } = require('uuid');
+  const sessionId = uuidv4();
+
+  // Optimistically persist sessionId and mode start
+  try {
+    const { updateIrrigationState } = require('../models/plantModel');
+    await updateIrrigationState(plant.plant_id, { mode: 'smart', startAt: new Date(), endAt: null, sessionId });
+  } catch (e) {
+    console.warn('Failed to persist irrigation session start:', e.message);
+  }
+
+  // Send irrigation request to Pi controller with session id
+  const piResult = piCommunication.irrigatePlant(plant.plant_id, sessionId);
 
   if (piResult.success) {
-    // Pi is connected - add to pending list and wait for irrigation result
+    // Pi is connected - add to pending list by both plant and session
+    const { addPendingIrrigation, addPendingSession } = require('../services/pendingIrrigationTracker');
     addPendingIrrigation(plant.plant_id, ws, email, {
       plant_id: plant.plant_id,
       plant_name: plant.name,
       ideal_moisture: parseFloat(plant.ideal_moisture)
     });
+    addPendingSession(sessionId, plant.plant_id, ws, email, {
+      plant_id: plant.plant_id,
+      plant_name: plant.name,
+      ideal_moisture: parseFloat(plant.ideal_moisture)
+    });
 
-    console.log(`[IRRIGATION] Request sent: plant=${plant.plant_id} name=${plant.name}`);
-    console.log(`[IRRIGATION] Waiting for Pi to start irrigation`);
-    // No immediate response - client will get IRRIGATION_STARTED when Pi actually starts irrigating
+    console.log(`Irrigation request for plant ${plant.plant_id} (${plant.name}) sent to Pi with sessionId ${sessionId}`);
+    addPendingSession(sessionId, plant.plant_id, ws, email, {
+      plant_id: plant.plant_id,
+      plant_name: plant.name,
+      ideal_moisture: parseFloat(plant.ideal_moisture)
+    });
+
+    console.log(`Irrigation request for plant ${plant.plant_id} (${plant.name}) sent to Pi with sessionId ${sessionId}`);
+    // Immediately acknowledge to client with sessionId so UI can correlate
+    sendSuccess(ws, 'IRRIGATION_REQUEST_ACCEPTED', { plantId: plant.plant_id, plantName: plant.name, sessionId });
   } else {
     // Pi not connected - return error 
     return sendError(ws, 'IRRIGATE_FAIL',

@@ -278,9 +278,7 @@ const MainScreen = () => {
    * @param {Object} data - Server moisture response data
    */
   const handleAllPlantsMoistureResponse = (data) => {
-    console.log('📊 MainScreen: Received ALL_PLANTS_MOISTURE_RESPONSE:', data);
     if (data.plants && Array.isArray(data.plants)) {
-      console.log(`📊 MainScreen: Processing ${data.plants.length} plants with sensor data`);
       setPlants(prevPlants =>
         prevPlants.map(plant => {
           const sensorData = data.plants.find(p => p.plant_id === plant.id);
@@ -288,18 +286,15 @@ const MainScreen = () => {
             const updatedPlant = { ...plant };
             if (sensorData.moisture !== undefined) {
               updatedPlant.moisture = sensorData.moisture;
-              console.log(`💧 Plant ${plant.name}: moisture updated to ${sensorData.moisture}%`);
             }
             if (sensorData.temperature !== undefined) {
               updatedPlant.temperature = sensorData.temperature;
-              console.log(`🌡️ Plant ${plant.name}: temperature updated to ${sensorData.temperature}°C`);
             }
             return updatedPlant;
           }
           return plant;
         })
       );
-      console.log('✅ MainScreen: Updated moisture and temperature for all plants');
     } else {
       console.log('MainScreen: No plants data in response or invalid format');
     }
@@ -581,7 +576,6 @@ const MainScreen = () => {
      * @param {Object} data - Weather data from server
      */
     function handleWeather(data) {
-      console.log('Weather data received:', data);
       setWeather(data);
       setWeatherError(false);
       setWeatherLoading(false);

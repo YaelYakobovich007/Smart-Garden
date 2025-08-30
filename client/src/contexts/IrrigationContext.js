@@ -85,7 +85,8 @@ export const IrrigationProvider = ({ children }) => {
         selectedTime: 0,
         timerStartTime: null,
         timerEndTime: null,
-        timerInterval: null
+        timerInterval: null,
+        irrigationSessionId: null
       };
       const newState = { ...currentState, ...updates };
       newMap.set(plantId, newState);
@@ -123,6 +124,7 @@ export const IrrigationProvider = ({ children }) => {
       const mode = (p?.irrigation_mode || '').toLowerCase();
       const startAt = p?.irrigation_start_at ? new Date(p.irrigation_start_at).getTime() : null;
       const endAt = p?.irrigation_end_at ? new Date(p.irrigation_end_at).getTime() : null;
+      const sessionId = p?.irrigation_session_id || null;
       if (mode === 'manual' && endAt && Date.now() < endAt) {
         const remainingSeconds = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
         updatePlantWateringState(plantId, {
@@ -134,6 +136,7 @@ export const IrrigationProvider = ({ children }) => {
           timerEndTime: endAt,
           pendingValveRequest: false,
           currentPlant: p?.name || null,
+          irrigationSessionId: null
         });
       } else if (mode === 'smart') {
         updatePlantWateringState(plantId, {
@@ -142,6 +145,7 @@ export const IrrigationProvider = ({ children }) => {
           isWateringActive: true,
           pendingIrrigationRequest: false,
           currentPlant: p?.name || null,
+          irrigationSessionId: sessionId || null
         });
       }
     });
@@ -452,13 +456,38 @@ export const IrrigationProvider = ({ children }) => {
 
   // WebSocket message handlers
   useEffect(() => {
+    // Helper: resolve plant id prioritizing sessionId
+    const resolveTargetPlantId = (sessionId, plantIdFromPayload, plantName) => {
+      if (sessionId) {
+        let found = null;
+        wateringPlantsRef.current.forEach((state, pid) => {
+          if (found == null && state.irrigationSessionId && state.irrigationSessionId === sessionId) {
+            found = pid;
+          }
+        });
+        if (found != null) return found;
+      }
+      if (plantIdFromPayload != null) return Number(plantIdFromPayload);
+      if (plantName) {
+        let foundByName = null;
+        wateringPlantsRef.current.forEach((state, pid) => {
+          if (foundByName == null && state.currentPlant === plantName) {
+            foundByName = pid;
+          }
+        });
+        if (foundByName != null) return foundByName;
+      }
+      return null;
+    };
+
     const handleIrrigationDecision = (data) => {
       // Clear the "checking" loader when a decision is made
       const payload = data?.data || data;
-      const plantIdFromServer = payload?.plant_id;
+      const plantIdFromServer = payload?.plant_id != null ? Number(payload?.plant_id) : null;
       const willIrrigate = payload?.will_irrigate;
+      const sessionId = payload?.sessionId || payload?.session_id || null;
 
-      let targetPlantId = plantIdFromServer;
+      let targetPlantId = resolveTargetPlantId(sessionId, plantIdFromServer, null);
 
       // Fallback: if plant id is missing, pick the one currently pending
       if (targetPlantId == null) {
@@ -481,7 +510,8 @@ export const IrrigationProvider = ({ children }) => {
             timerStartTime: null,
             timerEndTime: null,
             timerInterval: null,
-            currentPlant: null
+            currentPlant: null,
+            irrigationSessionId: null
           });
 
           // Show a clear user message and mark as notified to avoid duplicate alert on IRRIGATE_SKIPPED
@@ -490,7 +520,8 @@ export const IrrigationProvider = ({ children }) => {
         } else {
           // Will irrigate → stop showing the checking loader; wait for IRRIGATION_STARTED
           updatePlantWateringState(targetPlantId, {
-            pendingIrrigationRequest: false
+            pendingIrrigationRequest: false,
+            irrigationSessionId: sessionId || wateringPlantsRef.current.get(targetPlantId)?.irrigationSessionId || null
           });
         }
       }
@@ -590,19 +621,18 @@ export const IrrigationProvider = ({ children }) => {
       // Smart irrigation actually started (backend now only sends this when irrigation really begins)
       console.log('🚰 IrrigationContext: IRRIGATION_STARTED received (irrigation actually began):', data);
       
-      // Find the plant by name in the watering plants
-      let targetPlantId = null;
-      wateringPlantsRef.current.forEach((state, plantId) => {
-        if (state.pendingIrrigationRequest || state.isSmartMode) {
-          targetPlantId = plantId;
-        }
-      });
+      const payload = data?.data || data;
+      const sessionId = payload?.sessionId || payload?.session_id || null;
+      const plantName = payload?.plantName;
+      const pidFromPayload = payload?.plantId != null ? Number(payload.plantId) : null;
+      let targetPlantId = resolveTargetPlantId(sessionId, pidFromPayload, plantName);
       
       if (targetPlantId) {
         console.log('🚰 IrrigationContext: Setting isWateringActive: true for plant ID:', targetPlantId);
         // First clear the pending request to hide the loader
         updatePlantWateringState(targetPlantId, {
-          pendingIrrigationRequest: false
+          pendingIrrigationRequest: false,
+          irrigationSessionId: sessionId || wateringPlantsRef.current.get(targetPlantId)?.irrigationSessionId || null
         });
         
         // Then in the next tick, update the irrigation state
@@ -610,7 +640,7 @@ export const IrrigationProvider = ({ children }) => {
           updatePlantWateringState(targetPlantId, {
             isSmartMode: true,               // Keep smart mode
             isWateringActive: true,          // Show irrigation overlay
-            currentPlant: data.plantName     // Store plant name string
+            currentPlant: plantName || data.plantName     // Store plant name string
           });
         }, 0);
         
@@ -623,11 +653,12 @@ export const IrrigationProvider = ({ children }) => {
     const handleIrrigatePlantSuccess = (data) => {
       // Smart irrigation completed successfully
       console.log('🌿 Irrigation success:', data);
+      const sessionId = data?.sessionId || data?.session_id || data?.result?.session_id;
       const plantIdFromPayload = data?.result?.plant_id ?? data?.plantId ?? data?.plant_id;
       const plantName = data?.plantName;
 
       // Try multiple ways to find the target plant
-      let targetPlantId = plantIdFromPayload ?? null;
+      let targetPlantId = resolveTargetPlantId(sessionId, plantIdFromPayload ?? null, plantName);
 
       // 1. Try by plant ID from payload
       if (targetPlantId == null) {
@@ -673,7 +704,8 @@ export const IrrigationProvider = ({ children }) => {
           timerStartTime: null,
           timerEndTime: null,
           timerInterval: null,
-          currentPlant: null
+          currentPlant: null,
+          irrigationSessionId: null
         });
       } else {
         // Failsafe: clear any plants that might be stuck
@@ -690,7 +722,8 @@ export const IrrigationProvider = ({ children }) => {
               timerStartTime: null,
               timerEndTime: null,
               timerInterval: null,
-              currentPlant: null
+              currentPlant: null,
+              irrigationSessionId: null
             });
           }
         });
@@ -703,15 +736,18 @@ export const IrrigationProvider = ({ children }) => {
       // Smart irrigation failed
       // Prefer reason over message (server sendError uses 'reason')
       const failureMessage = data?.message || data?.reason || 'Smart irrigation failed.';
+      const sessionId = data?.sessionId || data?.session_id || data?.result?.session_id;
 
       // Try to identify a specific plant; if not, clear any active smart watering
       let anyCleared = false;
-      let targetPlantId = null;
-      wateringPlantsRef.current.forEach((state, plantId) => {
-        if (state.pendingIrrigationRequest) {
-          targetPlantId = plantId;
-        }
-      });
+      let targetPlantId = resolveTargetPlantId(sessionId, null, null);
+      if (targetPlantId == null) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (targetPlantId == null && state.pendingIrrigationRequest) {
+            targetPlantId = plantId;
+          }
+        });
+      }
 
       if (wasRecentlyStopped(targetPlantId)) {
         console.log('🛑 Suppressing IRRIGATE_FAIL after recent STOP_IRRIGATION_SUCCESS:', data);
@@ -727,7 +763,8 @@ export const IrrigationProvider = ({ children }) => {
           timerStartTime: null,
           timerEndTime: null,
           timerInterval: null,
-          currentPlant: null
+          currentPlant: null,
+          irrigationSessionId: null
         });
         anyCleared = true;
       }
@@ -744,7 +781,8 @@ export const IrrigationProvider = ({ children }) => {
               timerStartTime: null,
               timerEndTime: null,
               timerInterval: null,
-              currentPlant: null
+              currentPlant: null,
+              irrigationSessionId: null
             });
           }
         });
@@ -780,14 +818,17 @@ export const IrrigationProvider = ({ children }) => {
     const handleIrrigatePlantSkipped = (data) => {
       // Smart irrigation was skipped (not necessary)
       console.log('🔄 IrrigationContext: Irrigation skipped:', data);
+      const sessionId = data?.sessionId || data?.session_id;
       
       // Find the plant by name in the watering plants
-      let targetPlantId = null;
-      wateringPlantsRef.current.forEach((state, plantId) => {
-        if (state.pendingIrrigationRequest || state.isSmartMode) {
-          targetPlantId = plantId;
-        }
-      });
+      let targetPlantId = resolveTargetPlantId(sessionId, null, null);
+      if (targetPlantId == null) {
+        wateringPlantsRef.current.forEach((state, plantId) => {
+          if (targetPlantId == null && (state.pendingIrrigationRequest || state.isSmartMode)) {
+            targetPlantId = plantId;
+          }
+        });
+      }
       
       if (targetPlantId) {
         console.log('🔄 IrrigationContext: Clearing irrigation state for skipped irrigation, plant ID:', targetPlantId);
@@ -802,7 +843,8 @@ export const IrrigationProvider = ({ children }) => {
           timerStartTime: null,
           timerEndTime: null,
           timerInterval: null,
-          currentPlant: null
+          currentPlant: null,
+          irrigationSessionId: null
         });
         
         console.log('🔄 IrrigationContext: State cleared - overlay should disappear');
@@ -939,6 +981,17 @@ export const IrrigationProvider = ({ children }) => {
     websocketService.onMessage('OPEN_VALVE_FAIL', handleOpenValveFail);
     websocketService.onMessage('CLOSE_VALVE_SUCCESS', handleCloseValveSuccess);
     websocketService.onMessage('CLOSE_VALVE_FAIL', handleCloseValveFail);
+    // Store session id on acceptance so we can correlate later events
+    const handleIrrigationAccepted = (msg) => {
+      const payload = msg?.data || msg;
+      const pid = payload?.plantId != null ? Number(payload.plantId) : null;
+      const sessionId = payload?.sessionId;
+      if (pid != null && sessionId) {
+        updatePlantWateringState(pid, { irrigationSessionId: sessionId });
+      }
+    };
+
+    websocketService.onMessage('IRRIGATION_REQUEST_ACCEPTED', handleIrrigationAccepted);
     websocketService.onMessage('IRRIGATION_STARTED', handleIrrigationStarted);
     websocketService.onMessage('IRRIGATE_SUCCESS', handleIrrigatePlantSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleIrrigatePlantFail);
@@ -990,6 +1043,7 @@ export const IrrigationProvider = ({ children }) => {
       websocketService.offMessage('OPEN_VALVE_FAIL', handleOpenValveFail);
       websocketService.offMessage('CLOSE_VALVE_SUCCESS', handleCloseValveSuccess);
       websocketService.offMessage('CLOSE_VALVE_FAIL', handleCloseValveFail);
+      websocketService.offMessage('IRRIGATION_REQUEST_ACCEPTED', handleIrrigationAccepted);
       websocketService.offMessage('IRRIGATION_STARTED', handleIrrigationStarted);
       websocketService.offMessage('IRRIGATE_SUCCESS', handleIrrigatePlantSuccess);
       websocketService.offMessage('IRRIGATE_FAIL', handleIrrigatePlantFail);
