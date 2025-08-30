@@ -490,8 +490,21 @@ const MainScreen = () => {
         rehydrateIrrigationStopped(pid);
       } catch {}
     };
+    const handleGardenValveUnblocked = (message) => {
+      try {
+        const payload = message?.data || message;
+        const pid = payload?.plantId != null ? Number(payload.plantId) : null;
+        if (pid != null) {
+          setPlants(prev => prev.map(p => (p.id === pid ? { ...p, valve_blocked: false } : p)));
+        } else {
+          // Fallback: refresh from server
+          websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+        }
+      } catch {}
+    };
     websocketService.onMessage('GARDEN_IRRIGATION_STARTED', handleGardenIrrigationStarted);
     websocketService.onMessage('GARDEN_IRRIGATION_STOPPED', handleGardenIrrigationStopped);
+    websocketService.onMessage('GARDEN_VALVE_UNBLOCKED', handleGardenValveUnblocked);
 
 
     /**
@@ -552,6 +565,7 @@ const MainScreen = () => {
       websocketService.offMessage('VALVE_BLOCKED', handleValveBlocked);
       websocketService.offMessage('GARDEN_IRRIGATION_STARTED', handleGardenIrrigationStarted);
       websocketService.offMessage('GARDEN_IRRIGATION_STOPPED', handleGardenIrrigationStopped);
+      websocketService.offMessage('GARDEN_VALVE_UNBLOCKED', handleGardenValveUnblocked);
       websocketService.offConnectionChange(handleConnectionChange);
     };
   }, []);

@@ -976,6 +976,7 @@ function handlePiSocket(ws) {
         if (pendingInfo?.ws) {
           sendSuccess(pendingInfo.ws, 'RESTART_VALVE_SUCCESS', {
             plantId,
+            plantName: pendingInfo?.plantData?.plant_name,
             message: `Valve for "${pendingInfo?.plantData?.plant_name || plantId}" restarted successfully.`
           });
         }
@@ -986,7 +987,7 @@ function handlePiSocket(ws) {
           const plant = await getPlantById(plantId);
           if (plant?.garden_id) {
             const { broadcastToGarden } = require('../services/gardenBroadcaster');
-            await broadcastToGarden(plant.garden_id, 'GARDEN_VALVE_UNBLOCKED', { plantId }, pendingInfo?.email);
+            await broadcastToGarden(plant.garden_id, 'GARDEN_VALVE_UNBLOCKED', { plantId });
           }
         } catch {}
 
