@@ -78,14 +78,14 @@ class SmartGardenEngine:
         
         # Assign valve and sensor; if specific IDs are provided (from server sync), use them
         if valve_id is not None:
-            self.valves_manager.assign_specific_valve(plant_id, int(valve_id))
+            self.valves_manager.assign_specific_valve(int(plant_id), int(valve_id))
         else:
-            valve_id = self.valves_manager.assign_valve(plant_id)
+            valve_id = self.valves_manager.assign_valve(int(plant_id))
 
         if sensor_port is not None:
-            self.sensor_manager.assign_specific_sensor(str(plant_id), sensor_port)
+            self.sensor_manager.assign_specific_sensor(str(int(plant_id)), str(sensor_port))
         else:
-            sensor_port = self.sensor_manager.assign_sensor(str(plant_id))
+            sensor_port = self.sensor_manager.assign_sensor(str(int(plant_id)))
         
         # Create valve and sensor objects
         valve = Valve(

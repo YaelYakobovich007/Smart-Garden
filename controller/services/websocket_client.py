@@ -600,13 +600,16 @@ class SmartGardenPiClient:
             # Add each plant to the engine
             for plant_data in plants_data:
                 try:
-                    plant_id = plant_data.get("plant_id")
-                    desired_moisture = plant_data.get("desiredMoisture", 60.0)
-                    water_limit = plant_data.get("waterLimit", 1.0)
+                    # Coerce incoming types defensively
+                    raw_plant_id = plant_data.get("plant_id")
+                    plant_id = int(raw_plant_id) if raw_plant_id is not None else None
+                    desired_moisture = float(plant_data.get("desiredMoisture", 60.0))
+                    water_limit = float(plant_data.get("waterLimit", 1.0))
                     dripper_type = plant_data.get("dripperType", "2L/h")
                     schedule_data = plant_data.get("scheduleData")
                     sensor_port = plant_data.get("sensor_port")
-                    valve_id = plant_data.get("valve_id")
+                    raw_valve_id = plant_data.get("valve_id")
+                    valve_id = int(raw_valve_id) if raw_valve_id is not None else None
                     
                     self.logger.info(f"Adding plant {plant_id} to engine:")
                     self.logger.info(f"  - Desired Moisture: {desired_moisture}%")
