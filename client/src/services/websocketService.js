@@ -8,7 +8,8 @@ const BACKEND_URL = Constants.expoConfig.extra.BACKEND_URL;
 // Configuration for WebSocket connection
 
 const CONFIG = {
-  SERVER_URL: 'wss://smart-garden-backend-1088783109508.europe-west1.run.app',
+  //SERVER_URL: 'wss://smart-garden-backend-1088783109508.europe-west1.run.app',
+  SERVER_URL: 'wws://172.25.224.1:8080',
 };
 
 class WebSocketService {
