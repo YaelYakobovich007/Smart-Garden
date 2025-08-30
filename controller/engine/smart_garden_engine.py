@@ -52,9 +52,7 @@ class SmartGardenEngine:
             pipe_diameter: float = 1.0,
             flow_rate: float = 0.05,
             water_limit: float = 1.0,
-            dripper_type: str = "2L/h",
-            sensor_port: Optional[str] = None,
-            valve_id: Optional[int] = None
+            dripper_type: str = "2L/h"
     ) -> None:
         """
         Add a new plant to the system.
@@ -76,16 +74,9 @@ class SmartGardenEngine:
         if not self.sensor_manager.available_sensors:
             raise RuntimeError("No available sensors")
         
-        # Assign valve and sensor; if specific IDs are provided (from server sync), use them
-        if valve_id is not None:
-            self.valves_manager.assign_specific_valve(int(plant_id), int(valve_id))
-        else:
-            valve_id = self.valves_manager.assign_valve(int(plant_id))
-
-        if sensor_port is not None:
-            self.sensor_manager.assign_specific_sensor(str(int(plant_id)), str(sensor_port))
-        else:
-            sensor_port = self.sensor_manager.assign_sensor(str(int(plant_id)))
+        # Assign valve and sensor using proper assignment methods
+        valve_id = self.valves_manager.assign_valve(plant_id)
+        sensor_port = self.sensor_manager.assign_sensor(str(plant_id))
         
         # Create valve and sensor objects
         valve = Valve(
@@ -312,7 +303,7 @@ class SmartGardenEngine:
             print(f"remove_plant: Plant {plant_id} not found")
             return False
 
-        plant = self.plants[plant_id]
+            plant = self.plants[plant_id]
 
         # 1) Cancel running irrigation task (best-effort; non-blocking in sync context)
         try:
@@ -340,12 +331,12 @@ class SmartGardenEngine:
             print(f"remove_plant: Error while forcing valve close for plant {plant_id}: {e}")
 
         # 3) Release hardware from managers
-        try:
-            self.valves_manager.release_valve(plant_id)
+            try:
+                self.valves_manager.release_valve(plant_id)
         except Exception as e:
             print(f"remove_plant: Warning releasing valve for plant {plant_id}: {e}")
         try:
-            self.sensor_manager.release_sensor(str(plant_id))
+                self.sensor_manager.release_sensor(str(plant_id))
         except Exception as e:
             print(f"remove_plant: Warning releasing sensor for plant {plant_id}: {e}")
 
@@ -642,20 +633,20 @@ class SmartGardenEngine:
                 close_task = asyncio.create_task(self._close_valve_after_duration(plant_id, duration_seconds))
                 self.valve_tasks[plant_id] = close_task
                 
-                print(f"✅ DEBUG - Background task created for plant {plant_id}")
+                print(f" DEBUG - Background task created for plant {plant_id}")
                 return True
                 
             except Exception as e:
-                print(f"❌ ERROR - Error opening valve for plant {plant_id}: {e}")
+                print(f" ERROR - Error opening valve for plant {plant_id}: {e}")
                 # Clean up state in case of error
                 if plant_id in self.valve_states:
                     del self.valve_states[plant_id]
                 # Ensure valve is closed in case of error
                 try:
                     plant.valve.request_close()
-                    print(f"✅ DEBUG - Valve closed due to error")
+                    print(f" DEBUG - Valve closed due to error")
                 except Exception as close_error:
-                    print(f"❌ ERROR - Failed to close valve after error: {close_error}")
+                    print(f" ERROR - Failed to close valve after error: {close_error}")
                 return False
 
     async def close_valve(self, plant_id: int) -> bool:
@@ -668,11 +659,11 @@ class SmartGardenEngine:
         Returns:
             bool: True if valve was successfully closed, False otherwise
         """
-        print(f"🔍 DEBUG - SmartGardenEngine.close_valve() called:")
+        print(f" DEBUG - SmartGardenEngine.close_valve() called:")
         print(f"   - plant_id: {plant_id}")
         
         if plant_id not in self.plants:
-            print(f"❌ ERROR - Plant {plant_id} not found")
+            print(f" ERROR - Plant {plant_id} not found")
             return False
         
         plant = self.plants[plant_id]
@@ -681,16 +672,16 @@ class SmartGardenEngine:
             try:
                 # Cancel any running background task
                 if plant_id in self.valve_tasks and not self.valve_tasks[plant_id].done():
-                    print(f"🔍 DEBUG - Cancelling background task for plant {plant_id}")
+                    print(f" DEBUG - Cancelling background task for plant {plant_id}")
                     self.valve_tasks[plant_id].cancel()
                     try:
                         await self.valve_tasks[plant_id]
                     except asyncio.CancelledError:
-                        print(f"✅ DEBUG - Background task cancelled for plant {plant_id}")
+                        print(f" DEBUG - Background task cancelled for plant {plant_id}")
                 
                 # Close the valve
                 plant.valve.request_close()
-                print(f"✅ DEBUG - Valve closed successfully for plant {plant_id}")
+                print(f" DEBUG - Valve closed successfully for plant {plant_id}")
                 
                 # Update valve state
                 if plant_id in self.valve_states:
@@ -700,30 +691,30 @@ class SmartGardenEngine:
                 return True
                 
             except Exception as e:
-                print(f"❌ ERROR - Error closing valve for plant {plant_id}: {e}")
+                print(f"ERROR - Error closing valve for plant {plant_id}: {e}")
                 return False
 
     async def restart_valve(self, plant_id: int) -> bool:
         """Attempt a brief open/close reset on the valve. Unblocks on success, blocks on failure."""
-        print(f"🔧 DEBUG - SmartGardenEngine.restart_valve() called: plant_id={plant_id}")
+        print(f"DEBUG - SmartGardenEngine.restart_valve() called: plant_id={plant_id}")
         if plant_id not in self.plants:
-            print(f"❌ ERROR - Plant {plant_id} not found")
+            print(f"ERROR - Plant {plant_id} not found")
             return False
 
         # Disallow restart if irrigation is active
         if plant_id in self.irrigation_tasks and not self.irrigation_tasks[plant_id].done():
-            print(f"❌ ERROR - Cannot restart valve while irrigation is active for plant {plant_id}")
+            print(f"ERROR - Cannot restart valve while irrigation is active for plant {plant_id}")
             return False
 
         plant = self.plants[plant_id]
         async with self._lock:
             try:
                 # Ensure closed
-                print("🔒 Ensuring valve closed before restart...")
+                print("Ensuring valve closed before restart...")
                 plant.valve.request_close()
 
                 # Pulse open briefly then close
-                print("🔄 Brief open/close pulse...")
+                print("Brief open/close pulse...")
                 plant.valve.request_open()
                 await asyncio.sleep(0.6)
                 plant.valve.request_close()
@@ -735,10 +726,10 @@ class SmartGardenEngine:
                     # Fallback if valve object uses attribute
                     if hasattr(plant.valve, 'is_blocked'):
                         plant.valve.is_blocked = False
-                print("✅ Valve restart succeeded")
+                print(" Valve restart succeeded")
                 return True
             except Exception as e:
-                print(f"❌ Valve restart failed for plant {plant_id}: {e}")
+                print(f"Valve restart failed for plant {plant_id}: {e}")
                 # Keep (or set) blocked state and ensure closed
                 try:
                     plant.valve.request_close()
@@ -759,7 +750,7 @@ class SmartGardenEngine:
             duration_seconds (int): Duration in seconds to wait before closing
         """
         try:
-            print(f"🔍 DEBUG - Background task started for plant {plant_id}")
+            print(f"DEBUG - Background task started for plant {plant_id}")
             print(f"   - Waiting {duration_seconds} seconds before closing valve")
             print(f"   - Start time: {datetime.now().strftime('%H:%M:%S')}")
             
@@ -775,7 +766,7 @@ class SmartGardenEngine:
             task_end_time = time.time()
             actual_duration = task_end_time - task_start_time
             
-            print(f"🔍 DEBUG - Background task timer completed for plant {plant_id}")
+            print(f" DEBUG - Background task timer completed for plant {plant_id}")
             print(f"   - Current time: {datetime.now().strftime('%H:%M:%S')}")
             print(f"   - Expected duration: {duration_seconds} seconds")
             print(f"   - Actual duration: {actual_duration:.2f} seconds")
@@ -783,7 +774,7 @@ class SmartGardenEngine:
             
             # Validate timing accuracy (allow 2 second tolerance for system load)
             if abs(actual_duration - duration_seconds) > 2.0:
-                print(f"⚠️  WARNING - Timing discrepancy detected!")
+                print(f"  WARNING - Timing discrepancy detected!")
                 print(f"   - Expected: {duration_seconds} seconds")
                 print(f"   - Actual: {actual_duration:.2f} seconds")
                 print(f"   - Difference: {abs(actual_duration - duration_seconds):.2f} seconds")
@@ -791,11 +782,11 @@ class SmartGardenEngine:
             
             # Check if valve is still open (not manually closed)
             if plant_id in self.valve_states and self.valve_states[plant_id]['is_open']:
-                print(f"🔍 DEBUG - Auto-closing valve for plant {plant_id} after {duration_seconds} seconds")
+                print(f" DEBUG - Auto-closing valve for plant {plant_id} after {duration_seconds} seconds")
                 
                 plant = self.plants[plant_id]
                 plant.valve.request_close()
-                print(f"✅ DEBUG - Valve auto-closed for plant {plant_id}")
+                print(f" DEBUG - Valve auto-closed for plant {plant_id}")
                 
                 # Update valve state with actual timing information
                 self.valve_states[plant_id]['is_open'] = False
@@ -803,21 +794,21 @@ class SmartGardenEngine:
                 self.valve_states[plant_id]['actual_duration'] = actual_duration
                 self.valve_states[plant_id]['timing_accuracy'] = abs(actual_duration - duration_seconds)
             else:
-                print(f"🔍 DEBUG - Valve for plant {plant_id} was already closed manually")
+                print(f" DEBUG - Valve for plant {plant_id} was already closed manually")
                 
         except asyncio.CancelledError:
-            print(f"🔍 DEBUG - Background task cancelled for plant {plant_id}")
+            print(f" DEBUG - Background task cancelled for plant {plant_id}")
             raise
         except Exception as e:
-            print(f"❌ ERROR - Error in background task for plant {plant_id}: {e}")
+            print(f" ERROR - Error in background task for plant {plant_id}: {e}")
             # Try to close valve even if there's an error
             try:
                 if plant_id in self.plants:
                     plant = self.plants[plant_id]
                     plant.valve.request_close()
-                    print(f"✅ DEBUG - Valve closed due to background task error")
+                    print(f" DEBUG - Valve closed due to background task error")
             except Exception as close_error:
-                print(f"❌ ERROR - Failed to close valve after background task error: {close_error}")
+                print(f" ERROR - Failed to close valve after background task error: {close_error}")
         finally:
             # Clean up task reference
             if plant_id in self.valve_tasks:

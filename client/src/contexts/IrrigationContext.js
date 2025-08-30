@@ -753,6 +753,30 @@ export const IrrigationProvider = ({ children }) => {
       Alert.alert('Smart Irrigation', failureMessage);
     };
 
+    const handleValveBlocked = (data) => {
+      const message = data?.message || 'The valve has been blocked. Irrigation has been stopped.';
+      // Clear any active watering UI across plants to ensure overlays/icons disappear
+      let clearedAny = false;
+      wateringPlantsRef.current.forEach((state, plantId) => {
+        if (state.isSmartMode || state.isWateringActive || state.pendingIrrigationRequest || state.pendingValveRequest) {
+          updatePlantWateringState(plantId, {
+            isManualMode: false,
+            isSmartMode: false,
+            isWateringActive: false,
+            pendingIrrigationRequest: false,
+            pendingValveRequest: false,
+            wateringTimeLeft: 0,
+            timerStartTime: null,
+            timerEndTime: null,
+            timerInterval: null,
+            currentPlant: null
+          });
+          clearedAny = true;
+        }
+      });
+      Alert.alert('Valve Blocked', message);
+    };
+
     const handleIrrigatePlantSkipped = (data) => {
       // Smart irrigation was skipped (not necessary)
       console.log('🔄 IrrigationContext: Irrigation skipped:', data);
@@ -924,6 +948,7 @@ export const IrrigationProvider = ({ children }) => {
     websocketService.onMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
     websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
     websocketService.onMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
+    websocketService.onMessage('VALVE_BLOCKED', handleValveBlocked);
 
     // Restart valve responses
     const handleRestartValveSuccess = (msg) => {
@@ -974,6 +999,7 @@ export const IrrigationProvider = ({ children }) => {
       websocketService.offMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
       websocketService.offMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
       websocketService.offMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
+      websocketService.offMessage('VALVE_BLOCKED', handleValveBlocked);
       websocketService.offMessage('RESTART_VALVE_SUCCESS', handleRestartValveSuccess);
       websocketService.offMessage('RESTART_VALVE_FAIL', handleRestartValveFail);
     };

@@ -183,7 +183,6 @@ const MainScreen = () => {
    * @param {Object} data - Server plant data
    */
   const handlePlantsReceived = (data) => {
-    console.log('🌿 GET_MY_PLANTS_RESPONSE:', data);
     if (data.plants) {
       // Transform server data to match our plant format
       // Preserve existing sensor data to prevent flicker
@@ -191,7 +190,7 @@ const MainScreen = () => {
         const transformedPlants = data.plants.map(plant => {
           // Find existing plant data to preserve sensor values
           const existingPlant = prevPlants.find(p => p.id === plant.plant_id);
-          console.log(`🌿 Transforming plant ${plant.name}:`, plant);
+          
 
           // Normalize schedule fields from backend (DB columns: irrigation_days, irrigation_time)
           let normalizedDays = null;
@@ -237,7 +236,6 @@ const MainScreen = () => {
             irrigation_end_at: plant.irrigation_end_at || null,
             irrigation_session_id: plant.irrigation_session_id || null,
           };
-          console.log(`🌿 Transformed plant ${plant.name}:`, transformed);
           return transformed;
         });
         return transformedPlants;

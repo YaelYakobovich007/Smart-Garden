@@ -90,12 +90,12 @@ const PlantDetail = () => {
   // Refresh plant data (including target humidity) when screen gains focus
   useFocusEffect(
     React.useCallback(() => {
-      if (plant?.name && websocketService.isConnected()) {
+    if (plant?.name && websocketService.isConnected()) {
         // Get fresh moisture data
-        websocketService.sendMessage({
-          type: 'GET_PLANT_MOISTURE',
-          plantName: plant.name
-        });
+      websocketService.sendMessage({
+        type: 'GET_PLANT_MOISTURE',
+        plantName: plant.name
+      });
 
         // Get fresh plant details to ensure target humidity is current
         websocketService.sendMessage({
@@ -764,13 +764,13 @@ const PlantDetail = () => {
                    {pendingValveRequest ? 'Restarting…' : 'Restart Valve'}
                  </Text>
                </TouchableOpacity>
-               <TouchableOpacity
-                 style={styles.troubleshootButton}
-                 onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
-               >
-                 <Feather name="tool" size={20} color="#FFFFFF" />
-                 <Text style={styles.troubleshootButtonText}>Troubleshoot Valve</Text>
-               </TouchableOpacity>
+             <TouchableOpacity
+               style={styles.troubleshootButton}
+               onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
+             >
+               <Feather name="tool" size={20} color="#FFFFFF" />
+               <Text style={styles.troubleshootButtonText}>Troubleshoot Valve</Text>
+             </TouchableOpacity>
              </View>
            </View>
          )}
