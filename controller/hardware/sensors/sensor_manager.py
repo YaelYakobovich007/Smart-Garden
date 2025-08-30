@@ -51,6 +51,35 @@ class SensorManager:
         self.plant_sensor_map[plant_id] = sensor_port
         return sensor_port
 
+    def assign_specific_sensor(self, plant_id: str, sensor_port: str) -> str:
+        """
+        Assign a specific sensor port to the given plant.
+
+        If the sensor port is currently available, it will be removed from the
+        available pool and assigned. If the plant already has a sensor assigned,
+        this will override it.
+
+        Args:
+            plant_id (str): Unique identifier for the plant.
+            sensor_port (str): The specific sensor port to assign (e.g. "/dev/ttyUSB0").
+
+        Returns:
+            str: The sensor port that was assigned.
+        """
+        # Remove from available list if present
+        if sensor_port in self.available_sensors:
+            self.available_sensors.remove(sensor_port)
+
+        # If plant had a different sensor, release it back to available
+        if plant_id in self.plant_sensor_map:
+            prev = self.plant_sensor_map[plant_id]
+            if prev and prev != sensor_port and prev not in self.available_sensors:
+                self.available_sensors.append(prev)
+
+        # Assign mapping
+        self.plant_sensor_map[plant_id] = sensor_port
+        return sensor_port
+
     def release_sensor(self, plant_id: str) -> None:
         """
         Releases the sensor assigned to the given plant, making it available for reassignment.

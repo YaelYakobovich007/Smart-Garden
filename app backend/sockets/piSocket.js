@@ -7,7 +7,7 @@ const { broadcastPlantAdded, broadcastMoistureUpdate } = require('../services/ga
 
 let piSocket = null;
 const VERBOSE_LOGS = process.env.VERBOSE_LOGS === 'true';
-const vLog = (...args) => { if (VERBOSE_LOGS) console.log(...args); };
+const vLog = (...args) => console.log(...args);
 
 function handlePiSocket(ws) {
   piSocket = ws;
@@ -67,13 +67,13 @@ function handlePiSocket(ws) {
           plants: plants
         });
 
-        // Log plant details for debugging
+        // Log plant details for debugging (match payload fields)
         plants.forEach(plant => {
-          console.log(`   🌱 Plant: ${plant.name} (ID: ${plant.id})`);
-          console.log(`      Type: ${plant.plant_type}`);
-          console.log(`      Target Moisture: ${plant.target_moisture}%`);
+          console.log(`   🌱 Plant ID: ${plant.plant_id}`);
+          console.log(`      Desired Moisture: ${plant.desiredMoisture}%`);
           console.log(`      Sensor Port: ${plant.sensor_port}`);
           console.log(`      Valve ID: ${plant.valve_id}`);
+          console.log(`      Schedule: ${JSON.stringify(plant.scheduleData)}`);
         });
 
       } catch (error) {
@@ -989,7 +989,7 @@ function handlePiSocket(ws) {
             const { broadcastToGarden } = require('../services/gardenBroadcaster');
             await broadcastToGarden(plant.garden_id, 'GARDEN_VALVE_UNBLOCKED', { plantId });
           }
-        } catch {}
+        } catch { }
 
       } else {
         // Keep blocked; notify initiator

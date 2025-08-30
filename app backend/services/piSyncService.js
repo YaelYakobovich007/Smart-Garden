@@ -43,11 +43,14 @@ async function getGardenPlantsWithHardware(gardenId) {
         console.log(`📊 Found ${plants.length} total plants, ${plantsWithHardware.length} with hardware assigned`);
 
         // Transform plants to the format expected by the Pi controller (same as ADD_PLANT)
+        // Include hardware identifiers so the Pi can bind to the correct hardware
         const transformedPlants = plantsWithHardware.map(plant => ({
-            plant_id: plant.plant_id,  // This is the server plant_id that Pi will use
+            plant_id: plant.plant_id,
             desiredMoisture: parseFloat(plant.ideal_moisture),
             waterLimit: parseFloat(plant.water_limit || 1.0),
             dripperType: plant.dripper_type || '2L/h',
+            sensor_port: plant.sensor_port,
+            valve_id: plant.valve_id,
             scheduleData: {
                 irrigation_days: plant.irrigation_days || null,
                 irrigation_time: plant.irrigation_time || null
