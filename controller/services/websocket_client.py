@@ -107,16 +107,16 @@ class SmartGardenPiClient:
             return False
         
         self.logger.info("=== SENDING PI_CONNECT ===")
-        self.logger.info(f"🔗 Attempting to connect to garden with invite code: {self.family_code}")
-        self.logger.info(f"📤 Sending PI_CONNECT message to server...")
+        self.logger.info(f"Attempting to connect to garden with invite code: {self.family_code}")
+        self.logger.info(f"Sending PI_CONNECT message to server...")
         
         success = await self.send_message("PI_CONNECT", {"family_code": self.family_code})
         
         if success:
-            self.logger.info(f"✅ PI_CONNECT message sent successfully with family code: {self.family_code}")
-            self.logger.info("⏳ Waiting for GARDEN_SYNC response from server...")
+            self.logger.info(f"PI_CONNECT message sent successfully with family code: {self.family_code}")
+            self.logger.info("Waiting for GARDEN_SYNC response from server...")
         else:
-            self.logger.error(f"❌ Failed to send PI_CONNECT message with family code: {self.family_code}")
+            self.logger.error(f"ERROR- Failed to send PI_CONNECT message with family code: {self.family_code}")
         
         return success
     
@@ -416,7 +416,7 @@ class SmartGardenPiClient:
                 plant_id=plant_id if 'plant_id' in locals() else 0,
                 error_message=str(e)
             )
-            await self.send_message("CLOSE_VALVE_RESPONSE", error_result.to_websocket_data())
+            await self.send_message("", error_result.to_websocket_data())
 
     async def handle_get_valve_status_request(self, data):
         """Handle get valve status request from server."""
@@ -623,10 +623,10 @@ class SmartGardenPiClient:
                         valve_id=valve_id
                     )
                     
-                    self.logger.info(f"✅ Successfully added plant {plant_id} to engine")
+                    self.logger.info(f"Successfully added plant {plant_id} to engine")
                     
                 except Exception as e:
-                    self.logger.error(f"❌ Failed to add plant {plant_data.get('plant_id', 'Unknown')}: {e}")
+                    self.logger.error(f"EROR- Failed to add plant {plant_data.get('plant_id', 'Unknown')}: {e}")
             
             self.logger.info(f"=== GARDEN SYNC COMPLETE ===")
             self.logger.info(f"Total plants in engine: {len(self.engine.plants)}")

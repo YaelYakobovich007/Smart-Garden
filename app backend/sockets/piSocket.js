@@ -838,21 +838,26 @@ function handlePiSocket(ws) {
       vLog('DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
       vLog('   - Full data:', JSON.stringify(data));
 
-      const responseData = data.data || {};
-      const plantId = responseData.plant_id;
+      // Normalize nested payloads: data or data.data may hold the real fields
+      const envelope = data.data || data;
+      const responseData = envelope?.data || envelope || {};
+      const rawPlantId = responseData.plant_id ?? responseData.plantId;
+      const plantId = Number(rawPlantId);
+      const status = responseData.status;
+      const reason = responseData.reason || responseData.message || null;
 
       vLog('DEBUG - Extracted response data:');
       vLog('   - plantId:', plantId, '(type:', typeof plantId, ')');
-      vLog('   - status:', responseData.status);
+      vLog('   - status:', status);
 
       // Get pending irrigation info (websocket + plant data)
       vLog('DEBUG - Getting pending irrigation info for plantId:', plantId);
       const pendingInfo = completePendingIrrigation(plantId);
       vLog('DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
 
-      if (responseData.status === 'success') {
+      if (status === 'success') {
         vLog(`DEBUG - Plant ${plantId} valve closed successfully`);
-        vLog(`   - Reason: ${responseData.reason}`);
+        vLog(`   - Reason: ${reason}`);
 
         // Persist irrigation state: manual mode cleared
         try {
@@ -869,7 +874,7 @@ function handlePiSocket(ws) {
           const irrigationResult = await irrigationModel.addIrrigationResult({
             plant_id: plantId,
             status: 'valve_closed',
-            reason: responseData.reason || 'Pi valve closed',
+            reason: reason || 'Pi valve closed',
             moisture: responseData.moisture || null,
             final_moisture: responseData.moisture || null,
             water_added_liters: 0, // No water added during valve closing

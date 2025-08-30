@@ -80,7 +80,7 @@ async function handleCreateGarden(data, ws, email) {
             message: `Garden "${gardenName}" created successfully! Share invite code: ${result.inviteCode}`
         });
 
-        console.log(`🏡 Garden "${gardenName}" created by ${user.full_name} (${email}) with invite code: ${result.inviteCode}`);
+        console.log(`Garden "${gardenName}" created by ${user.full_name} (${email}) with invite code: ${result.inviteCode}`);
 
     } catch (error) {
         console.error('Error in handleCreateGarden:', error);
@@ -320,7 +320,7 @@ async function handleLeaveGarden(data, ws, email) {
             message: 'Successfully left the garden'
         });
 
-        console.log(`👤 User ${user.full_name} (${email}) left garden ${gardenId}`);
+        console.log(`User ${user.full_name} (${email}) left garden ${gardenId}`);
 
     } catch (error) {
         console.error('Error in handleLeaveGarden:', error);
@@ -372,7 +372,7 @@ async function handleUpdateGarden(data, ws, email) {
             message: 'Garden updated successfully'
         });
 
-        console.log(`🏡 Garden ${gardenId} updated by ${user.full_name} (${email})`);
+        console.log(`Garden ${gardenId} updated by ${user.full_name} (${email})`);
 
     } catch (error) {
         console.error('Error in handleUpdateGarden:', error);
