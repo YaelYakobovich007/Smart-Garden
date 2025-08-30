@@ -118,7 +118,7 @@ export const IrrigationProvider = ({ children }) => {
   const rehydrateFromPlants = (plantsArray) => {
     if (!Array.isArray(plantsArray)) return;
     plantsArray.forEach((p) => {
-      const plantId = p?.id ?? p?.plant_id;
+      const plantId = Number(p?.id ?? p?.plant_id);
       if (!plantId) return;
       const mode = (p?.irrigation_mode || '').toLowerCase();
       const startAt = p?.irrigation_start_at ? new Date(p.irrigation_start_at).getTime() : null;

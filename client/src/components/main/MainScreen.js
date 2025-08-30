@@ -189,7 +189,8 @@ const MainScreen = () => {
       setPlants(prevPlants => {
         const transformedPlants = data.plants.map(plant => {
           // Find existing plant data to preserve sensor values
-          const existingPlant = prevPlants.find(p => p.id === plant.plant_id);
+          const pid = Number(plant.plant_id ?? plant.id);
+          const existingPlant = prevPlants.find(p => Number(p.id) === pid);
           
 
           // Normalize schedule fields from backend (DB columns: irrigation_days, irrigation_time)
@@ -210,7 +211,7 @@ const MainScreen = () => {
           const inferredMode = (normalizedDays && normalizedDays.length > 0 && normalizedTime) ? 'scheduled' : 'smart';
 
           const transformed = {
-            id: plant.plant_id,
+            id: pid,
             name: plant.name,
             type: plant.plant_type || 'Unknown',
             image_url: plant.image_url,
@@ -244,7 +245,8 @@ const MainScreen = () => {
       // Rehydrate irrigation state from persisted fields AFTER plants state update commits
       try {
         setTimeout(() => {
-          rehydrateFromPlants(data.plants);
+          // Ensure ids are numbers when rehydrating
+          rehydrateFromPlants(data.plants.map(p => ({ ...p, id: Number(p.plant_id ?? p.id) })));
         }, 0);
       } catch (e) {
         console.log('rehydrateFromPlants error:', e?.message);

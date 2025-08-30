@@ -13,14 +13,15 @@ const pendingIrrigations = new Map(); // Map<plant_id, { ws, email, plantData, t
  * @param {Object} plantData - Plant data to include in response
  */
 function addPendingIrrigation(plantId, ws, email, plantData) {
-    pendingIrrigations.set(plantId, {
+    const id = Number(plantId);
+    pendingIrrigations.set(id, {
         ws,
         email,
         plantData,
         timestamp: Date.now()
     });
 
-    console.log(`Added irrigation request for plant ${plantId} to pending list (count=${pendingIrrigations.size})`);
+    console.log(`Added irrigation request for plant ${id} to pending list (count=${pendingIrrigations.size})`);
 }
 
 /**
@@ -29,7 +30,8 @@ function addPendingIrrigation(plantId, ws, email, plantData) {
  * @returns {Object|null} Pending irrigation info or null if not found
  */
 function getPendingIrrigation(plantId) {
-    const pendingInfo = pendingIrrigations.get(plantId);
+    const id = Number(plantId);
+    const pendingInfo = pendingIrrigations.get(id);
     if (pendingInfo) {
         return pendingInfo;
     }
@@ -42,14 +44,15 @@ function getPendingIrrigation(plantId) {
  * @returns {Object|null} Pending irrigation info or null if not found
  */
 function completePendingIrrigation(plantId) {
-    const pendingInfo = pendingIrrigations.get(plantId);
+    const id = Number(plantId);
+    const pendingInfo = pendingIrrigations.get(id);
     if (pendingInfo) {
-        pendingIrrigations.delete(plantId);
-        console.log(`Completed pending irrigation for plant ${plantId} (remaining=${pendingIrrigations.size})`);
+        pendingIrrigations.delete(id);
+        console.log(`Completed pending irrigation for plant ${id} (remaining=${pendingIrrigations.size})`);
         return pendingInfo;
     }
 
-    console.log(`Irrigation for plant ${plantId} not found in pending list`);
+    console.log(`Irrigation for plant ${id} not found in pending list`);
     return null;
 }
 
@@ -59,7 +62,7 @@ function completePendingIrrigation(plantId) {
  * @returns {boolean} True if irrigation is pending
  */
 function isPendingIrrigation(plantId) {
-    return pendingIrrigations.has(plantId);
+    return pendingIrrigations.has(Number(plantId));
 }
 
 /**

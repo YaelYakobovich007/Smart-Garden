@@ -217,7 +217,7 @@ function handlePiSocket(ws) {
     // Handle IRRIGATION_DECISION messages from Pi
     if (data.type === 'IRRIGATION_DECISION') {
       const decisionData = data.data || {};
-      const plantId = decisionData.plant_id;
+      const plantId = Number(decisionData.plant_id);
       
       console.log(`[IRRIGATION DECISION] Plant ${plantId}`);
       console.log(`Current Moisture: ${decisionData.current_moisture}%`);
@@ -638,7 +638,7 @@ function handlePiSocket(ws) {
     // Handle STOP_IRRIGATION_RESPONSE from Pi
     if (data.type === 'STOP_IRRIGATION_RESPONSE') {
       const responseData = data.data || {};
-      const plantId = responseData.plant_id;
+      const plantId = Number(responseData.plant_id);
 
       // Get pending irrigation info (websocket + plant data)
       const pendingInfo = completePendingIrrigation(plantId);
