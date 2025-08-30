@@ -764,13 +764,13 @@ export default function AddPlantScreen() {
           <View style={styles.centerModalContent}>
             <Text style={styles.modalTitle}>Choose Time</Text>
             <View style={styles.timePickerContainer}>
-              <DateTimePicker
-                value={formData.schedule.time}
-                mode="time"
-                is24Hour={true}
+        <DateTimePicker
+          value={formData.schedule.time}
+          mode="time"
+          is24Hour={true}
                 display={Platform.OS === 'ios' ? 'spinner' : 'clock'}
-                onChange={handleTimeChange}
-              />
+          onChange={handleTimeChange}
+        />
             </View>
             <View style={styles.modalActionsRow}>
               <TouchableOpacity style={styles.modalActionButton} onPress={() => setShowTimePicker(false)}>

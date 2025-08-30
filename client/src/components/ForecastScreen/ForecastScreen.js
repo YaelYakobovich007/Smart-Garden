@@ -149,10 +149,10 @@ const ForecastScreen = ({ navigation, route }) => {
     let currentTime;
     let sunrise, sunset;
     
-    currentTime = Date.now() / 1000;
-    const sunTimes = getSunTimes();
-    sunrise = sunTimes.sunrise;
-    sunset = sunTimes.sunset;
+      currentTime = Date.now() / 1000;
+      const sunTimes = getSunTimes();
+      sunrise = sunTimes.sunrise;
+      sunset = sunTimes.sunset;
     
     // Calculate time periods
     const earlyMorning = sunrise - 1800; // 30 min before sunrise
@@ -196,10 +196,10 @@ const ForecastScreen = ({ navigation, route }) => {
     let currentTime;
     let sunrise, sunset;
     
-    currentTime = Date.now() / 1000;
-    const sunTimes = getSunTimes();
-    sunrise = sunTimes.sunrise;
-    sunset = sunTimes.sunset;
+      currentTime = Date.now() / 1000;
+      const sunTimes = getSunTimes();
+      sunrise = sunTimes.sunrise;
+      sunset = sunTimes.sunset;
     
     // Before sunrise - dot at left (0)
     if (currentTime < sunrise) return 0;
@@ -286,7 +286,7 @@ const ForecastScreen = ({ navigation, route }) => {
   // Check if it's night time for stars
   let currentTime, sunrise, sunset;
   
-  currentTime = Date.now() / 1000;
+    currentTime = Date.now() / 1000;
   const sunTimesTop = getSunTimes();
   sunrise = sunTimesTop.sunrise;
   sunset = sunTimesTop.sunset;
