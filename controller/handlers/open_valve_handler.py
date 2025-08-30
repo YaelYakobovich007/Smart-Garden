@@ -26,7 +26,7 @@ class OpenValveHandler:
             OpenValveResponse: Result of the valve operation
         """
         try:
-            print(f"Processing OPEN_VALVE command for plant {plant_id}, duration: {time_minutes} minutes")
+            # Handle request
             
             # Validate parameters
             if not isinstance(plant_id, int) or plant_id <= 0:
@@ -44,13 +44,11 @@ class OpenValveHandler:
             success = await self.smart_engine.open_valve(plant_id, time_minutes)
             
             if success:
-                print(f"Valve opened successfully for plant {plant_id} for {time_minutes} minutes")
                 return OpenValveResponse.success(
                     plant_id, time_minutes,
                     f"Valve opened for plant {plant_id} for {time_minutes} minutes"
                 )
             else:
-                print(f"Failed to open valve for plant {plant_id}")
                 return OpenValveResponse.error(plant_id, f"Failed to open valve for plant {plant_id}")
                 
         except ValueError as e:

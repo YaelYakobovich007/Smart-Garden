@@ -11,7 +11,7 @@ const { handleArticleMessage } = require('../controllers/articleController');
 
 
 function handleUserSocket(ws) {
-  console.log('New USER connected');
+  console.log('USER connected');
   ws.clientType = 'USER';
 
   // Send confirmation that user connection is established
@@ -36,7 +36,7 @@ function handleUserSocket(ws) {
     } else if (data.type === 'GET_WEATHER') {
       handleGetWeather(ws);
     } else if (data.type === 'PLANT_IDENTIFY') {
-      console.log('🌱 Received PLANT_IDENTIFY message in userSocket');
+      console.log('Received PLANT_IDENTIFY message in userSocket');
       handlePlantIdentify(data, ws);
     } else if (['UPDATE_PLANT_SCHEDULE', 'GET_IRRIGATION_RESULT', 'IRRIGATE_PLANT', 'STOP_IRRIGATION', 'OPEN_VALVE', 'CLOSE_VALVE', 'GET_VALVE_STATUS', 'UNBLOCK_VALVE', 'TEST_VALVE_BLOCK', 'RESTART_VALVE'].includes(data.type)) {
       handleIrrigationMessage(data, ws);

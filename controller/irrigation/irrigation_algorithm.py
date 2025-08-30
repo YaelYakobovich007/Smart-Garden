@@ -65,7 +65,7 @@ class IrrigationAlgorithm:
         """
         Send structured irrigation progress update to server via WebSocket.
         """
-        print(f"🚰 IRRIGATION PROGRESS: {progress.message}")
+        print(f"IRRIGATION PROGRESS: {progress.message}")
         if self.websocket_client and hasattr(self.websocket_client, 'send_message'):
             try:
                 await self.websocket_client.send_message("IRRIGATION_PROGRESS", progress.to_websocket_data())
@@ -372,8 +372,8 @@ class IrrigationAlgorithm:
         Determines if the plant is overwatered.
         """
         # Debug logging for overwatering analysis
-        print(f"   📊 CURRENT MOISTURE: {moisture}% (type: {type(moisture)})")
-        print(f"   🎯 DESIRED MOISTURE: {plant.desired_moisture}% (type: {type(plant.desired_moisture)})")
+        print(f"   CURRENT MOISTURE: {moisture}% (type: {type(moisture)})")
+        print(f"   DESIRED MOISTURE: {plant.desired_moisture}% (type: {type(plant.desired_moisture)})")
         
         # Ensure both values are float
         try:
@@ -392,7 +392,7 @@ class IrrigationAlgorithm:
                 return result
             return False
         except (ValueError, TypeError) as e:
-            print(f"❌ ERROR - Failed to convert moisture values to float in is_overwatered: {e}")
+            print(f"ERROR - Failed to convert moisture values to float in is_overwatered: {e}")
             print(f"   moisture: {moisture} (type: {type(moisture)})")
             print(f"   plant.desired_moisture: {plant.desired_moisture} (type: {type(plant.desired_moisture)})")
             # Return False as a safe default
@@ -404,8 +404,8 @@ class IrrigationAlgorithm:
         Uses the plant's base target (without hysteresis) to determine if irrigation should start.
         """
         # Debug logging for irrigation need analysis
-        print(f"   📊 CURRENT MOISTURE: {current_moisture}% (type: {type(current_moisture)})")
-        print(f"   🎯 DESIRED MOISTURE: {plant.desired_moisture}% (type: {type(plant.desired_moisture)})")
+        print(f"   CURRENT MOISTURE: {current_moisture}% (type: {type(current_moisture)})")
+        print(f"   DESIRED MOISTURE: {plant.desired_moisture}% (type: {type(plant.desired_moisture)})")
         
         # Ensure both values are float
         try:
@@ -421,7 +421,7 @@ class IrrigationAlgorithm:
             
             return result
         except (ValueError, TypeError) as e:
-            print(f"❌ ERROR - Failed to convert moisture values to float: {e}")
+            print(f"ERROR - Failed to convert moisture values to float: {e}")
             print(f"   current_moisture: {current_moisture} (type: {type(current_moisture)})")
             print(f"   plant.desired_moisture: {plant.desired_moisture} (type: {type(plant.desired_moisture)})")
             # Return False as a safe default
@@ -430,11 +430,11 @@ class IrrigationAlgorithm:
     async def _ensure_valve_closed(self, plant: "Plant") -> None:
         """Ensure valve is safely closed regardless of is_open state"""
         try:
-            print(f"🔒 Forcing valve close for plant {plant.plant_id} (safety measure)")
+            print(f"Forcing valve close for plant {plant.plant_id} (safety measure)")
             plant.valve.request_close()
-            print(f"✅ Valve close command sent")
+            print(f"Valve close command sent")
         except Exception as e:
-            print(f"❌ Failed to close valve: {e}")
+            print(f"ERROR - Failed to close valve: {e}")
 
     async def _get_averaged_moisture(self, plant: "Plant", num_measurements: int = 5) -> float:
         """Take multiple moisture measurements and return the average"""
