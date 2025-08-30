@@ -17,7 +17,7 @@ function addPendingMoistureRequest(plantId, ws, requestData) {
     requestData,
     timestamp: Date.now()
   });
-  console.log(`Added pending moisture request for plant ${plantId}`);
+  console.log(`[MOISTURE] Added request: plant=${plantId}`);
 }
 
 /**
@@ -29,7 +29,7 @@ function completePendingMoistureRequest(plantId) {
   const pendingInfo = pendingMoistureRequests.get(plantId);
   if (pendingInfo) {
     pendingMoistureRequests.delete(plantId);
-    console.log(`Completed pending moisture request for plant ${plantId}`);
+    console.log(`[MOISTURE] Completed request: plant=${plantId}`);
     return pendingInfo;
   }
   return null;
@@ -62,7 +62,7 @@ function cleanupOldPendingRequests() {
   for (const [plantId, requestInfo] of pendingMoistureRequests.entries()) {
     if (now - requestInfo.timestamp > fiveMinutes) {
       pendingMoistureRequests.delete(plantId);
-      console.log(`🧹 Cleaned up old pending moisture request for plant ${plantId}`);
+      console.log(`[MOISTURE] Cleaned old request: plant=${plantId}`);
     }
   }
 }

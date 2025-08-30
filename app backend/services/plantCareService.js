@@ -1392,25 +1392,25 @@ function normalizePlantName(speciesName) {
     if (!speciesName) return null;
 
     const normalizedName = speciesName.toLowerCase().trim();
-    console.log('🔍 Normalizing plant name:', speciesName, '→', normalizedName);
+    console.log(`[CARE] Normalizing name: species=${speciesName} normalized=${normalizedName}`);
 
     // First, check if the exact name exists in our database
     if (plantCareDatabase[normalizedName]) {
-        console.log('✅ Exact match found:', normalizedName);
+        console.log(`[CARE] Exact match found: name=${normalizedName}`);
         return normalizedName;
     }
 
     // Check if there's a mapping for this name
     if (plantNameMapping[normalizedName]) {
         const mappedName = plantNameMapping[normalizedName];
-        console.log('✅ Mapped name found:', normalizedName, '→', mappedName);
+        console.log(`[CARE] Mapped name found: original=${normalizedName} mapped=${mappedName}`);
         return mappedName;
     }
 
     // Try partial matching for common patterns
     for (const [apiName, dbName] of Object.entries(plantNameMapping)) {
         if (normalizedName.includes(apiName) || apiName.includes(normalizedName)) {
-            console.log('✅ Partial match found:', normalizedName, '→', dbName);
+            console.log(`[CARE] Partial match found: original=${normalizedName} matched=${dbName}`);
             return dbName;
         }
     }
@@ -1418,12 +1418,12 @@ function normalizePlantName(speciesName) {
     // Try to find similar names in our database
     for (const dbName of Object.keys(plantCareDatabase)) {
         if (normalizedName.includes(dbName) || dbName.includes(normalizedName)) {
-            console.log('✅ Similar name found:', normalizedName, '→', dbName);
+            console.log(`[CARE] Similar name found: original=${normalizedName} similar=${dbName}`);
             return dbName;
         }
     }
 
-    console.log('❌ No match found for:', normalizedName);
+    console.log(`[CARE] No match found: name=${normalizedName}`);
     return null;
 }
 
@@ -1437,18 +1437,18 @@ async function getPlantCare(speciesName) {
 
     const normalizedName = normalizePlantName(speciesName);
     if (!normalizedName) {
-        console.log('❌ Could not normalize plant name:', speciesName);
+        console.log(`[CARE] Error: Failed to normalize name - species=${speciesName}`);
         return null;
     }
 
     const careData = plantCareDatabase[normalizedName];
     if (careData) {
-        console.log('✅ Found plant care data for:', speciesName, '→', normalizedName);
+        console.log(`[CARE] Found data: species=${speciesName} normalized=${normalizedName}`);
         return careData;
     }
 
-    console.log('❌ No plant care data found for:', speciesName, '(normalized:', normalizedName, ')');
-    console.log('🤖 Trying ChatGPT as fallback...');
+    console.log(`[CARE] No data found: species=${speciesName} normalized=${normalizedName}`);
+    console.log('[CARE] Trying ChatGPT fallback');
 
     // Try ChatGPT as fallback
     try {
@@ -1456,14 +1456,14 @@ async function getPlantCare(speciesName) {
         const chatgptCareData = await getPlantCareFromChatGPT(speciesName);
 
         if (chatgptCareData) {
-            console.log('✅ Got care data from ChatGPT for:', speciesName);
+            console.log(`[CARE] ChatGPT data received: species=${speciesName}`);
             return chatgptCareData;
         }
     } catch (error) {
-        console.error('❌ ChatGPT fallback failed for:', speciesName, error.message);
+        console.log(`[CARE] Error: ChatGPT fallback failed - species=${speciesName} error=${error.message}`);
     }
 
-    console.log('❌ No care data available from any source for:', speciesName);
+    console.log(`[CARE] No data available: species=${speciesName}`);
     return null;
 }
 

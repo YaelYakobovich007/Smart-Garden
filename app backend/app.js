@@ -16,26 +16,26 @@ testConnection();
 
 // Handle incoming WebSocket connections
 wss.on('connection', (ws) => {
-  console.log('WebSocket connection established');
+  console.log('[SERVER] New connection established');
 
   ws.once('message', (msg) => {
     let data;
     try {
       data = JSON.parse(msg);
-      console.log(`First message: ${data.type} from ${data.device_id || 'unknown device'}`);
+      console.log(`[SERVER] First message: type=${data.type} device=${data.device_id || 'unknown'}`);
       handleSocketConnection(ws, data);
     } catch {
-      console.log('Invalid JSON received from client');
+      console.log('[SERVER] Error: Invalid JSON in first message');
       sendError(ws, 'ERROR', 'Invalid JSON format');
       ws.close();
     }
   });
 
   ws.on('close', () => {
-    console.log('WebSocket connection closed');
+    console.log('[SERVER] Connection closed');
   });
 });
 
 
-console.log(`WebSocket server running on port ${port}`);
+console.log(`[SERVER] Started on port ${port}`);
 

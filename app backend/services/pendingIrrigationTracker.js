@@ -21,7 +21,7 @@ function addPendingIrrigation(plantId, ws, email, plantData) {
         timestamp: Date.now()
     });
 
-    console.log(`Added irrigation request for plant ${id} to pending list (count=${pendingIrrigations.size})`);
+    console.log(`[PENDING] Added irrigation request: plant=${id} total=${pendingIrrigations.size}`);
 }
 
 /**
@@ -48,11 +48,11 @@ function completePendingIrrigation(plantId) {
     const pendingInfo = pendingIrrigations.get(id);
     if (pendingInfo) {
         pendingIrrigations.delete(id);
-        console.log(`Completed pending irrigation for plant ${id} (remaining=${pendingIrrigations.size})`);
+        console.log(`[PENDING] Completed irrigation: plant=${id} remaining=${pendingIrrigations.size}`);
         return pendingInfo;
     }
 
-    console.log(`Irrigation for plant ${id} not found in pending list`);
+    console.log(`[PENDING] Not found: plant=${id}`);
     return null;
 }
 
@@ -85,12 +85,12 @@ function cleanupOldPendingIrrigations() {
         if (info.timestamp < twoMinutesAgo) {
             pendingIrrigations.delete(plantId);
             cleanedCount++;
-            console.log(`🧹 Cleaned up old pending irrigation for plant ${plantId}`);
+            console.log(`[PENDING] Cleaned old request: plant=${plantId}`);
         }
     }
 
     if (cleanedCount > 0) {
-        console.log(`🧹 Cleaned up ${cleanedCount} old pending irrigations`);
+        console.log(`[PENDING] Cleanup complete: removed=${cleanedCount}`);
     }
 }
 

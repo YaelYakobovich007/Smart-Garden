@@ -37,17 +37,15 @@ async function identifyPlantFromBase64(imageBase64) {
 
             // Get comprehensive result with care data
             const resultWithCare = await getPlantIdentificationWithCare(top.name, top.probability);
-            console.log('🌿 Plant care data included:', !!resultWithCare.careData);
+            console.log(`[IDENTIFY] Care data: included=${!!resultWithCare.careData}`);
 
             return resultWithCare;
         }
 
-        console.log('❌ No suggestions found');
+        console.log('[IDENTIFY] No matches found');
         return { species: null, probability: null, careData: null, hasCareData: false };
     } catch (error) {
-        console.log('❌ Plant.id API Error:');
-        console.log('Error message:', error.message);
-        console.log('Response data:', error.response?.data);
+        console.log(`[IDENTIFY] Error: API request failed - message=${error.message} response=${JSON.stringify(error.response?.data)}`);
         throw new Error(error?.response?.data?.message || error?.message || 'Identification failed');
     }
 }

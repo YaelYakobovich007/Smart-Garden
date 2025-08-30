@@ -12,7 +12,7 @@ const openai = new OpenAI({
  */
 async function getPlantCareFromChatGPT(plantName) {
     try {
-        console.log(`🤖 Asking ChatGPT for care recommendations for: ${plantName}`);
+        console.log(`[CHATGPT] Requesting care data: plant=${plantName}`);
 
         const prompt = `Provide plant care recommendations for "${plantName}". 
 Return ONLY a JSON object with this exact format (no additional text):
@@ -46,7 +46,7 @@ Focus on soil moisture levels for smart irrigation systems.`;
         });
 
         const response = completion.choices[0].message.content;
-        console.log(`🤖 ChatGPT response: ${response}`);
+        console.log(`[CHATGPT] Raw response: ${response}`);
 
         // Try to parse the JSON response
         try {
@@ -57,7 +57,7 @@ Focus on soil moisture levels for smart irrigation systems.`;
                 throw new Error('Invalid response format from ChatGPT');
             }
 
-            console.log(`✅ Successfully got care data from ChatGPT for ${plantName}`);
+            console.log(`[CHATGPT] Care data received: plant=${plantName} moisture=${careData.optimalMoisture}%`);
             return {
                 ...careData,
                 source: 'chatgpt',
@@ -65,12 +65,12 @@ Focus on soil moisture levels for smart irrigation systems.`;
             };
 
         } catch (parseError) {
-            console.error(`❌ Failed to parse ChatGPT response: ${parseError.message}`);
+            console.log(`[CHATGPT] Error: Failed to parse response - ${parseError.message}`);
             throw new Error('Invalid response format from ChatGPT');
         }
 
     } catch (error) {
-        console.error(`❌ ChatGPT API error for ${plantName}:`, error.message);
+        console.log(`[CHATGPT] Error: API request failed - plant=${plantName} error=${error.message}`);
 
         // Return fallback data if ChatGPT fails
         return {
@@ -95,7 +95,7 @@ Focus on soil moisture levels for smart irrigation systems.`;
 async function isChatGPTAvailable() {
     try {
         if (!process.env.OPENAI_API_KEY) {
-            console.log('❌ OpenAI API key not configured');
+            console.log('[CHATGPT] Error: OpenAI API key not configured');
             return false;
         }
 
@@ -108,7 +108,7 @@ async function isChatGPTAvailable() {
 
         return true;
     } catch (error) {
-        console.error('❌ ChatGPT API not available:', error.message);
+        console.log(`[CHATGPT] Error: API not available - ${error.message}`);
         return false;
     }
 }

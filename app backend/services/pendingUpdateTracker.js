@@ -11,7 +11,7 @@ function storePendingUpdate(plantId, ws, email, updateData) {
     updateData,
     timestamp: Date.now()
   });
-  console.log(`Stored pending update for plant ${plantId}`);
+  console.log(`[UPDATE] Added pending: plant=${plantId}`);
 }
 
 /**
@@ -21,7 +21,7 @@ function getPendingUpdate(plantId) {
   const pending = pendingUpdates.get(plantId);
   if (pending) {
     pendingUpdates.delete(plantId);
-    console.log(`Retrieved pending update for plant ${plantId}`);
+    console.log(`[UPDATE] Retrieved pending: plant=${plantId}`);
   }
   return pending;
 }
@@ -32,11 +32,11 @@ function getPendingUpdate(plantId) {
 function cleanupOldUpdates() {
   const now = Date.now();
   const fiveMinutes = 5 * 60 * 1000;
-  
+
   for (const [plantId, pending] of pendingUpdates.entries()) {
     if (now - pending.timestamp > fiveMinutes) {
       pendingUpdates.delete(plantId);
-      console.log(`Cleaned up old pending update for plant ${plantId}`);
+      console.log(`[UPDATE] Cleaned old pending: plant=${plantId}`);
     }
   }
 }

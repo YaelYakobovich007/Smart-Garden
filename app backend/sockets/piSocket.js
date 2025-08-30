@@ -11,26 +11,26 @@ const vLog = (...args) => console.log(...args);
 
 function handlePiSocket(ws) {
   piSocket = ws;
-  console.log('Pi connected: raspberrypi_main_controller');
+  console.log('[PI] Connected: raspberrypi_main_controller');
   sendSuccess(ws, 'WELCOME', { message: 'Hello Pi' });
 
   ws.on('message', async (msg) => {
     let data;
     try {
       data = JSON.parse(msg);
-      console.log(`Pi message: ${data.type}`);
+      console.log(`[PI] Message received: ${data.type}`);
     } catch {
       console.error('Invalid JSON from Pi:', msg);
       return sendError(ws, 'INVALID_JSON', 'Invalid JSON format');
     }
 
     if (data.type === 'SENSOR_ASSIGNED') {
-      console.log(`Received sensor assignment: ${data.data?.sensor_port} for ${data.data?.plant_id}`);
+      console.log(`[HARDWARE] Sensor assigned: port=${data.data?.sensor_port} plant=${data.data?.plant_id}`);
       return handleSensorAssigned(data, ws);
     }
 
     if (data.type === 'VALVE_ASSIGNED') {
-      console.log(`Received valve assignment: ${data.data?.valve_id} for ${data.data?.plant_id}`);
+      console.log(`[HARDWARE] Valve assigned: valve=${data.data?.valve_id} plant=${data.data?.plant_id}`);
       return handleValveAssigned(data, ws);
     }
 
@@ -39,11 +39,11 @@ function handlePiSocket(ws) {
       const familyCode = connectData.family_code;
 
       if (!familyCode) {
-        console.log('ERROR - Pi connection attempt without family code');
+        console.log('[PI] Connection failed: missing family code');
         return sendError(ws, 'PI_CONNECT_FAIL', 'Family code is required');
       }
 
-      console.log(`Pi attempting to connect with family code: ${familyCode}`);
+      console.log(`[PI] Connecting with family code: ${familyCode}`);
 
       try {
         // Get garden by invite code
@@ -51,7 +51,7 @@ function handlePiSocket(ws) {
         const garden = await getGardenByInviteCode(familyCode);
 
         if (!garden) {
-          console.log(`Garden not found for family code: ${familyCode}`);
+          console.log(`[PI] Connection failed: garden not found for code ${familyCode}`);
           return sendError(ws, 'PI_CONNECT_FAIL', 'Garden not found for this family code');
         }
 
@@ -59,8 +59,8 @@ function handlePiSocket(ws) {
         const plants = await getGardenPlantsWithHardware(garden.id);
 
         // Send garden sync data to Pi
-        console.log(`Pi connected successfully to garden: ${garden.name}`);
-        console.log(`Sending ${plants.length} plants to Pi`);
+        console.log(`[PI] Connected to garden: ${garden.name}`);
+        console.log(`[PI] Syncing ${plants.length} plants`);
 
         sendSuccess(ws, 'GARDEN_SYNC', {
           garden: { name: garden.name, invite_code: garden.invite_code },
@@ -69,11 +69,7 @@ function handlePiSocket(ws) {
 
         // Log plant details for debugging (match payload fields)
         plants.forEach(plant => {
-          console.log(`   Plant ID: ${plant.plant_id}`);
-          console.log(`      Desired Moisture: ${plant.desiredMoisture}%`);
-          console.log(`      Sensor Port: ${plant.sensor_port}`);
-          console.log(`      Valve ID: ${plant.valve_id}`);
-          console.log(`      Schedule: ${JSON.stringify(plant.scheduleData)}`);
+          console.log(`[PI] Plant ${plant.plant_id}: moisture=${plant.desiredMoisture}% sensor=${plant.sensor_port} valve=${plant.valve_id} schedule=${JSON.stringify(plant.scheduleData)}`);
         });
 
       } catch (error) {

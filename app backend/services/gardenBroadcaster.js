@@ -29,15 +29,15 @@ async function broadcastToGarden(gardenId, messageType, data, excludeEmail = nul
             if (ws && ws.readyState === 1) { // WebSocket.OPEN
                 sendSuccess(ws, messageType, data);
                 broadcastCount++;
-                console.log(`Broadcasted ${messageType} to ${member.email} for garden ${gardenId}`);
+                console.log(`[BROADCAST] Sent: type=${messageType} email=${member.email} garden=${gardenId}`);
             } else {
-                console.log(`User ${member.email} not connected, skipping broadcast`);
+                console.log(`[BROADCAST] Skipped: email=${member.email} reason=not_connected`);
             }
         }
 
-        console.log(`Broadcasted ${messageType} to ${broadcastCount} members of garden ${gardenId}`);
+        console.log(`[BROADCAST] Summary: type=${messageType} garden=${gardenId} count=${broadcastCount}`);
     } catch (error) {
-        console.error(`Error broadcasting to garden ${gardenId}:`, error);
+        console.log(`[BROADCAST] Error: Failed to send - garden=${gardenId} error=${error.message}`);
     }
 }
 

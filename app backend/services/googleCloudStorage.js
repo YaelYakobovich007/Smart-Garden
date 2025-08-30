@@ -4,13 +4,13 @@ class GoogleCloudStorageService {
   constructor() {
     // Check if required environment variables are set
     if (!process.env.GOOGLE_CLOUD_PROJECT_ID) {
-      console.error('❌ GOOGLE_CLOUD_PROJECT_ID environment variable is not set');
+      console.log('[STORAGE] Error: Missing GOOGLE_CLOUD_PROJECT_ID environment variable');
     }
     if (!process.env.GOOGLE_CLOUD_KEY_FILE && !process.env.K_SERVICE) {
-      console.error('❌ GOOGLE_CLOUD_KEY_FILE environment variable is not set (required for local development)');
+      console.log('[STORAGE] Error: Missing GOOGLE_CLOUD_KEY_FILE environment variable (required for local development)');
     }
     if (!process.env.GOOGLE_CLOUD_BUCKET_NAME) {
-      console.error('❌ GOOGLE_CLOUD_BUCKET_NAME environment variable is not set');
+      console.log('[STORAGE] Error: Missing GOOGLE_CLOUD_BUCKET_NAME environment variable');
     }
 
     // Initialize Google Cloud Storage
@@ -30,12 +30,9 @@ class GoogleCloudStorageService {
       this.bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME;
       this.bucket = this.storage.bucket(this.bucketName);
 
-      console.log('✅ Google Cloud Storage initialized with:');
-      console.log(`   Project ID: ${process.env.GOOGLE_CLOUD_PROJECT_ID}`);
-      console.log(`   Bucket: ${this.bucketName}`);
-      console.log(`   Key file: ${process.env.GOOGLE_CLOUD_KEY_FILE}`);
+      console.log(`[STORAGE] Initialized: project=${process.env.GOOGLE_CLOUD_PROJECT_ID} bucket=${this.bucketName} key=${process.env.GOOGLE_CLOUD_KEY_FILE || 'default'}`);
     } catch (error) {
-      console.error('❌ Failed to initialize Google Cloud Storage:', error);
+      console.log(`[STORAGE] Error: Failed to initialize - ${error.message}`);
       throw error;
     }
   }
@@ -48,7 +45,7 @@ class GoogleCloudStorageService {
    */
   async uploadBase64Image(base64Image, fileName) {
     try {
-      console.log(`📤 Starting upload for file: ${fileName}`);
+      console.log(`[STORAGE] Starting upload: file=${fileName}`);
 
       // Validate inputs
       if (!base64Image) {
@@ -63,13 +60,13 @@ class GoogleCloudStorageService {
 
       // Convert base64 to buffer
       const imageBuffer = Buffer.from(base64Data, 'base64');
-      console.log(`📊 Image buffer size: ${imageBuffer.length} bytes`);
+      console.log(`[STORAGE] Image buffer: size=${imageBuffer.length}bytes`);
 
       // Create file reference
       const file = this.bucket.file(fileName);
 
       // Upload the file (removed public: true due to public access prevention)
-      console.log(`🚀 Uploading to bucket: ${this.bucketName}`);
+      console.log(`[STORAGE] Uploading to bucket: ${this.bucketName}`);
       await file.save(imageBuffer, {
         metadata: {
           contentType: this.getContentType(fileName),
@@ -83,17 +80,11 @@ class GoogleCloudStorageService {
         expires: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1 year from now
       });
 
-      console.log(`✅ Image uploaded successfully with signed URL`);
+      console.log(`[STORAGE] Upload complete: file=${fileName} url=${signedUrl}`);
       return signedUrl;
 
     } catch (error) {
-      console.error('❌ Error uploading image to Google Cloud Storage:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        code: error.code,
-        status: error.status,
-        details: error.details
-      });
+      console.log(`[STORAGE] Error: Upload failed - file=${fileName} message=${error.message} code=${error.code} status=${error.status}`);
       throw new Error(`Failed to upload image to cloud storage: ${error.message}`);
     }
   }
@@ -106,9 +97,9 @@ class GoogleCloudStorageService {
     try {
       const file = this.bucket.file(fileName);
       await file.delete();
-      console.log(`Image deleted successfully: ${fileName}`);
+      console.log(`[STORAGE] Deleted: file=${fileName}`);
     } catch (error) {
-      console.error('Error deleting image from Google Cloud Storage:', error);
+      console.log(`[STORAGE] Error: Failed to delete - file=${fileName} error=${error.message}`);
       throw new Error('Failed to delete image from cloud storage');
     }
   }
@@ -147,7 +138,7 @@ class GoogleCloudStorageService {
    */
   async testConnection() {
     try {
-      console.log('🧪 Testing Google Cloud Storage connection...');
+      console.log('[STORAGE] Testing connection...');
 
       // Test bucket access
       const [exists] = await this.bucket.exists();
@@ -155,11 +146,10 @@ class GoogleCloudStorageService {
         throw new Error(`Bucket '${this.bucketName}' does not exist`);
       }
 
-      console.log('✅ Google Cloud Storage connection test successful');
-      console.log(`✅ Bucket '${this.bucketName}' is accessible`);
+      console.log(`[STORAGE] Connection test successful: bucket=${this.bucketName}`);
       return true;
     } catch (error) {
-      console.error('❌ Google Cloud Storage connection test failed:', error);
+      console.log(`[STORAGE] Error: Connection test failed - ${error.message}`);
       throw error;
     }
   }

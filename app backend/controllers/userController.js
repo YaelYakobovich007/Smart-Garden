@@ -30,7 +30,7 @@ async function handleUserMessage(data, ws) {
       sendError(ws, 'UNKNOWN_TYPE', `Unknown user message type: ${data.type}`);
     }
   } catch (err) {
-    console.error('User message error:', err);
+    console.log(`[USER] Error: Message handling failed - ${err.message}`);
     sendError(ws, 'USER_ERROR', 'Internal server error');
   }
 }
@@ -115,7 +115,7 @@ async function handleUpdateUserDetails(data, ws, email) {
 
     sendSuccess(ws, 'UPDATE_USER_DETAILS_SUCCESS', { changed, ...result });
   } catch (err) {
-    console.error('Update user details error:', err);
+    console.log(`[USER] Error: Failed to update details - ${err.message}`);
     sendError(ws, 'UPDATE_USER_DETAILS_FAIL', 'Failed to update user details');
   }
 }
@@ -155,7 +155,7 @@ async function handleForgotPassword(data, ws, email) {
       sendError(ws, 'FORGOT_PASSWORD_FAIL', 'Failed to send password reset code');
     }
   } catch (err) {
-    console.error('Forgot password error:', err);
+    console.log(`[USER] Error: Failed to process password reset request - ${err.message}`);
     sendError(ws, 'FORGOT_PASSWORD_FAIL', 'Failed to process password reset request');
   }
 }
@@ -183,7 +183,7 @@ async function handleResetPassword(data, ws, email) {
       sendError(ws, 'RESET_PASSWORD_FAIL', 'Invalid or expired reset code');
     }
   } catch (err) {
-    console.error('Reset password error:', err);
+    console.log(`[USER] Error: Failed to reset password - ${err.message}`);
     sendError(ws, 'RESET_PASSWORD_FAIL', 'Failed to reset password');
   }
 }
@@ -211,7 +211,7 @@ async function handleValidateResetToken(data, ws, email) {
       });
     }
   } catch (err) {
-    console.error('Validate reset code error:', err);
+    console.log(`[USER] Error: Failed to validate reset code - ${err.message}`);
     sendError(ws, 'VALIDATE_RESET_TOKEN_FAIL', 'Failed to validate reset code');
   }
 }

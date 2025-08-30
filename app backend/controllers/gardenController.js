@@ -28,7 +28,7 @@ async function handleGardenMessage(data, ws) {
             sendError(ws, 'UNKNOWN_TYPE', `Unknown garden message type: ${data.type}`);
         }
     } catch (err) {
-        console.error('Garden message handling error:', err);
+        console.log(`[GARDEN] Error handling message: ${err.message}`);
         sendError(ws, 'GARDEN_ERROR', 'Internal server error while processing garden request');
     }
 }
@@ -80,10 +80,10 @@ async function handleCreateGarden(data, ws, email) {
             message: `Garden "${gardenName}" created successfully! Share invite code: ${result.inviteCode}`
         });
 
-        console.log(`Garden "${gardenName}" created by ${user.full_name} (${email}) with invite code: ${result.inviteCode}`);
+        console.log(`[GARDEN] Created: name=${gardenName} user=${user.full_name} email=${email} code=${result.inviteCode}`);
 
     } catch (error) {
-        console.error('Error in handleCreateGarden:', error);
+        console.log(`[GARDEN] Error: Failed to create - ${error.message}`);
         sendError(ws, 'CREATE_GARDEN_FAIL', 'Internal server error while creating garden');
     }
 }
@@ -123,7 +123,7 @@ async function handleGetUserGardens(data, ws, email) {
         }
 
     } catch (error) {
-        console.error('Error in handleGetUserGardens:', error);
+        console.log(`[GARDEN] Error: Failed to get user gardens - ${error.message}`);
         sendError(ws, 'GET_GARDENS_FAIL', 'Internal server error while fetching gardens');
     }
 }
@@ -160,7 +160,7 @@ async function handleGetGardenDetails(data, ws, email) {
         });
 
     } catch (error) {
-        console.error('Error in handleGetGardenDetails:', error);
+        console.log(`[GARDEN] Error: Failed to get details - ${error.message}`);
         sendError(ws, 'GET_GARDEN_DETAILS_FAIL', 'Internal server error while fetching garden details');
     }
 }
@@ -197,7 +197,7 @@ async function handleSearchGardenByCode(data, ws, email) {
         });
 
     } catch (error) {
-        console.error('Error in handleSearchGardenByCode:', error);
+        console.log(`[GARDEN] Error: Failed to search by code - ${error.message}`);
         sendError(ws, 'SEARCH_GARDEN_FAIL', 'Internal server error while searching for garden');
     }
 }
@@ -246,10 +246,10 @@ async function handleJoinGarden(data, ws, email) {
             message: `Successfully joined "${result.garden.name}"! You can now manage plants in this garden.`
         });
 
-        console.log(`👤 User ${user.full_name} (${email}) joined garden "${result.garden.name}" (${result.garden.id})`);
+        console.log(`[GARDEN] User joined: name=${user.full_name} email=${email} garden=${result.garden.name} id=${result.garden.id}`);
 
     } catch (error) {
-        console.error('Error in handleJoinGarden:', error);
+        console.log(`[GARDEN] Error: Failed to join - ${error.message}`);
         sendError(ws, 'JOIN_GARDEN_FAIL', 'Internal server error while joining garden');
     }
 }
@@ -282,7 +282,7 @@ async function handleGetGardenMembers(data, ws, email) {
         });
 
     } catch (error) {
-        console.error('Error in handleGetGardenMembers:', error);
+        console.log(`[GARDEN] Error: Failed to get members - ${error.message}`);
         sendError(ws, 'GET_GARDEN_MEMBERS_FAIL', 'Internal server error while fetching garden members');
     }
 }
@@ -320,10 +320,10 @@ async function handleLeaveGarden(data, ws, email) {
             message: 'Successfully left the garden'
         });
 
-        console.log(`User ${user.full_name} (${email}) left garden ${gardenId}`);
+        console.log(`[GARDEN] User left: name=${user.full_name} email=${email} garden=${gardenId}`);
 
     } catch (error) {
-        console.error('Error in handleLeaveGarden:', error);
+        console.log(`[GARDEN] Error: Failed to leave - ${error.message}`);
         sendError(ws, 'LEAVE_GARDEN_FAIL', 'Internal server error while leaving garden');
     }
 }
@@ -372,10 +372,10 @@ async function handleUpdateGarden(data, ws, email) {
             message: 'Garden updated successfully'
         });
 
-        console.log(`Garden ${gardenId} updated by ${user.full_name} (${email})`);
+        console.log(`[GARDEN] Updated: id=${gardenId} user=${user.full_name} email=${email}`);
 
     } catch (error) {
-        console.error('Error in handleUpdateGarden:', error);
+        console.log(`[GARDEN] Error: Failed to update - ${error.message}`);
         sendError(ws, 'UPDATE_GARDEN_FAIL', 'Internal server error while updating garden');
     }
 }

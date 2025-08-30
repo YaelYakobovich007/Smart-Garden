@@ -45,7 +45,7 @@ class EmailService {
         try {
             // Validate reset code
             if (!resetCode || typeof resetCode !== 'string' || resetCode.length !== 6) {
-                console.error('Invalid reset code provided for password reset');
+                console.log('[EMAIL] Error: Invalid reset code provided');
                 return false;
             }
 
@@ -56,16 +56,11 @@ class EmailService {
                 return await this.sendRealEmail(email, 'Password Reset Code - Smart Garden', emailContent, resetCode);
             } else {
                 // Log email to console (development mode)
-                console.log('📧 Password Reset Email:');
-                console.log('To:', email);
-                console.log('Subject: Password Reset Code - Smart Garden');
-                console.log('Content:', emailContent);
-                console.log('Reset Code:', resetCode);
-                console.log('---');
+                console.log(`[EMAIL] Password reset (dev mode): to=${email} code=${resetCode}`);
                 return true;
             }
         } catch (error) {
-            console.error('Error sending password reset email:', error);
+            console.log(`[EMAIL] Error: Failed to send reset email - ${error.message}`);
             return false;
         }
     }
@@ -81,10 +76,10 @@ class EmailService {
             };
 
             const result = await this.transporter.sendMail(mailOptions);
-            console.log('✅ Email sent successfully:', result.messageId);
+            console.log(`[EMAIL] Sent: to=${to} id=${result.messageId}`);
             return true;
         } catch (error) {
-            console.error('❌ Failed to send email:', error);
+            console.log(`[EMAIL] Error: Failed to send - to=${to} error=${error.message}`);
             return false;
         }
     }

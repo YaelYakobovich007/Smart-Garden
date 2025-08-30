@@ -61,7 +61,7 @@ async function handleRegister(data, ws) {
       message: success ? 'User created' : 'Email already exists',
     });
   } catch (err) {
-    console.error('Registration failed:', err);
+    console.log(`[AUTH] Error: Registration failed - ${err.message}`);
     return sendError(ws, 'REGISTER_FAIL', 'Internal server error');
   }
 }
@@ -77,7 +77,7 @@ async function handleLogin(data, ws) {
       return sendError(ws, 'LOGIN_FAIL', 'Invalid email or password');
     }
   } catch (err) {
-    console.error('LOGIN error:', err);
+    console.log(`[AUTH] Error: Login failed - ${err.message}`);
     return sendError(ws, 'LOGIN_FAIL', 'Something went wrong during login');
   }
 }
@@ -100,7 +100,7 @@ async function handleGoogleLogin(data, ws) {
     addUserSession(ws, user.email);
     return sendSuccess(ws, 'LOGIN_SUCCESS', { userId: normalizedEmail, name: userData.name, });
   } catch (err) {
-    console.error('Google login failed:', err);
+    console.log(`[AUTH] Error: Google login failed - ${err.message}`);
     return sendError(ws, 'LOGIN_FAIL', 'Google authentication failed');
   }
 }

@@ -36,7 +36,7 @@ async function handlePlantMessage(data, ws) {
       sendError(ws, 'UNKNOWN_TYPE', `Unknown plant message type: ${data.type}`);
     }
   } catch (err) {
-    console.error('Plant message handling error:', err);
+    console.log(`[PLANT] Error handling message: ${err.message}`);
     sendError(ws, 'PLANT_ERROR', 'Internal server error while processing plant request');
   }
 }
@@ -78,18 +78,13 @@ async function handleAddPlant(data, ws, email) {
   let imageUrl = null;
   if (imageData) {
     try {
-      console.log('Processing image upload for plant:', plantName);
-      console.log('Image data received:', {
-        filename: imageData.filename,
-        mimeType: imageData.mimeType,
-        base64Length: imageData.base64 ? imageData.base64.length : 0
-      });
+      console.log(`[PLANT] Processing image: plant=${plantName} file=${imageData.filename} type=${imageData.mimeType} size=${imageData.base64?.length || 0}`);
 
       imageUrl = await processAndSaveImage(imageData, user.id, plantName);
 
-      console.log('Image processed successfully, URL:', imageUrl);
+      console.log(`[PLANT] Image uploaded: url=${imageUrl}`);
     } catch (imageError) {
-      console.error('Error processing image:', imageError);
+      console.log(`[PLANT] Error: Failed to process image - ${imageError.message}`);
       return sendError(ws, 'ADD_PLANT_FAIL', 'Failed to process plant image');
     }
   }
@@ -121,13 +116,12 @@ async function handleAddPlant(data, ws, email) {
     return sendError(ws, 'ADD_PLANT_FAIL', 'Your garden can only have up to 2 plants connected at the same time');
   }
 
-  console.log(`Plant "${plantName}" saved to database with ID ${result.plant.plant_id}`);
+  console.log(`[PLANT] Saved to database: name=${plantName} id=${result.plant.plant_id}`);
 
   // Step 2: Handle Pi connection based on test mode
   if (TEST_MODE) {
     // Test mode: Allow plant creation without Pi
-    console.log(`🧪 TEST MODE: Plant "${plantName}" created successfully without Pi connection`);
-    console.log(`🧪 TODO: Delete this test mode when Pi is connected`);
+    console.log(`[PLANT] Test mode: Created without Pi - name=${plantName}`);
 
     const plantWithImage = {
       ...result.plant,
@@ -144,7 +138,7 @@ async function handleAddPlant(data, ws, email) {
     try {
       await broadcastPlantAdded(result.plant.garden_id, plantWithImage, email);
     } catch (broadcastError) {
-      console.error('Error broadcasting plant addition:', broadcastError);
+      console.log(`[PLANT] Error: Failed to broadcast addition - ${broadcastError.message}`);
     }
   } else {
     // Production mode: Require Pi connection
@@ -157,12 +151,12 @@ async function handleAddPlant(data, ws, email) {
         image_url: imageUrl
       });
 
-      console.log(`Plant ${result.plant.plant_id} sent to Pi for hardware assignment...`);
+      console.log(`[PLANT] Sent to Pi: id=${result.plant.plant_id} name=${result.plant.name}`);
       // No immediate response - client will get success only after hardware assignment
     } else {
       // Pi not connected - DELETE the plant we just saved and return error
       await deletePlantById(result.plant.plant_id, user.id);
-      console.log(`Deleted plant ${result.plant.plant_id} from database (Pi not connected)`);
+      console.log(`[PLANT] Deleted from database: id=${result.plant.plant_id} reason=pi_not_connected`);
 
       return sendError(ws, 'ADD_PLANT_FAIL',
         'Pi controller not connected. Cannot assign hardware to plant. Please try again when Pi is online.');
@@ -217,20 +211,20 @@ async function handleDeletePlant(data, ws, email) {
     const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
     const pending = getPendingIrrigation(plant.plant_id);
     if (pending) {
-      console.log(`Cancelling pending irrigation state for plant ${plant.plant_id}`);
+      console.log(`[PLANT] Cancelling pending irrigation: plant=${plant.plant_id}`);
     }
   } catch (e) {
-    console.log('Warning clearing pending trackers:', e?.message);
+    console.log(`[PLANT] Warning: Failed to clear pending trackers - ${e?.message}`);
   }
 
   // Inform Pi (non-blocking): remove plant and free hardware
   try {
     const piResult = piCommunication.removePlant(plant.plant_id);
     if (!piResult.success) {
-      console.log('Pi not connected or failed to send REMOVE_PLANT, proceeding with server-side delete');
+      console.log(`[PLANT] Warning: Failed to send remove request to Pi - ${piResult.error}`);
     }
   } catch (e) {
-    console.log('Error sending REMOVE_PLANT to Pi:', e?.message);
+    console.log(`[PLANT] Error: Failed to send remove request to Pi - ${e?.message}`);
   }
 
   // Delete irrigation events first
@@ -268,13 +262,13 @@ async function handleDeletePlant(data, ws, email) {
       await broadcastPlantDeleted(gardenId, plant, email);
     }
   } catch (broadcastError) {
-    console.error('Error broadcasting plant deletion:', broadcastError);
+    console.log(`[PLANT] Error: Failed to broadcast deletion - ${broadcastError.message}`);
   }
 }
 
 async function handleUpdatePlantDetails(data, ws, email) {
   try {
-    console.log('🔍 DEBUG - handleUpdatePlantDetails called with data:', data);
+    console.log(`[PLANT] Update request received: ${JSON.stringify(data)}`);
     const { plantName, newPlantName, desiredMoisture, waterLimit, dripperType, imageData } = data;
 
     // Validate required fields
@@ -324,7 +318,7 @@ async function handleUpdatePlantDetails(data, ws, email) {
         const generatedName = googleCloudStorage.generateFileName(user.id, imageData.filename);
         imageUrlToSave = await googleCloudStorage.uploadBase64Image(imageData.base64, generatedName);
       } catch (e) {
-        console.error('Error updating plant image:', e);
+        console.log(`[PLANT] Error: Failed to update image - ${e.message}`);
         return sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Failed to upload new image');
       }
     }
@@ -365,17 +359,11 @@ async function handleUpdatePlantDetails(data, ws, email) {
     // Send update to Pi controller if plant has hardware IDs
     if (updatedPlant.sensor_port && updatedPlant.valve_id) {
       try {
-        console.log('DEBUG - About to send update to Pi:');
-        console.log('   - updatedPlant:', updatedPlant);
-        console.log('   - updatedPlant.plant_id:', updatedPlant.plant_id);
-        console.log('   - updatedPlant.name:', updatedPlant.name);
-        console.log('   - updatedPlant.ideal_moisture:', updatedPlant.ideal_moisture);
-        console.log('   - updatedPlant.water_limit:', updatedPlant.water_limit);
-        console.log('   - updatedPlant.dripper_type:', updatedPlant.dripper_type);
+        console.log(`[PLANT] Sending update to Pi: id=${updatedPlant.plant_id} name=${updatedPlant.name} moisture=${updatedPlant.ideal_moisture} limit=${updatedPlant.water_limit} dripper=${updatedPlant.dripper_type}`);
 
         // Ensure plant_id is available
         if (!updatedPlant.plant_id) {
-          console.warn('WARNING - updatedPlant.plant_id is missing, using original plantId:', plant.plant_id);
+          console.log(`[PLANT] Warning: Missing plant_id in update, using original: ${plant.plant_id}`);
           updatedPlant.plant_id = plant.plant_id;
         }
 
@@ -390,13 +378,13 @@ async function handleUpdatePlantDetails(data, ws, email) {
 
         const piResult = piCommunication.updatePlant(updatedPlant);
         if (!piResult.success) {
-          console.warn('Failed to update plant on Pi:', piResult.error);
+          console.log(`[PLANT] Warning: Failed to update on Pi - ${piResult.error}`);
           // Remove pending update since Pi update failed
           const { getPendingUpdate } = require('../services/pendingUpdateTracker');
           getPendingUpdate(updatedPlant.plant_id);
         }
       } catch (piError) {
-        console.error('Error updating plant on Pi:', piError);
+        console.log(`[PLANT] Error: Failed to update on Pi - ${piError.message}`);
         // Remove pending update since Pi update failed
         const { getPendingUpdate } = require('../services/pendingUpdateTracker');
         getPendingUpdate(updatedPlant.plant_id);
@@ -416,11 +404,11 @@ async function handleUpdatePlantDetails(data, ws, email) {
         await broadcastPlantUpdated(gardenId, updatedPlant, email);
       }
     } catch (broadcastError) {
-      console.error('Error broadcasting plant update:', broadcastError);
+      console.log(`[PLANT] Error: Failed to broadcast update - ${broadcastError.message}`);
     }
 
   } catch (err) {
-    console.error('Update plant details error:', err);
+    console.log(`[PLANT] Error: Failed to update details - ${err.message}`);
     sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Failed to update plant details');
   }
 }
@@ -428,7 +416,7 @@ async function handleUpdatePlantDetails(data, ws, email) {
 // Updated function for image processing with Google Cloud Storage
 async function processAndSaveImage(imageData, userId, plantName) {
   try {
-    console.log('Processing image for user:', userId, 'plant:', plantName);
+    console.log(`[PLANT] Processing image: user=${userId} plant=${plantName}`);
 
     // Generate unique filename
     const fileName = googleCloudStorage.generateFileName(userId, imageData.filename);
@@ -439,11 +427,11 @@ async function processAndSaveImage(imageData, userId, plantName) {
       fileName
     );
 
-    console.log('Image uploaded successfully to:', imageUrl);
+    console.log(`[PLANT] Image uploaded: url=${imageUrl}`);
 
     return imageUrl;
   } catch (error) {
-    console.error('Error in processAndSaveImage:', error);
+    console.log(`[PLANT] Error: Failed to process and save image - ${error.message}`);
     throw new Error('Failed to upload image to cloud storage');
   }
 }
@@ -483,7 +471,7 @@ async function handleGetPlantMoisture(data, ws, email) {
       sendError(ws, 'GET_MOISTURE_FAIL', piResult.error || 'Failed to request moisture from Pi');
     }
   } catch (error) {
-    console.error('Error in handleGetPlantMoisture:', error);
+    console.log(`[PLANT] Error: Failed to get moisture - ${error.message}`);
     sendError(ws, 'GET_MOISTURE_FAIL', 'Internal server error');
   }
 }
@@ -507,7 +495,7 @@ async function handleGetAllPlantsMoisture(data, ws, email) {
       sendError(ws, 'GET_ALL_MOISTURE_FAIL', piResult.error || 'Failed to request moisture from Pi');
     }
   } catch (error) {
-    console.error('Error in handleGetAllPlantsMoisture:', error);
+    console.log(`[PLANT] Error: Failed to get all moisture - ${error.message}`);
     sendError(ws, 'GET_ALL_MOISTURE_FAIL', 'Internal server error');
   }
 }

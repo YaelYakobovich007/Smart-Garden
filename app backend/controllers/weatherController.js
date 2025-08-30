@@ -1,7 +1,7 @@
 const axios = require('axios');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getUser } = require('../models/userModel');
-const { getEmailBySocket} = require('../models/userSessions');
+const { getEmailBySocket } = require('../models/userSessions');
 
 const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
 
@@ -18,7 +18,7 @@ function normalizeCityName(cityName) {
 // Try multiple variations of the city name
 async function findCityCoordinates(cityName, countryName, apiKey) {
   const normalizedCity = normalizeCityName(cityName);
-  
+
   // Try different variations
   const variations = [
     `${normalizedCity}, ${countryName}`,
@@ -33,25 +33,25 @@ async function findCityCoordinates(cityName, countryName, apiKey) {
     try {
       const geoUrl = `http://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(variation)}&limit=1&appid=${apiKey}`;
       const response = await axios.get(geoUrl);
-      
+
       if (response.data.length > 0) {
         return response.data[0];
       }
     } catch (error) {
-      console.error(`Error trying variation "${variation}":`, error.message);
+      console.log(`[WEATHER] Error: Failed to find city - variation="${variation}" error=${error.message}`);
     }
   }
-  
+
   return null;
-} 
+}
 
 async function handleGetWeather(ws) {
   try {
     const email = getEmailBySocket(ws);
     if (!email) {
-        return sendError(ws, 'UNAUTHORIZED', 'User must be logged in to get weather');
+      return sendError(ws, 'UNAUTHORIZED', 'User must be logged in to get weather');
     }
-    
+
     if (!WEATHER_API_KEY) {
       return sendError(ws, 'GET_WEATHER_FAIL', 'Weather API key is not configured');
     }
@@ -60,7 +60,7 @@ async function handleGetWeather(ws) {
     if (!user) {
       return sendError(ws, 'GET_WEATHER_FAIL', 'User not found');
     }
-    
+
     // Use default location if user doesn't have city/country set
     const city = user.city || 'New York';
     const country = user.country || 'United States';
@@ -70,7 +70,7 @@ async function handleGetWeather(ws) {
     if (!cityData) {
       return sendError(ws, 'GET_WEATHER_FAIL', 'Could not find coordinates for city');
     }
-    
+
     const { lat, lon } = cityData;
 
     const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&appid=${WEATHER_API_KEY}&exclude=minutely,alerts&units=metric`;
@@ -111,7 +111,7 @@ async function handleGetWeather(ws) {
       current_conditions: current
     });
   } catch (err) {
-    console.error('Weather fetch error:', err.message);
+    console.log(`[WEATHER] Error: Failed to fetch weather - ${err.message}`);
     sendError(ws, 'GET_WEATHER_FAIL', 'Failed to fetch weather');
   }
 }
