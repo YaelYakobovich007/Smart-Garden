@@ -47,7 +47,7 @@ const MainScreen = () => {
   const route = useRoute();
 
   // Get irrigation state from context
-  const { getPlantWateringState, getWateringPlants, rehydrateFromPlants } = useIrrigation();
+  const { getPlantWateringState, getWateringPlants, rehydrateFromPlants, rehydrateIrrigationStarted, rehydrateIrrigationStopped } = useIrrigation();
 
   // State management for screen data and UI
   const [plants, setPlants] = useState([]);
@@ -191,7 +191,7 @@ const MainScreen = () => {
           // Find existing plant data to preserve sensor values
           const pid = Number(plant.plant_id ?? plant.id);
           const existingPlant = prevPlants.find(p => Number(p.id) === pid);
-          
+
 
           // Normalize schedule fields from backend (DB columns: irrigation_days, irrigation_time)
           let normalizedDays = null;
@@ -481,14 +481,14 @@ const MainScreen = () => {
       try {
         // Immediate local UI update without waiting for DB fetch
         rehydrateIrrigationStarted(pid, mode, duration);
-      } catch {}
+      } catch { }
     };
     const handleGardenIrrigationStopped = (message) => {
       const payload = message?.data || message;
       const pid = payload?.plantId != null ? Number(payload.plantId) : null;
       try {
         rehydrateIrrigationStopped(pid);
-      } catch {}
+      } catch { }
     };
     const handleGardenValveUnblocked = (message) => {
       try {
@@ -500,7 +500,7 @@ const MainScreen = () => {
           // Fallback: refresh from server
           websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
         }
-      } catch {}
+      } catch { }
     };
     websocketService.onMessage('GARDEN_IRRIGATION_STARTED', handleGardenIrrigationStarted);
     websocketService.onMessage('GARDEN_IRRIGATION_STOPPED', handleGardenIrrigationStopped);
