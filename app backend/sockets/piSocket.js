@@ -6,7 +6,7 @@ const { completePendingMoistureRequest } = require('../services/pendingMoistureT
 const { broadcastToGarden } = require('../services/gardenBroadcaster');
 const { getPendingDeletion } = require('../services/pendingDeletionTracker');
 const { deletePlantById, getUserGardenId } = require('../models/plantModel');
-const { getUserByEmail } = require('../models/userModel');
+const { getUser } = require('../models/userModel');
 
 
 let piSocket = null;
@@ -1188,7 +1188,7 @@ function handlePiSocket(ws) {
         // Pi confirmed removal - now delete from database
         try {
 
-          const user = await getUserByEmail(email);
+          const user = await getUser(email);
           const deleteResult = await deletePlantById(plantId, user.id);
 
           if (deleteResult.error) {
