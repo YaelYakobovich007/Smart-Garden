@@ -121,7 +121,7 @@ async function handleAddPlant(data, ws, email) {
     return sendError(ws, 'ADD_PLANT_FAIL', 'Your garden can only have up to 2 plants connected at the same time');
   }
 
-  console.log(`💾 Plant "${plantName}" saved to database with ID ${result.plant.plant_id}`);
+  console.log(`Plant "${plantName}" saved to database with ID ${result.plant.plant_id}`);
 
   // Step 2: Handle Pi connection based on test mode
   if (TEST_MODE) {
@@ -157,12 +157,12 @@ async function handleAddPlant(data, ws, email) {
         image_url: imageUrl
       });
 
-      console.log(`⏳ Plant ${result.plant.plant_id} sent to Pi for hardware assignment...`);
+      console.log(`Plant ${result.plant.plant_id} sent to Pi for hardware assignment...`);
       // No immediate response - client will get success only after hardware assignment
     } else {
       // Pi not connected - DELETE the plant we just saved and return error
       await deletePlantById(result.plant.plant_id, user.id);
-      console.log(`🗑️ Deleted plant ${result.plant.plant_id} from database (Pi not connected)`);
+      console.log(`Deleted plant ${result.plant.plant_id} from database (Pi not connected)`);
 
       return sendError(ws, 'ADD_PLANT_FAIL',
         'Pi controller not connected. Cannot assign hardware to plant. Please try again when Pi is online.');
@@ -181,9 +181,9 @@ async function handleGetPlantDetails(data, ws, email) {
   // Ensure schedule fields are normalized for client
   try {
     if (plant && plant.irrigation_days && typeof plant.irrigation_days === 'string') {
-      try { plant.irrigation_days = JSON.parse(plant.irrigation_days); } catch {}
+      try { plant.irrigation_days = JSON.parse(plant.irrigation_days); } catch { }
     }
-  } catch {}
+  } catch { }
   sendSuccess(ws, 'GET_PLANT_DETAILS_RESPONSE', { plant });
 }
 
@@ -194,7 +194,7 @@ async function handleGetMyPlants(data, ws, email) {
   // Best-effort: normalize schedule array for client
   const normalized = (plants || []).map(p => {
     if (p && p.irrigation_days && typeof p.irrigation_days === 'string') {
-      try { p.irrigation_days = JSON.parse(p.irrigation_days); } catch {}
+      try { p.irrigation_days = JSON.parse(p.irrigation_days); } catch { }
     }
     return p;
   });
@@ -242,7 +242,7 @@ async function handleDeletePlant(data, ws, email) {
     if (deleteScheduleByPlantId) {
       await deleteScheduleByPlantId(plant.plant_id);
     }
-  } catch {}
+  } catch { }
 
   // Delete the plant with optimistic locking
   const deleteResult = await deletePlantById(plant.plant_id, user.id);
@@ -365,20 +365,20 @@ async function handleUpdatePlantDetails(data, ws, email) {
     // Send update to Pi controller if plant has hardware IDs
     if (updatedPlant.sensor_port && updatedPlant.valve_id) {
       try {
-        console.log('🔍 DEBUG - About to send update to Pi:');
+        console.log('DEBUG - About to send update to Pi:');
         console.log('   - updatedPlant:', updatedPlant);
         console.log('   - updatedPlant.plant_id:', updatedPlant.plant_id);
         console.log('   - updatedPlant.name:', updatedPlant.name);
         console.log('   - updatedPlant.ideal_moisture:', updatedPlant.ideal_moisture);
         console.log('   - updatedPlant.water_limit:', updatedPlant.water_limit);
         console.log('   - updatedPlant.dripper_type:', updatedPlant.dripper_type);
-        
+
         // Ensure plant_id is available
         if (!updatedPlant.plant_id) {
-          console.warn('⚠️ WARNING - updatedPlant.plant_id is missing, using original plantId:', plant.plant_id);
+          console.warn('WARNING - updatedPlant.plant_id is missing, using original plantId:', plant.plant_id);
           updatedPlant.plant_id = plant.plant_id;
         }
-        
+
         // Store pending update to track the response
         storePendingUpdate(updatedPlant.plant_id, ws, email, {
           newPlantName,
@@ -387,7 +387,7 @@ async function handleUpdatePlantDetails(data, ws, email) {
           dripperType,
           imageData
         });
-        
+
         const piResult = piCommunication.updatePlant(updatedPlant);
         if (!piResult.success) {
           console.warn('Failed to update plant on Pi:', piResult.error);

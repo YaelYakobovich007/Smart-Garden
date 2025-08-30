@@ -123,7 +123,7 @@ class SmartGardenEngine:
         Returns:
             Optional[asyncio.Task]: The created task, or None if plant doesn't exist or is already irrigating
         """
-        print(f"\n=== STARTING IRRIGATION FOR PLANT {plant_id} ===")
+        print(f"Starting irrigation for plant {plant_id}")
         
         plant = self.plants.get(plant_id)
         if not plant:
@@ -179,7 +179,7 @@ class SmartGardenEngine:
         # Check if plant is already being irrigated under lock
         async with self._lock:
             if plant_id in self.irrigation_tasks and not self.irrigation_tasks[plant_id].done():
-                print(f"⚠️ Plant {plant_id} is already being irrigated")
+                print(f"WARNING - Plant {plant_id} is already being irrigated")
                 return IrrigationResult.error(
                     plant_id=plant_id,
                     error_message="Plant is already being irrigated. Please wait for current irrigation to complete or stop it first."
@@ -197,16 +197,16 @@ class SmartGardenEngine:
             # Store the task for potential cancellation under lock
             async with self._lock:
                 self.irrigation_tasks[plant_id] = irrigation_task
-                print(f"🚀 Started irrigation task for plant {plant_id}")
+                print(f"Started irrigation task for plant {plant_id}")
             
             # Wait for irrigation to complete
             result = await irrigation_task
             
-            print(f"✅ Irrigation task completed for plant {plant_id}: {result.status}")
+            print(f"Irrigation task completed for plant {plant_id}: {result.status}")
             return result
             
         except asyncio.CancelledError:
-            print(f"🛑 Irrigation task for plant {plant_id} was cancelled")
+            print(f"Irrigation task for plant {plant_id} was cancelled")
             # Return a cancelled result
             try:
                 current_moisture = await plant.get_moisture() if plant.sensor else 0
@@ -221,7 +221,7 @@ class SmartGardenEngine:
                 reason="Smart irrigation cancelled by user"
             )
         except Exception as e:
-            print(f"❌ Irrigation task failed for plant {plant_id}: {e}")
+            print(f"ERROR - Irrigation task failed for plant {plant_id}: {e}")
             return IrrigationResult.error(
                 plant_id=plant_id,
                 error_message=f"Irrigation failed: {str(e)}"

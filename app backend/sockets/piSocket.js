@@ -39,11 +39,11 @@ function handlePiSocket(ws) {
       const familyCode = connectData.family_code;
 
       if (!familyCode) {
-        console.log('❌ Pi connection attempt without family code');
+        console.log('ERROR - Pi connection attempt without family code');
         return sendError(ws, 'PI_CONNECT_FAIL', 'Family code is required');
       }
 
-      console.log(`🔄 Pi attempting to connect with family code: ${familyCode}`);
+      console.log(`Pi attempting to connect with family code: ${familyCode}`);
 
       try {
         // Get garden by invite code
@@ -51,7 +51,7 @@ function handlePiSocket(ws) {
         const garden = await getGardenByInviteCode(familyCode);
 
         if (!garden) {
-          console.log(`❌ Garden not found for family code: ${familyCode}`);
+          console.log(`Garden not found for family code: ${familyCode}`);
           return sendError(ws, 'PI_CONNECT_FAIL', 'Garden not found for this family code');
         }
 
@@ -59,8 +59,8 @@ function handlePiSocket(ws) {
         const plants = await getGardenPlantsWithHardware(garden.id);
 
         // Send garden sync data to Pi
-        console.log(`✅ Pi connected successfully to garden: ${garden.name}`);
-        console.log(`📊 Sending ${plants.length} plants to Pi`);
+        console.log(`Pi connected successfully to garden: ${garden.name}`);
+        console.log(`Sending ${plants.length} plants to Pi`);
 
         sendSuccess(ws, 'GARDEN_SYNC', {
           garden: { name: garden.name, invite_code: garden.invite_code },
@@ -69,7 +69,7 @@ function handlePiSocket(ws) {
 
         // Log plant details for debugging (match payload fields)
         plants.forEach(plant => {
-          console.log(`   🌱 Plant ID: ${plant.plant_id}`);
+          console.log(`   Plant ID: ${plant.plant_id}`);
           console.log(`      Desired Moisture: ${plant.desiredMoisture}%`);
           console.log(`      Sensor Port: ${plant.sensor_port}`);
           console.log(`      Valve ID: ${plant.valve_id}`);
@@ -77,7 +77,7 @@ function handlePiSocket(ws) {
         });
 
       } catch (error) {
-        console.error('❌ Error during Pi connection:', error);
+        console.error('Error during Pi connection:', error);
         return sendError(ws, 'PI_CONNECT_FAIL', 'Failed to sync garden data');
       }
     }
@@ -197,7 +197,7 @@ function handlePiSocket(ws) {
 
     // Handle PI_LOG messages from Pi
     if (data.type === 'PI_LOG') {
-      console.log('🔍 DEBUG - Received PI_LOG message:');
+      console.log('DEBUG - Received PI_LOG message:');
       console.log('   - Full data:', JSON.stringify(data));
       console.log('   - data.data:', data.data);
       console.log('   - data.data.message:', data.data?.message);
@@ -205,9 +205,9 @@ function handlePiSocket(ws) {
       const logData = data.data || {};
       const timestamp = logData.timestamp || new Date().toISOString();
       const message = logData.message || 'No message';
-      
-      console.log(`🌱 [PI LOG - ${timestamp}] ${message}`);
-      
+
+
+      console.log(`[PI LOG - ${timestamp}] ${message}`);
       // You could also broadcast this to connected clients if needed
       // For now, just log to server console
       return;
@@ -298,20 +298,22 @@ function handlePiSocket(ws) {
       const plantId = progressData.plant_id;
       const stage = progressData.stage;
       const timestamp = progressData.timestamp || new Date().toISOString();
-      
-      console.log(`🚰 [IRRIGATION PROGRESS - ${timestamp}] Plant ${plantId} - ${stage.toUpperCase()}`);
-      console.log(`   📊 Current Moisture: ${progressData.current_moisture}%`);
-      console.log(`   🎯 Target Moisture: ${progressData.target_moisture}%`);
-      console.log(`   💧 Moisture Gap: ${progressData.moisture_gap}%`);
-      console.log(`   💦 Total Water Used: ${progressData.total_water_used}L`);
-      console.log(`   📈 Pulse Number: ${progressData.pulse_number || 'N/A'}`);
-      console.log(`   🚰 Water Limit: ${progressData.water_limit || 'N/A'}L`);
-      console.log(`   📋 Status: ${progressData.status}`);
-      console.log(`   📝 Message: ${progressData.message}`);
-      
+
+
+      console.log(`[IRRIGATION PROGRESS - ${timestamp}] Plant ${plantId} - ${stage.toUpperCase()}`);
+      console.log(`   Current Moisture: ${progressData.current_moisture}%`);
+      console.log(`   Target Moisture: ${progressData.target_moisture}%`);
+      console.log(`   Moisture Gap: ${progressData.moisture_gap}%`);
+      console.log(`   Total Water Used: ${progressData.total_water_used}L`);
+      console.log(`   Pulse Number: ${progressData.pulse_number || 'N/A'}`);
+      console.log(`   Water Limit: ${progressData.water_limit || 'N/A'}L`);
+      console.log(`   Status: ${progressData.status}`);
+      console.log(`   Message: ${progressData.message}`);
+
+
       // Display details object if it exists
       if (progressData.details) {
-        console.log(`   🔍 Details:`);
+        console.log(`   Details:`);
         Object.entries(progressData.details).forEach(([key, value]) => {
           console.log(`      ${key}: ${value}`);
         });
@@ -319,8 +321,9 @@ function handlePiSocket(ws) {
       
       // Check if this is the first pulse (irrigation actually starting)
       if (stage === 'pulse' && progressData.pulse_number === 1) {
-        console.log(`🚀 First pulse detected - irrigation actually started for plant ${plantId}`);
-        
+
+        console.log(`First pulse detected - irrigation actually started for plant ${plantId}`);
+
         // Get pending irrigation info to send notification
         const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
         const pendingInfo = getPendingIrrigation(plantId);
@@ -333,9 +336,9 @@ function handlePiSocket(ws) {
             initialMoisture: progressData.current_moisture || 0,
             targetMoisture: progressData.target_moisture || pendingInfo.plantData.ideal_moisture
           });
-          console.log(`📱 Sent irrigation start notification to user ${pendingInfo.email} for plant ${pendingInfo.plantData.plant_name}`);
+          console.log(`Sent irrigation start notification to user ${pendingInfo.email} for plant ${pendingInfo.plantData.plant_name}`);
         } else {
-          console.log(`⚠️ No pending irrigation found for plant ${plantId} - cannot send start notification`);
+          console.log(`No pending irrigation found for plant ${plantId} - cannot send start notification`);
         }
       }
 
@@ -860,21 +863,26 @@ function handlePiSocket(ws) {
       vLog('DEBUG - Received CLOSE_VALVE_RESPONSE from Pi:');
       vLog('   - Full data:', JSON.stringify(data));
 
-      const responseData = data.data || {};
-      const plantId = responseData.plant_id;
+      // Normalize nested payloads: data or data.data may hold the real fields
+      const envelope = data.data || data;
+      const responseData = envelope?.data || envelope || {};
+      const rawPlantId = responseData.plant_id ?? responseData.plantId;
+      const plantId = Number(rawPlantId);
+      const status = responseData.status;
+      const reason = responseData.reason || responseData.message || null;
 
       vLog('DEBUG - Extracted response data:');
       vLog('   - plantId:', plantId, '(type:', typeof plantId, ')');
-      vLog('   - status:', responseData.status);
+      vLog('   - status:', status);
 
       // Get pending irrigation info (websocket + plant data)
       vLog('DEBUG - Getting pending irrigation info for plantId:', plantId);
       const pendingInfo = completePendingIrrigation(plantId);
       vLog('DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
 
-      if (responseData.status === 'success') {
+      if (status === 'success') {
         vLog(`DEBUG - Plant ${plantId} valve closed successfully`);
-        vLog(`   - Reason: ${responseData.reason}`);
+        vLog(`   - Reason: ${reason}`);
 
         // Persist irrigation state: manual mode cleared
         try {
@@ -891,7 +899,7 @@ function handlePiSocket(ws) {
           const irrigationResult = await irrigationModel.addIrrigationResult({
             plant_id: plantId,
             status: 'valve_closed',
-            reason: responseData.reason || 'Pi valve closed',
+            reason: reason || 'Pi valve closed',
             moisture: responseData.moisture || null,
             final_moisture: responseData.moisture || null,
             water_added_liters: 0, // No water added during valve closing

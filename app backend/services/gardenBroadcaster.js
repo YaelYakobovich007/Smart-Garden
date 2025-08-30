@@ -14,10 +14,7 @@ async function broadcastToGarden(gardenId, messageType, data, excludeEmail = nul
         // Get all garden members
         const members = await getGardenMembers(gardenId);
 
-        if (!members || members.length === 0) {
-            console.log(`No members found for garden ${gardenId}`);
-            return;
-        }
+        if (!members || members.length === 0) return;
 
         let broadcastCount = 0;
 
@@ -32,13 +29,13 @@ async function broadcastToGarden(gardenId, messageType, data, excludeEmail = nul
             if (ws && ws.readyState === 1) { // WebSocket.OPEN
                 sendSuccess(ws, messageType, data);
                 broadcastCount++;
-                console.log(`📡 Broadcasted ${messageType} to ${member.email} for garden ${gardenId}`);
+                console.log(`Broadcasted ${messageType} to ${member.email} for garden ${gardenId}`);
             } else {
-                console.log(`⚠️ User ${member.email} not connected, skipping broadcast`);
+                console.log(`User ${member.email} not connected, skipping broadcast`);
             }
         }
 
-        console.log(`📡 Broadcasted ${messageType} to ${broadcastCount} members of garden ${gardenId}`);
+        console.log(`Broadcasted ${messageType} to ${broadcastCount} members of garden ${gardenId}`);
     } catch (error) {
         console.error(`Error broadcasting to garden ${gardenId}:`, error);
     }
