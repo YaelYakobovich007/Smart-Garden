@@ -331,7 +331,7 @@ class SmartGardenEngine:
             print(f"remove_plant: Error while forcing valve close for plant {plant_id}: {e}")
 
         # 3) Release hardware from managers
-            try:
+        try:
                 self.valves_manager.release_valve(plant_id)
         except Exception as e:
             print(f"remove_plant: Warning releasing valve for plant {plant_id}: {e}")
