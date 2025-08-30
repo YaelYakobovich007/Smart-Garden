@@ -34,7 +34,7 @@ const CARD_WIDTH = Math.floor(Dimensions.get('window').width * 0.65);
 
 const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) => {
   const navigation = useNavigation();
-  
+
   // Animation for watering indicator
   const [wateringAnimations, setWateringAnimations] = useState({});
 
@@ -52,21 +52,33 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
     plants.forEach(plant => {
       const plantWateringState = getPlantWateringState(plant.id);
       const animation = wateringAnimations[plant.id];
-      
+
       if (plantWateringState.isWateringActive && animation) {
-        // Start ripple animation - multiple expanding circles
+        // Blinking animation for both smart and manual irrigation
         const rippleAnimation = Animated.loop(
           Animated.sequence([
-            // First ripple
+            // Fade in
             Animated.timing(animation, {
               toValue: 1,
-              duration: 1500,
+              duration: 750,
               useNativeDriver: true,
             }),
-            // Reset for next ripple
+            // Hold
+            Animated.timing(animation, {
+              toValue: 1,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+            // Fade out
             Animated.timing(animation, {
               toValue: 0,
-              duration: 0,
+              duration: 750,
+              useNativeDriver: true,
+            }),
+            // Hold
+            Animated.timing(animation, {
+              toValue: 0,
+              duration: 100,
               useNativeDriver: true,
             }),
           ])
@@ -295,7 +307,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                 }
                 style={styles.plantImage}
               />
-              
+
               {/* Watering Indicator */}
               {isPlantBeingWatered(plant) && (
                 <View style={styles.wateringIndicator}>
@@ -312,16 +324,16 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                         }) || 1,
                       }}
                     >
-                      <Feather 
-                        name={getPlantWateringState(plant.id).isSmartMode ? "zap" : "droplet"} 
-                        size={12} 
-                        color="#FFFFFF" 
+                      <Feather
+                        name={getPlantWateringState(plant.id).isSmartMode ? "zap" : "droplet"}
+                        size={12}
+                        color="#FFFFFF"
                       />
                     </Animated.View>
                   </View>
-                  
+
                   {/* Multiple expanding ripple circles - animate; blue for manual, purple for smart */}
-                  <Animated.View 
+                  <Animated.View
                     style={[
                       styles.rippleCircle,
                       getPlantWateringState(plant.id).isSmartMode ? styles.smartRippleCircle : null,
@@ -339,7 +351,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                       }
                     ]}
                   />
-                  <Animated.View 
+                  <Animated.View
                     style={[
                       styles.rippleCircle,
                       getPlantWateringState(plant.id).isSmartMode ? styles.smartRippleCircle : null,
@@ -357,7 +369,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                       }
                     ]}
                   />
-                  <Animated.View 
+                  <Animated.View
                     style={[
                       styles.rippleCircle,
                       getPlantWateringState(plant.id).isSmartMode ? styles.smartRippleCircle : null,
@@ -384,7 +396,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
               <View style={styles.plantImageSpacer} />
               <Text style={styles.plantName}>{plant.name}</Text>
               <Text style={styles.plantType}>{plant.type}</Text>
-              
+
               {/* Valve Blocked Warning */}
               {plant.valve_blocked && (
                 <View style={styles.valveBlockedWarning}>
@@ -392,7 +404,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                   <Text style={styles.valveBlockedText}>Tap Blocked</Text>
                 </View>
               )}
-              
+
 
             </View>
 
