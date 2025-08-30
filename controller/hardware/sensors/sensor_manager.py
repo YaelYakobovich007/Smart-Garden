@@ -79,7 +79,7 @@ class SensorManager:
         # Assign mapping
         self.plant_sensor_map[plant_id] = sensor_port
         return sensor_port
-
+        
     def release_sensor(self, plant_id: str) -> None:
         """
         Releases the sensor assigned to the given plant, making it available for reassignment.

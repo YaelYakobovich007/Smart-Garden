@@ -8,18 +8,18 @@ const { getPlantsByGardenId } = require('../models/plantModel');
  */
 async function getGardenByInviteCode(inviteCode) {
     try {
-        console.log(`🔍 Looking for garden with invite code: ${inviteCode}`);
+        console.log(`Looking for garden with invite code: ${inviteCode}`);
         const garden = await getGardenByInviteCodeModel(inviteCode);
 
         if (garden) {
-            console.log(`✅ Found garden: ${garden.name} (ID: ${garden.id})`);
+            console.log(`Found garden: ${garden.name} (ID: ${garden.id})`);
         } else {
-            console.log(`❌ No garden found with invite code: ${inviteCode}`);
+            console.log(`No garden found with invite code: ${inviteCode}`);
         }
 
         return garden;
     } catch (error) {
-        console.error(`❌ Error getting garden by invite code ${inviteCode}:`, error);
+        console.error(`Error getting garden by invite code ${inviteCode}:`, error);
         throw error;
     }
 }
@@ -31,7 +31,7 @@ async function getGardenByInviteCode(inviteCode) {
  */
 async function getGardenPlantsWithHardware(gardenId) {
     try {
-        console.log(`🌱 Getting plants for garden ID: ${gardenId}`);
+        console.log(`Getting plants for garden ID: ${gardenId}`);
         const plants = await getPlantsByGardenId(gardenId);
 
         // Filter only plants that have hardware assigned (sensor_port and valve_id)
@@ -40,7 +40,7 @@ async function getGardenPlantsWithHardware(gardenId) {
             plant.valve_id !== null
         );
 
-        console.log(`📊 Found ${plants.length} total plants, ${plantsWithHardware.length} with hardware assigned`);
+        console.log(`Found ${plants.length} total plants, ${plantsWithHardware.length} with hardware assigned`);
 
         // Transform plants to the format expected by the Pi controller (same as ADD_PLANT)
         // Include hardware identifiers so the Pi can bind to the correct hardware
@@ -59,7 +59,7 @@ async function getGardenPlantsWithHardware(gardenId) {
 
         // Log each plant's info
         transformedPlants.forEach(plant => {
-            console.log(`   🌱 Plant ID: ${plant.plant_id}`);
+            console.log(`   Plant ID: ${plant.plant_id}`);
             console.log(`      Desired Moisture: ${plant.desiredMoisture}%`);
             console.log(`      Water Limit: ${plant.waterLimit}L`);
             console.log(`      Dripper Type: ${plant.dripperType}`);
@@ -68,7 +68,7 @@ async function getGardenPlantsWithHardware(gardenId) {
 
         return transformedPlants;
     } catch (error) {
-        console.error(`❌ Error getting plants for garden ${gardenId}:`, error);
+        console.error(`Error getting plants for garden ${gardenId}:`, error);
         throw error;
     }
 }
