@@ -218,6 +218,7 @@ function handlePiSocket(ws) {
     if (data.type === 'IRRIGATION_DECISION') {
       const decisionData = data.data || {};
       const plantId = Number(decisionData.plant_id);
+      const sessionId = decisionData.session_id;
       
       console.log(`[IRRIGATION DECISION] Plant ${plantId}`);
       console.log(`Current Moisture: ${decisionData.current_moisture}%`);
@@ -227,17 +228,18 @@ function handlePiSocket(ws) {
       console.log(`Reason: ${decisionData.reason}`);
       
       // Get pending irrigation info to send notification
-      const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
-      const pendingInfo = getPendingIrrigation(plantId);
+      const { getPendingIrrigation, getPendingBySession } = require('../services/pendingIrrigationTracker');
+      const pendingInfo = getPendingBySession(sessionId) || getPendingIrrigation(plantId);
       
       if (pendingInfo) {
         // If irrigation will start, notify the client
         if (decisionData.will_irrigate) {
-          if (pendingInfo.ws) {
+          if (pendingInfo?.ws) {
             sendSuccess(pendingInfo.ws, 'IRRIGATION_STARTED', {
               message: `Starting irrigation for plant "${pendingInfo.plantData.plant_name}"`,
               plantName: pendingInfo.plantData.plant_name,
               plantId: plantId,
+              sessionId,
               currentMoisture: decisionData.current_moisture,
               targetMoisture: decisionData.target_moisture
             });
@@ -245,7 +247,7 @@ function handlePiSocket(ws) {
           // Persist irrigation state: smart started
           try {
             const { updateIrrigationState } = require('../models/plantModel');
-            await updateIrrigationState(Number(plantId), { mode: 'smart', startAt: new Date(), endAt: null, sessionId: null });
+            await updateIrrigationState(Number(plantId), { mode: 'smart', startAt: new Date(), endAt: null, sessionId });
           } catch (e) {
             console.warn('Failed to persist smart irrigation start:', e.message);
           }
@@ -296,6 +298,7 @@ function handlePiSocket(ws) {
     if (data.type === 'IRRIGATION_PROGRESS') {
       const progressData = data.data || {};
       const plantId = progressData.plant_id;
+      const sessionId = progressData.session_id;
       const stage = progressData.stage;
       const timestamp = progressData.timestamp || new Date().toISOString();
 
@@ -344,8 +347,8 @@ function handlePiSocket(ws) {
 
       // Forward live progress to the requesting client so the app can update the UI in real-time
       try {
-        const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
-        const pendingInfo = getPendingIrrigation(plantId);
+        const { getPendingIrrigation, getPendingBySession } = require('../services/pendingIrrigationTracker');
+        const pendingInfo = getPendingBySession(sessionId) || getPendingIrrigation(plantId);
         if (pendingInfo && pendingInfo.ws) {
           sendSuccess(pendingInfo.ws, 'IRRIGATION_PROGRESS', progressData);
         }

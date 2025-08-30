@@ -20,6 +20,7 @@ class IrrigationProgress(BaseModel):
     message: Optional[str] = None                    # Human-readable status message
     details: Optional[Dict[str, Any]] = None         # Additional stage-specific details
     timestamp: Optional[float] = None                # When this progress update was created
+    session_id: Optional[str] = None                 # Correlation id for this irrigation run
     
     def __init__(self, **data):
         # Auto-set timestamp if not provided
@@ -130,5 +131,6 @@ class IrrigationProgress(BaseModel):
             "status": self.status,
             "message": self.message,
             "details": self.details,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
+            "session_id": self.session_id
         }

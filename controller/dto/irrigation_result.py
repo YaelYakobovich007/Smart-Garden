@@ -15,6 +15,7 @@ class IrrigationResult(BaseModel):
     water_added_liters: Optional[float] = None   # How much water was actually given 
     error_message: Optional[str] = None          # Error details if status is "error"
     timestamp: Optional[float] = None            # When the irrigation was completed
+    session_id: Optional[str] = None             # Correlation id for this irrigation run
     
     def __init__(self, **data):
         # Auto-set timestamp if not provided
@@ -24,7 +25,8 @@ class IrrigationResult(BaseModel):
     
     @classmethod
     def success(cls, plant_id: int, moisture: float, final_moisture: float, 
-                water_added_liters: float, reason: Optional[str] = None) -> "IrrigationResult":
+                water_added_liters: float, reason: Optional[str] = None,
+                session_id: Optional[str] = None) -> "IrrigationResult":
         """Create a success notification for when irrigation completes successfully."""
         return cls(
             plant_id=plant_id,
@@ -32,11 +34,12 @@ class IrrigationResult(BaseModel):
             moisture=moisture,
             final_moisture=final_moisture,
             water_added_liters=water_added_liters,
-            reason=reason
+            reason=reason,
+            session_id=session_id
         )
     
     @classmethod  
-    def skipped(cls, plant_id: int, moisture: float, reason: str) -> "IrrigationResult":
+    def skipped(cls, plant_id: int, moisture: float, reason: str, session_id: Optional[str] = None) -> "IrrigationResult":
         """Create a skipped notification for when irrigation is skipped."""
         return cls(
             plant_id=plant_id,
@@ -44,12 +47,14 @@ class IrrigationResult(BaseModel):
             moisture=moisture,
             final_moisture=moisture,  # Same as initial for skipped
             water_added_liters=0.0,
-            reason=reason
+            reason=reason,
+            session_id=session_id
         )
     
     @classmethod  
     def error(cls, plant_id: int, error_message: str, moisture: Optional[float] = None,
-              final_moisture: Optional[float] = None, water_added_liters: float = 0.0) -> "IrrigationResult":
+              final_moisture: Optional[float] = None, water_added_liters: float = 0.0,
+              session_id: Optional[str] = None) -> "IrrigationResult":
         """Create an error notification for when irrigation fails."""
         return cls(
             plant_id=plant_id,
@@ -58,13 +63,15 @@ class IrrigationResult(BaseModel):
             final_moisture=final_moisture,
             water_added_liters=water_added_liters,
             error_message=error_message,
-            reason=error_message
+            reason=error_message,
+            session_id=session_id
         )
     
     @classmethod
     def cancelled(cls, plant_id: int, moisture: Optional[float] = None,
                   final_moisture: Optional[float] = None, water_added_liters: float = 0.0,
-                  reason: str = "Smart irrigation cancelled by user") -> "IrrigationResult":
+                  reason: str = "Smart irrigation cancelled by user",
+                  session_id: Optional[str] = None) -> "IrrigationResult":
         """Create a cancelled notification for when irrigation is stopped by user."""
         return cls(
             plant_id=plant_id,
@@ -72,7 +79,8 @@ class IrrigationResult(BaseModel):
             moisture=moisture,
             final_moisture=final_moisture if final_moisture is not None else moisture,
             water_added_liters=water_added_liters,
-            reason=reason
+            reason=reason,
+            session_id=session_id
         )
     
     def to_websocket_data(self) -> dict:
@@ -85,6 +93,7 @@ class IrrigationResult(BaseModel):
             "final_moisture": self.final_moisture,
             "water_added_liters": self.water_added_liters,
             "error_message": self.error_message,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
+            "session_id": self.session_id
         }
     

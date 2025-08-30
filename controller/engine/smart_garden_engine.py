@@ -126,7 +126,7 @@ class SmartGardenEngine:
         self.plants[plant_id] = plant
         print(f"Plant {plant_id} added with valve {valve.valve_id} and sensor {sensor.port}")
 
-    def start_irrigation(self, plant_id: int) -> Optional[asyncio.Task]:
+    def start_irrigation(self, plant_id: int, session_id: str = None) -> Optional[asyncio.Task]:
         """Start irrigation as a background task.
         
         Returns:
@@ -147,7 +147,7 @@ class SmartGardenEngine:
             
         # Create the irrigation task
         task = asyncio.create_task(
-            self.irrigation_algorithm.irrigate(plant),
+            self.irrigation_algorithm.irrigate(plant, session_id=session_id),
             name=f"irrigation_plant_{plant_id}"
         )
         

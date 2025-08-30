@@ -754,23 +754,13 @@ const PlantDetail = () => {
                Please troubleshoot the hardware issue to restore irrigation functionality.
              </Text>
              <View style={{ flexDirection: 'row', gap: 12 }}>
-               <TouchableOpacity
-                 style={[styles.troubleshootButton, pendingValveRequest && styles.disabledButton]}
-                 disabled={pendingValveRequest}
-                 onPress={() => restartValve(plant)}
-               >
-                 <Feather name="refresh-ccw" size={20} color="#FFFFFF" />
-                 <Text style={styles.troubleshootButtonText}>
-                   {pendingValveRequest ? 'Restarting…' : 'Restart Valve'}
-                 </Text>
-               </TouchableOpacity>
-             <TouchableOpacity
-               style={styles.troubleshootButton}
-               onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
-             >
-               <Feather name="tool" size={20} color="#FFFFFF" />
-               <Text style={styles.troubleshootButtonText}>Troubleshoot Valve</Text>
-             </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.troubleshootButton}
+                onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
+              >
+                <Feather name="tool" size={20} color="#FFFFFF" />
+                <Text style={styles.troubleshootButtonText}>Diagnose</Text>
+              </TouchableOpacity>
              </View>
            </View>
          )}

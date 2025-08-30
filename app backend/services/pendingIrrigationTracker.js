@@ -4,6 +4,7 @@
  */
 
 const pendingIrrigations = new Map(); // Map<plant_id, { ws, email, plantData, timestamp }>
+const pendingBySession = new Map(); // Map<sessionId, { ws, email, plantId, plantData, timestamp }>
 
 /**
  * Add an irrigation request to pending list while waiting for Pi response
@@ -14,12 +15,14 @@ const pendingIrrigations = new Map(); // Map<plant_id, { ws, email, plantData, t
  */
 function addPendingIrrigation(plantId, ws, email, plantData) {
     const id = Number(plantId);
-    pendingIrrigations.set(id, {
+    const entry = {
         ws,
         email,
+        plantId: id,
         plantData,
         timestamp: Date.now()
-    });
+    };
+    pendingIrrigations.set(id, entry);
 
     console.log(`Added irrigation request for plant ${id} to pending list (count=${pendingIrrigations.size})`);
 }
@@ -36,6 +39,32 @@ function getPendingIrrigation(plantId) {
         return pendingInfo;
     }
     return null;
+}
+
+// Session-based APIs
+function addPendingSession(sessionId, plantId, ws, email, plantData) {
+    if (!sessionId) return;
+    const id = String(sessionId);
+    pendingBySession.set(id, {
+        ws,
+        email,
+        plantId: Number(plantId),
+        plantData,
+        timestamp: Date.now()
+    });
+}
+
+function getPendingBySession(sessionId) {
+    if (!sessionId) return null;
+    return pendingBySession.get(String(sessionId)) || null;
+}
+
+function completePendingBySession(sessionId) {
+    if (!sessionId) return null;
+    const key = String(sessionId);
+    const info = pendingBySession.get(key) || null;
+    if (info) pendingBySession.delete(key);
+    return info;
 }
 
 /**
@@ -102,5 +131,8 @@ module.exports = {
     getPendingIrrigation,
     completePendingIrrigation,
     isPendingIrrigation,
-    getPendingIrrigationIds
+    getPendingIrrigationIds,
+    addPendingSession,
+    getPendingBySession,
+    completePendingBySession
 };
