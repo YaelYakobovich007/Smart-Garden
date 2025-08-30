@@ -8,6 +8,7 @@ from controller.models.dripper_type import DripperType
 from controller.hardware.valves.valves_manager import ValvesManager
 from controller.hardware.sensors.sensor_manager import SensorManager
 from controller.irrigation.irrigation_algorithm import IrrigationAlgorithm
+from controller.irrigation.irrigation_schedule import IrrigationSchedule
 from controller.dto.irrigation_result import IrrigationResult
 from controller.hardware.valves.valve import Valve
 from controller.hardware.sensors.sensor import Sensor
@@ -41,6 +42,24 @@ class SmartGardenEngine:
         self.irrigation_tasks: Dict[int, asyncio.Task] = {}  # Track running irrigation tasks
         
         self._lock = asyncio.Lock()  # Thread-safe operations
+
+        # Start schedule runner thread (run_pending)
+        try:
+            import schedule
+            def _run_schedule_loop():
+                import time as _time
+                while True:
+                    try:
+                        schedule.run_pending()
+                    except Exception:
+                        pass
+                    _time.sleep(1)
+
+            t = threading.Thread(target=_run_schedule_loop, daemon=True)
+            t.start()
+        except Exception:
+            # If schedule module missing or any failure, skip run loop
+            pass
 
     async def add_plant(
             self,
@@ -125,6 +144,15 @@ class SmartGardenEngine:
         
         self.plants[plant_id] = plant
         print(f"Plant {plant_id} added with valve {valve.valve_id} and sensor {sensor.port}")
+
+        # Attach schedule if provided
+        try:
+            if schedule_data:
+                # Ensure schedule entries include full day names and HH:MM times; IrrigationSchedule normalizes
+                plant.schedule = IrrigationSchedule(plant, schedule_data, self.irrigation_algorithm)
+                print(f"Attached schedule to plant {plant_id}: {len(schedule_data)} entries")
+        except Exception as e:
+            print(f"WARNING: Failed to attach schedule for plant {plant_id}: {e}")
 
     def start_irrigation(self, plant_id: int, session_id: str = None) -> Optional[asyncio.Task]:
         """Start irrigation as a background task.
@@ -312,7 +340,7 @@ class SmartGardenEngine:
             print(f"remove_plant: Plant {plant_id} not found")
             return False
 
-            plant = self.plants[plant_id]
+        plant = self.plants[plant_id]
 
         # 1) Cancel running irrigation task (best-effort; non-blocking in sync context)
         try:

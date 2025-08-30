@@ -214,6 +214,16 @@ const MainScreen = () => {
           }
           const normalizedTime = plant.irrigation_time || null;
           const inferredMode = (normalizedDays && normalizedDays.length > 0 && normalizedTime) ? 'scheduled' : 'smart';
+          
+          // Debug logging for watering mode inference
+          console.log(' Watering Mode Debug:', {
+            plantName: plant.name,
+            originalMode: plant.watering_mode,
+            normalizedDays: normalizedDays,
+            normalizedTime: normalizedTime,
+            inferredMode: inferredMode,
+            finalMode: plant.watering_mode || inferredMode
+          });
 
           const transformed = {
             id: pid,
@@ -712,6 +722,19 @@ const MainScreen = () => {
   };
 
   /**
+   * Handle "See All" plants button press
+   * Navigates to a full plants list screen
+   */
+  const handleSeeAllPlants = () => {
+    // For now, show an alert. In the future, this could navigate to a full plants list screen
+    Alert.alert(
+      'See All Plants',
+      'This will show all your plants in a detailed list view.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  /**
    * Handle garden navigation
    * Navigates to garden management screen
    */
@@ -1049,43 +1072,84 @@ const MainScreen = () => {
             </View>
           )}
 
-          {/* Garden Status Banner */}
-          {!gardenLoading && (
-            <View style={styles.gardenStatusContainer}>
-              {garden ? (
-                <View style={styles.gardenActiveBanner}>
-                  <View style={styles.gardenInfo}>
-                    <View style={styles.gardenIconContainerActive}>
-                      <Feather name="users" size={18} color="#22C55E" />
+                     {/* Garden Area Section */}
+           <View style={styles.gardenAreaSection}>
+                           <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  {garden ? 'Garden Area' : 'Garden'}
+                </Text>
+              </View>
+              <View style={styles.titleSeparator} />
+            
+            {/* Garden Status Banner */}
+            {!gardenLoading && (
+              <View style={styles.gardenStatusContainer}>
+                {garden ? (
+                  <View style={styles.gardenCard}>
+                    <View style={styles.gardenCardHeader}>
+                      <View style={styles.gardenCardIconContainer}>
+                        <Feather name="users" size={24} color="#FFFFFF" />
+                      </View>
+                      <View style={styles.gardenCardInfo}>
+                        <Text style={styles.gardenCardTitle}>{garden.name}</Text>
+                        <View style={styles.participantsContainer}>
+                          <Text style={styles.participantsText}>
+                            {garden.member_count || 1} member{garden.member_count !== 1 ? 's' : ''}
+                          </Text>
+                          <View style={styles.participantDotsRow}>
+                            {Array.from({ length: Math.min(garden.member_count || 1, 5) }, (_, index) => (
+                              <View
+                                key={index}
+                                style={[
+                                  styles.participantDot,
+                                  index < (garden.member_count || 1) ? styles.participantDotActive : styles.participantDotInactive
+                                ]}
+                              />
+                            ))}
+                          </View>
+                        </View>
+                      </View>
                     </View>
-                    <Text style={styles.gardenStatusText}>
-                      Garden: {garden.name} • {garden.member_count || 1} member{garden.member_count !== 1 ? 's' : ''}
-                    </Text>
+                                         <View style={styles.gardenCardFooter}>
+                       <View style={styles.gardenCardStat}>
+                         <Text style={styles.gardenCardStatText}>Active Garden</Text>
+                       </View>
+                       <View style={styles.gardenCardStat}>
+                         <Feather name="clock" size={16} color="#16A34A" />
+                         <Text style={styles.gardenCardStatText}>24/7 Monitoring</Text>
+                       </View>
+                     </View>
                   </View>
-                  <TouchableOpacity onPress={handleGardenSettings} style={styles.gardenSettingsButton}>
-                    <Feather name="settings" size={18} color="#22C55E" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.gardenInactiveBanner}>
-                  <TouchableOpacity onPress={handleCreateOrJoinGarden} style={styles.gardenInfo}>
-                    <View style={styles.gardenIconContainerInactive}>
-                      <Feather name="plus" size={18} color="#F59E0B" />
+                ) : (
+                  <TouchableOpacity onPress={handleCreateOrJoinGarden} style={styles.gardenCardEmpty}>
+                    <View style={styles.gardenCardEmptyIcon}>
+                      <Feather name="plus-circle" size={32} color="#16A34A" />
                     </View>
-                    <Text style={styles.gardenStatusTextClickable}>
-                      Join a garden to start managing plants
-                    </Text>
+                    <View style={styles.gardenCardEmptyContent}>
+                      <Text style={styles.gardenCardEmptyTitle}>Join a Garden</Text>
+                      <Text style={styles.gardenCardEmptySubtitle}>
+                        Connect with others to manage plants together
+                      </Text>
+                    </View>
+                    <Feather name="chevron-right" size={20} color="#16A34A" />
                   </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          )}
+                )}
+              </View>
+            )}
+          </View>
 
           {/* Plants List Section */}
           <View style={styles.plantsSection}>
-            <Text style={styles.sectionTitle}>
-              {garden ? `${garden.name} Plants` : 'My Plants'}
-            </Text>
+            {/* Section Header with See All Button */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {garden ? `${garden.name} Plants` : 'My Plants'}
+              </Text>
+              <TouchableOpacity onPress={handleSeeAllPlants} style={styles.seeAllButton}>
+                <Text style={styles.seeAllButtonText}>See All</Text>
+                <Feather name="chevron-right" size={16} color="#16A34A" />
+              </TouchableOpacity>
+            </View>
             <View style={styles.titleSeparator} />
             <PlantList
               plants={plants}

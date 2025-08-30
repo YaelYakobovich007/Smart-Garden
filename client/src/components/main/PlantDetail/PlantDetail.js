@@ -112,11 +112,38 @@ const PlantDetail = () => {
       const data = message?.data || message;
       const incoming = data?.plant;
       if (incoming) {
+        // Normalize schedule fields and watering mode using existing DB columns
+        let normalizedDays = null;
+        if (incoming.irrigation_days != null) {
+          if (Array.isArray(incoming.irrigation_days)) {
+            normalizedDays = incoming.irrigation_days;
+          } else {
+            try {
+              const parsedDays = JSON.parse(incoming.irrigation_days);
+              normalizedDays = Array.isArray(parsedDays) ? parsedDays : null;
+            } catch {
+              normalizedDays = null;
+            }
+          }
+        } else if (incoming.schedule_days != null) {
+          normalizedDays = Array.isArray(incoming.schedule_days) ? incoming.schedule_days : null;
+        }
+
+        const normalizedTime = incoming.irrigation_time || incoming.schedule_time || null;
+        const inferredMode = (normalizedDays && normalizedDays.length > 0 && normalizedTime) ? 'scheduled' : 'smart';
+        const normalizedMode = (typeof incoming.watering_mode === 'string' && incoming.watering_mode)
+          ? incoming.watering_mode
+          : inferredMode;
+
         const normalized = {
           ...incoming,
           id: incoming.plant_id != null ? Number(incoming.plant_id) : (plant?.id ?? incoming.id),
           type: incoming.plant_type || incoming.type || plant?.type,
           image_url: incoming.image_url != null ? incoming.image_url : plant?.image_url,
+          // Expose unified schedule fields for UI
+          schedule_days: normalizedDays,
+          schedule_time: normalizedTime,
+          watering_mode: normalizedMode,
         };
         setPlant(normalized);
         try {
@@ -188,8 +215,21 @@ const PlantDetail = () => {
     const days = p?.schedule_days;
     const time = p?.schedule_time;
 
+    // More robust schedule detection
     const hasSchedule = Array.isArray(days) ? days.length > 0 : !!days;
-    const isScheduledMode = (mode && typeof mode === 'string' && mode.toLowerCase() === 'scheduled') || (hasSchedule && !!time);
+    const hasTime = !!time;
+    const isScheduledMode = (mode && typeof mode === 'string' && mode.toLowerCase() === 'scheduled') || (hasSchedule && hasTime);
+    
+    // Debug logging
+    console.log('🌱 Schedule Debug:', {
+      plantName: p?.name,
+      mode: mode,
+      days: days,
+      time: time,
+      hasSchedule: hasSchedule,
+      hasTime: hasTime,
+      isScheduledMode: isScheduledMode
+    });
 
     if (!isScheduledMode) {
       return (
