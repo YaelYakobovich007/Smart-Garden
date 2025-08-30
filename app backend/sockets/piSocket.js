@@ -3,7 +3,8 @@ const { handleSensorAssigned, handleValveAssigned } = require('../controllers/pl
 const { completePendingPlant } = require('../services/pendingPlantsTracker');
 const { completePendingIrrigation } = require('../services/pendingIrrigationTracker');
 const { completePendingMoistureRequest } = require('../services/pendingMoistureTracker');
-const { broadcastPlantAdded, broadcastMoistureUpdate } = require('../services/gardenBroadcaster');
+const { broadcastToGarden } = require('../services/gardenBroadcaster');
+
 
 let piSocket = null;
 const VERBOSE_LOGS = process.env.VERBOSE_LOGS === 'true';
@@ -20,7 +21,7 @@ function handlePiSocket(ws) {
       data = JSON.parse(msg);
       console.log(`[PI] Message received: ${data.type}`);
     } catch {
-      console.error('Invalid JSON from Pi:', msg);
+      console.log(`[PI] Error: Invalid JSON message - ${msg}`);
       return sendError(ws, 'INVALID_JSON', 'Invalid JSON format');
     }
 
@@ -73,7 +74,7 @@ function handlePiSocket(ws) {
         });
 
       } catch (error) {
-        console.error('Error during Pi connection:', error);
+        console.log(`[PI] Error: Connection failed - ${error.message}`);
         return sendError(ws, 'PI_CONNECT_FAIL', 'Failed to sync garden data');
       }
     }
@@ -112,14 +113,17 @@ function handlePiSocket(ws) {
             try {
               const gardenId = await require('../models/plantModel').getUserGardenId(pendingInfo.userId);
               if (gardenId) {
-                await broadcastPlantAdded(gardenId, {
-                  ...plantData,
-                  sensor_port: responseData.sensor_port,
-                  valve_id: responseData.assigned_valve
+                await broadcastToGarden(gardenId, 'PLANT_ADDED_TO_GARDEN', {
+                  plant: {
+                    ...plantData,
+                    sensor_port: responseData.sensor_port,
+                    valve_id: responseData.assigned_valve
+                  },
+                  message: `New plant "${plantData.name}" was added to your garden`
                 }, email);
               }
             } catch (broadcastError) {
-              console.error('Error broadcasting plant addition:', broadcastError);
+              console.log(`[BROADCAST] Error: Failed to send plant addition - ${broadcastError.message}`);
             }
           }
         } catch (dbError) {
@@ -151,7 +155,7 @@ function handlePiSocket(ws) {
       if (responseData.success) {
         console.log(`Plant ${plantId} updated successfully on Pi: ${responseData.message}`);
 
-        // Send success response to frontend
+        // Send success response to frontend and broadcast to garden
         if (pendingInfo) {
           const { sendSuccess } = require('../utils/wsResponses');
           // Get the updated plant data from the database
@@ -162,6 +166,14 @@ function handlePiSocket(ws) {
               plant: updatedPlant,
               message: `Plant updated successfully on hardware: ${responseData.message}`
             });
+
+            // Broadcast plant update to garden members
+            if (updatedPlant && updatedPlant.garden_id) {
+              await broadcastToGarden(updatedPlant.garden_id, 'PLANT_UPDATED_IN_GARDEN', {
+                plant: updatedPlant,
+                message: `Plant "${updatedPlant.name}" was updated in your garden`
+              }, pendingInfo.email);
+            }
           } catch (error) {
             console.error('Error getting updated plant data:', error);
             sendSuccess(pendingInfo.ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {
@@ -249,7 +261,7 @@ function handlePiSocket(ws) {
             const { getPlantById } = require('../models/plantModel');
             const plant = await getPlantById(Number(plantId));
             if (plant?.garden_id) {
-              const { broadcastToGarden } = require('../services/gardenBroadcaster');
+
               await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STARTED', {
                 plantId: Number(plantId),
                 plantName: plant.name || pendingInfo.plantData.plant_name,
@@ -613,7 +625,7 @@ function handlePiSocket(ws) {
             try {
               const plant = await getPlantById(Number(plantId));
               if (plant?.garden_id) {
-                const { broadcastToGarden } = require('../services/gardenBroadcaster');
+
                 await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STOPPED', {
                   plantId: Number(plantId),
                   plantName: plant.name || pendingInfo?.plantData?.plant_name
@@ -701,7 +713,7 @@ function handlePiSocket(ws) {
           const { getPlantById } = require('../models/plantModel');
           const plant = await getPlantById(Number(plantId));
           if (plant?.garden_id) {
-            const { broadcastToGarden } = require('../services/gardenBroadcaster');
+
             await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STOPPED', {
               plantId: Number(plantId),
               plantName: plant.name || pendingInfo?.plantData?.plant_name
@@ -800,7 +812,7 @@ function handlePiSocket(ws) {
             const { getPlantById } = require('../models/plantModel');
             const plant = await getPlantById(Number(plantId));
             if (plant?.garden_id) {
-              const { broadcastToGarden } = require('../services/gardenBroadcaster');
+
               await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STARTED', {
                 plantId: Number(plantId),
                 plantName: plant.name || pendingInfo?.plantData?.plant_name,
@@ -931,7 +943,7 @@ function handlePiSocket(ws) {
             const { getPlantById } = require('../models/plantModel');
             const plant = await getPlantById(Number(plantId));
             if (plant?.garden_id) {
-              const { broadcastToGarden } = require('../services/gardenBroadcaster');
+
               await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STOPPED', {
                 plantId: Number(plantId),
                 plantName: plant.name || pendingInfo?.plantData?.plant_name
@@ -1015,7 +1027,7 @@ function handlePiSocket(ws) {
           const { getPlantById } = require('../models/plantModel');
           const plant = await getPlantById(plantId);
           if (plant?.garden_id) {
-            const { broadcastToGarden } = require('../services/gardenBroadcaster');
+
             await broadcastToGarden(plant.garden_id, 'GARDEN_VALVE_UNBLOCKED', { plantId });
           }
         } catch { }
@@ -1035,7 +1047,7 @@ function handlePiSocket(ws) {
       const responseData = data.data || {};
 
       if (responseData.status === 'success') {
-        console.log(`🌿 Plant ${responseData.plant_id}: moisture=${responseData.moisture}%, temperature=${responseData.temperature}°C`);
+        console.log(`[PI] Plant ${responseData.plant_id}: moisture=${responseData.moisture}%, temperature=${responseData.temperature}°C`);
 
         // Get pending moisture request info
         const pendingInfo = completePendingMoistureRequest(responseData.plant_id);
@@ -1051,23 +1063,26 @@ function handlePiSocket(ws) {
 
           // Send moisture data to requesting client
           sendSuccess(pendingInfo.ws, 'PLANT_MOISTURE_RESPONSE', moistureData);
-          console.log(`📊 Sent moisture data to client for plant ${responseData.plant_id}`);
+          console.log(`[PI] Sent moisture data: plant=${responseData.plant_id}`);
 
           // Broadcast moisture update to other garden members
           try {
             const { getPlantById } = require('../models/plantModel');
             const plant = await getPlantById(responseData.plant_id);
             if (plant && plant.garden_id) {
-              await broadcastMoistureUpdate(plant.garden_id, moistureData, pendingInfo.email);
+              await broadcastToGarden(plant.garden_id, 'GARDEN_MOISTURE_UPDATE', {
+                moistureData: moistureData,
+                message: 'Plant moisture levels have been updated'
+              }, pendingInfo.email);
             }
           } catch (broadcastError) {
-            console.error('Error broadcasting moisture update:', broadcastError);
+            console.log(`[BROADCAST] Error: Failed to send moisture update - ${broadcastError.message}`);
           }
         } else {
-          console.log(`⚠️ No pending client found for plant ${responseData.plant_id} moisture request`);
+          console.log(`[PI] Warning: No pending client for moisture request - plant=${responseData.plant_id}`);
         }
       } else {
-        console.error(`❌ Plant ${responseData.plant_id} moisture read failed: ${responseData.error_message}`);
+        console.log(`[PI] Error: Moisture read failed - plant=${responseData.plant_id} error=${responseData.error_message}`);
 
         // Get pending moisture request info
         const pendingInfo = completePendingMoistureRequest(responseData.plant_id);
@@ -1078,7 +1093,7 @@ function handlePiSocket(ws) {
             plant_id: responseData.plant_id,
             error_message: responseData.error_message || 'Failed to read moisture data'
           });
-          console.log(`❌ Sent moisture error to client for plant ${responseData.plant_id}`);
+          console.log(`[PI] Sent error to client: plant=${responseData.plant_id}`);
         }
       }
       return;
@@ -1089,9 +1104,9 @@ function handlePiSocket(ws) {
       const responseData = data.data || {};
 
       if (responseData.status === 'success') {
-        console.log(`🌿 All plants moisture: ${responseData.total_plants} plants received`);
+        console.log(`[pi] All plants moisture: ${responseData.total_plants} plants received`);]
         responseData.plants?.forEach(plant => {
-          console.log(`   Plant ${plant.plant_id}: moisture=${plant.moisture}%, temperature=${plant.temperature}°C`);
+          console.log(`[PI] Plant ${plant.plant_id}: moisture=${plant.moisture}%, temperature=${plant.temperature}°C`);
         });
 
         // Broadcast to all connected clients
@@ -1102,13 +1117,13 @@ function handlePiSocket(ws) {
           try {
             sendSuccess(userSocket, 'ALL_PLANTS_MOISTURE_RESPONSE', responseData);
           } catch (error) {
-            console.error('Error sending moisture data to client:', error);
+            console.log(`[BROADCAST] Error: Failed to send moisture data - ${error.message}`);
           }
         });
 
-        console.log(`📊 Broadcasted moisture data to ${userSockets.length} connected clients`);
+        console.log(`[BROADCAST] Moisture data sent to ${userSockets.length} clients`);
       } else {
-        console.error(`❌ All plants moisture request failed: ${responseData.error_message}`);
+        console.log(`[PI] Error: Moisture request failed - ${responseData.error_message}`);
       }
       return;
     }
@@ -1119,14 +1134,9 @@ function handlePiSocket(ws) {
       const plantId = responseData.plant_id;
 
       if (responseData.error) {
-        console.error(`❌ Valve status request failed for plant ${plantId}: ${responseData.error_message}`);
+        console.log(`[VALVE] Error: Status request failed - plant=${plantId} error=${responseData.error_message}`);
       } else {
-        console.log(`🚰 Valve status for plant ${plantId}:`);
-        console.log(`   Valve ID: ${responseData.valve_id}`);
-        console.log(`   Is Blocked: ${responseData.is_blocked ? 'YES' : 'NO'}`);
-        console.log(`   Is Open: ${responseData.is_open ? 'YES' : 'NO'}`);
-        console.log(`   Can Irrigate: ${responseData.can_irrigate ? 'YES' : 'NO'}`);
-        console.log(`   User Message: ${responseData.user_message}`);
+        console.log(`[VALVE] Status: plant=${plantId} valve=${responseData.valve_id} blocked=${responseData.is_blocked} open=${responseData.is_open} can_irrigate=${responseData.can_irrigate} message="${responseData.user_message}"`);
 
         // Get pending irrigation info to notify client
         const pendingInfo = completePendingIrrigation(plantId);
@@ -1158,9 +1168,23 @@ function handlePiSocket(ws) {
       const responseData = data.data || {};
       const plantId = responseData.plant_id;
       if (responseData.status === 'success') {
-        console.log(`REMOVE_PLANT_RESPONSE: Plant ${plantId} removed on Pi`);
+        console.log(`[PI] Plant removed: id=${plantId}`);
+
+        // Broadcast plant removal to garden members
+        try {
+          const { getPlantById } = require('../models/plantModel');
+          const plant = await getPlantById(plantId);
+          if (plant && plant.garden_id) {
+            await broadcastToGarden(plant.garden_id, 'PLANT_DELETED_FROM_GARDEN', {
+              plant: plant,
+              message: `Plant "${plant.name}" was removed from your garden`
+            });
+          }
+        } catch (broadcastError) {
+          console.log(`[BROADCAST] Error: Failed to send plant removal - ${broadcastError.message}`);
+        }
       } else {
-        console.error(`REMOVE_PLANT_RESPONSE: Failed for plant ${plantId}: ${responseData.error_message}`);
+        console.log(`[PI] Error: Failed to remove plant - id=${plantId} error=${responseData.error_message}`);
       }
       return;
     }
@@ -1169,7 +1193,7 @@ function handlePiSocket(ws) {
   });
 
   ws.on('close', () => {
-    console.log('Pi disconnected: raspberrypi_main_controller');
+    console.log('[PI] Disconnected: raspberrypi_main_controller');
     piSocket = null;
   });
 }

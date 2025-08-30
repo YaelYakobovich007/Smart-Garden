@@ -6,7 +6,7 @@ const googleCloudStorage = require('../services/googleCloudStorage');
 const piCommunication = require('../services/piCommunication');
 const { addPendingPlant } = require('../services/pendingPlantsTracker');
 const { addPendingMoistureRequest } = require('../services/pendingMoistureTracker');
-const { broadcastPlantAdded, broadcastPlantDeleted, broadcastPlantUpdated } = require('../services/gardenBroadcaster');
+
 const { storePendingUpdate } = require('../services/pendingUpdateTracker');
 
 // Test mode flag - set to true to allow plant creation without Pi
@@ -134,12 +134,7 @@ async function handleAddPlant(data, ws, email) {
       testMode: true
     });
 
-    // Broadcast plant addition to other garden members
-    try {
-      await broadcastPlantAdded(result.plant.garden_id, plantWithImage, email);
-    } catch (broadcastError) {
-      console.log(`[PLANT] Error: Failed to broadcast addition - ${broadcastError.message}`);
-    }
+    // Note: In test mode, no Pi involved, so no broadcast for now
   } else {
     // Production mode: Require Pi connection
     const piResult = piCommunication.addPlant(result.plant);
@@ -255,15 +250,7 @@ async function handleDeletePlant(data, ws, email) {
 
   sendSuccess(ws, 'DELETE_PLANT_SUCCESS', { message: 'Plant and its irrigation events deleted' });
 
-  // Broadcast plant deletion to other garden members
-  try {
-    const gardenId = await require('../models/plantModel').getUserGardenId(user.id);
-    if (gardenId) {
-      await broadcastPlantDeleted(gardenId, plant, email);
-    }
-  } catch (broadcastError) {
-    console.log(`[PLANT] Error: Failed to broadcast deletion - ${broadcastError.message}`);
-  }
+  // Note: Broadcast will happen in piSocket.js after Pi processes removal
 }
 
 async function handleUpdatePlantDetails(data, ws, email) {
@@ -397,15 +384,7 @@ async function handleUpdatePlantDetails(data, ws, email) {
       });
     }
 
-    // Broadcast plant update to other garden members
-    try {
-      const gardenId = await require('../models/plantModel').getUserGardenId(user.id);
-      if (gardenId) {
-        await broadcastPlantUpdated(gardenId, updatedPlant, email);
-      }
-    } catch (broadcastError) {
-      console.log(`[PLANT] Error: Failed to broadcast update - ${broadcastError.message}`);
-    }
+    // Note: Broadcast will happen in piSocket.js after Pi processes update
 
   } catch (err) {
     console.log(`[PLANT] Error: Failed to update details - ${err.message}`);
