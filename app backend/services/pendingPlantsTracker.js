@@ -20,8 +20,7 @@ function addPendingPlant(plantId, ws, email, plantData) {
         timestamp: Date.now()
     });
 
-    console.log(`📋 Added plant ${plantId} to pending list (waiting for hardware assignment)`);
-    console.log(`📋 Pending plants count: ${pendingPlants.size}`);
+    console.log(`Added plant ${plantId} to pending list (pending_count=${pendingPlants.size})`);
 }
 
 /**
@@ -33,12 +32,11 @@ function completePendingPlant(plantId) {
     const pendingInfo = pendingPlants.get(plantId);
     if (pendingInfo) {
         pendingPlants.delete(plantId);
-        console.log(`✅ Completed pending plant ${plantId}`);
-        console.log(`📋 Remaining pending plants: ${pendingPlants.size}`);
+        console.log(`Completed pending plant ${plantId} (remaining=${pendingPlants.size})`);
         return pendingInfo;
     }
 
-    console.log(`⚠️ Plant ${plantId} not found in pending list`);
+    console.log(`Plant ${plantId} not found in pending list`);
     return null;
 }
 
@@ -71,12 +69,12 @@ function cleanupOldPendingPlants() {
         if (info.timestamp < fiveMinutesAgo) {
             pendingPlants.delete(plantId);
             cleanedCount++;
-            console.log(`🧹 Cleaned up old pending plant ${plantId}`);
+            console.log(`Cleaned up old pending plant ${plantId}`);
         }
     }
 
     if (cleanedCount > 0) {
-        console.log(`🧹 Cleaned up ${cleanedCount} old pending plants`);
+        console.log(`Cleaned up ${cleanedCount} old pending plants`);
     }
 }
 

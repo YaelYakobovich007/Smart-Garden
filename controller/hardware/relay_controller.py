@@ -38,9 +38,9 @@ class RelayController:
                 self.device = hid.device()
                 self.device.open(self.vendor_id, self.product_id)
                 self.device.set_nonblocking(1)
-                print("HID Relay connected successfully!")
+                print("HID Relay connected successfully")
             except Exception as e:
-                print(f" Unable to connect to HID Relay: {e}")
+                print(f"ERROR - Unable to connect to HID Relay: {e}")
                 self.device = None
 
     def turn_on(self, valve_number: int):
@@ -50,24 +50,20 @@ class RelayController:
         Args:
             valve_number (int): The number of the valve to activate.
         """
-        print(f"🔍 DEBUG - RelayController.turn_on() called for valve {valve_number}")
-        print(f"   - simulation_mode: {self.simulation_mode}")
-        print(f"   - device: {self.device}")
+        print(f"DEBUG - RelayController.turn_on() valve={valve_number} simulation_mode={self.simulation_mode} device={self.device}")
         
         if self.simulation_mode:
-            print(f"✅ [SIMULATION] Valve {valve_number} ON")
+            print(f"[SIMULATION] Valve {valve_number} ON")
             return
             
         if self.device:
             report = [0x00, 0xFF, valve_number]
-            print(f"🔍 DEBUG - Sending report to HID device: {report}")
+            print(f"DEBUG - Sending report to HID device: {report}")
             self.device.write(report)
-            print(f"✅ DEBUG - HID write completed for valve {valve_number}")
-            print(f"✅ Valve {valve_number} ON")
+            print(f"DEBUG - HID write completed for valve {valve_number}")
+            print(f"Valve {valve_number} ON")
         else:
-            print("❌ ERROR - HID device not connected")
-            print("   - simulation_mode:", self.simulation_mode)
-            print("   - device:", self.device)
+            print("ERROR - HID device not connected", "simulation_mode:", self.simulation_mode, "device:", self.device)
 
     def turn_off(self, valve_number: int):
         """
@@ -76,24 +72,20 @@ class RelayController:
         Args:
             valve_number (int): The number of the valve to deactivate.
         """
-        print(f"🔍 DEBUG - RelayController.turn_off() called for valve {valve_number}")
-        print(f"   - simulation_mode: {self.simulation_mode}")
-        print(f"   - device: {self.device}")
+        print(f"DEBUG - RelayController.turn_off() valve={valve_number} simulation_mode={self.simulation_mode} device={self.device}")
         
         if self.simulation_mode:
-            print(f"✅ [SIMULATION] Valve {valve_number} OFF")
+            print(f"[SIMULATION] Valve {valve_number} OFF")
             return
             
         if self.device:
             report = [0x00, 0xFD, valve_number]
-            print(f"🔍 DEBUG - Sending report to HID device: {report}")
+            print(f"DEBUG - Sending report to HID device: {report}")
             self.device.write(report)
-            print(f"✅ DEBUG - HID write completed for valve {valve_number}")
-            print(f"✅ Valve {valve_number} OFF")
+            print(f"DEBUG - HID write completed for valve {valve_number}")
+            print(f"Valve {valve_number} OFF")
         else:
-            print("❌ ERROR - HID device not connected")
-            print("   - simulation_mode:", self.simulation_mode)
-            print("   - device:", self.device)
+            print("ERROR - HID device not connected", "simulation_mode:", self.simulation_mode, "device:", self.device)
 
     def close(self):
         """
@@ -101,4 +93,4 @@ class RelayController:
         """
         if self.device:
             self.device.close()  
-            print("Relay device closed.")
+            print("Relay device closed")

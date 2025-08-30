@@ -22,7 +22,7 @@ class CloseValveHandler:
             CloseValveResponse: Response indicating success or failure
         """
         try:
-            print(f"Processing CLOSE_VALVE command for plant {plant_id}")
+            # Handle request
             
             # Get the plant to find its valve
             plant = self.smart_engine.get_plant_by_id(plant_id)
@@ -32,19 +32,17 @@ class CloseValveHandler:
                     error_message=f"Plant {plant_id} not found"
                 )
             
-            print(f"Found plant {plant_id}, closing valve {plant.valve.valve_id}")
+            # Close valve
             
             # Use the new non-blocking close_valve method
             success = await self.smart_engine.close_valve(plant_id)
             
             if success:
-                print(f"Valve {plant.valve.valve_id} closed successfully for plant {plant_id}")
                 return CloseValveResponse.success(
                     plant_id=plant_id,
                     message=f"Valve {plant.valve.valve_id} closed successfully"
                 )
             else:
-                print(f"Failed to close valve {plant.valve.valve_id} for plant {plant_id}")
                 return CloseValveResponse.error(
                     plant_id=plant_id,
                     error_message=f"Failed to close valve {plant.valve.valve_id}"

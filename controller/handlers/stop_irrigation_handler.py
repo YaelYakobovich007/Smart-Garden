@@ -21,12 +21,10 @@ class StopIrrigationHandler:
         Returns:
             StopIrrigationResponse: Response indicating success or failure
         """
-        print("\n=== STOP IRRIGATION HANDLER ===")
-        print(f"Plant ID: {plant_id}")
+        # Stop irrigation handler entry
         
         try:
-            # Check if plant exists
-            print(f"\nChecking if plant {plant_id} exists...")
+            # Validate plant exists
             if plant_id not in self.engine.plants:
                 print(f"ERROR: Plant {plant_id} not found")
                 return StopIrrigationResponse.error(
@@ -36,23 +34,19 @@ class StopIrrigationHandler:
             
             # Get the plant for sensor reading
             plant = self.engine.plants[plant_id]
-            print(f"\nFound plant: {plant_id}")
-            print(f"Valve ID: {plant.valve.valve_id}")
-            print(f"Valve state: {'OPEN' if plant.valve.is_open else 'CLOSED'}")
+            # Basic state snapshot
             
             current_moisture = await plant.get_moisture() if plant.sensor else 0
             current_moisture = current_moisture if current_moisture is not None else 0
-            print(f"Current moisture: {current_moisture}%")
+            # Current moisture captured
             
             # Use the engine's stop_irrigation method to properly cancel the task
-            print(f"\nCalling engine.stop_irrigation...")
+            # Call engine
             irrigation_stopped = await self.engine.stop_irrigation(plant_id)
             
             if irrigation_stopped:
                 # Irrigation task was successfully cancelled
-                print(f"\nIrrigation successfully stopped")
-                print(f"Final moisture: {current_moisture}%")
-                print(f"Valve state: {'OPEN' if plant.valve.is_open else 'CLOSED'}")
+                # Success path
                 
                 return StopIrrigationResponse.success(
                     plant_id=plant_id,
@@ -61,9 +55,6 @@ class StopIrrigationHandler:
                 )
             else:
                 # No irrigation was running
-                print(f"\nNo active irrigation found")
-                print(f"Current moisture: {current_moisture}%")
-                print(f"Valve state: {'OPEN' if plant.valve.is_open else 'CLOSED'}")
                 
                 return StopIrrigationResponse.error(
                     plant_id=plant_id,
@@ -73,8 +64,7 @@ class StopIrrigationHandler:
                 
         except Exception as e:
             # Handle unexpected errors
-            print(f"\nERROR during stop irrigation:")
-            print(f"Error message: {str(e)}")
+            print(f"ERROR during stop irrigation: {str(e)}")
             return StopIrrigationResponse.error(
                 plant_id=plant_id,
                 error_message=f"Unexpected error during stop irrigation: {str(e)}"
