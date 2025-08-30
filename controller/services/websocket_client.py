@@ -583,6 +583,8 @@ class SmartGardenPiClient:
                     water_limit = plant_data.get("waterLimit", 1.0)
                     dripper_type = plant_data.get("dripperType", "2L/h")
                     schedule_data = plant_data.get("scheduleData")
+                    sensor_port = plant_data.get("sensor_port")
+                    valve_id = plant_data.get("valve_id")
                     
                     self.logger.info(f"Adding plant {plant_id} to engine:")
                     self.logger.info(f"  - Desired Moisture: {desired_moisture}%")
@@ -610,7 +612,9 @@ class SmartGardenPiClient:
                         desired_moisture=desired_moisture,
                         schedule_data=engine_schedule_data,
                         water_limit=water_limit,
-                        dripper_type=dripper_type
+                        dripper_type=dripper_type,
+                        sensor_port=sensor_port,
+                        valve_id=valve_id
                     )
                     
                     self.logger.info(f"✅ Successfully added plant {plant_id} to engine")

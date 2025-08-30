@@ -51,6 +51,38 @@ class ValvesManager:
         self.plant_valve_map[plant_id] = valve_id
         return valve_id
 
+    def assign_specific_valve(self, plant_id: int, valve_id: int) -> int:
+        """
+        Assign a specific valve ID to the given plant.
+
+        If the valve ID is currently available, it will be removed from the
+        available pool and assigned. If the plant already has a valve assigned,
+        this will override it and return the previous one to the pool.
+
+        Args:
+            plant_id (int): Unique identifier of the plant.
+            valve_id (int): Specific valve ID to assign.
+
+        Returns:
+            int: The valve ID that was assigned.
+        """
+        # Remove from available pool if present
+        try:
+            self.available_valves.remove(valve_id)
+        except ValueError:
+            # Not in available list; assume it can still be assigned (already in use)
+            pass
+
+        # If plant had a different valve, release it
+        prev = self.plant_valve_map.get(plant_id)
+        if prev is not None and prev != valve_id:
+            # Return previous valve to pool
+            if prev not in self.available_valves:
+                self.available_valves.append(prev)
+
+        self.plant_valve_map[plant_id] = valve_id
+        return valve_id
+
     def release_valve(self, plant_id: int) -> None:
         """
         Releases the valve assigned to a specific plant, making it available for reassignment.

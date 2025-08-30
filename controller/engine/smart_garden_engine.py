@@ -52,7 +52,9 @@ class SmartGardenEngine:
             pipe_diameter: float = 1.0,
             flow_rate: float = 0.05,
             water_limit: float = 1.0,
-            dripper_type: str = "2L/h"
+            dripper_type: str = "2L/h",
+            sensor_port: Optional[str] = None,
+            valve_id: Optional[int] = None
     ) -> None:
         """
         Add a new plant to the system.
@@ -74,9 +76,16 @@ class SmartGardenEngine:
         if not self.sensor_manager.available_sensors:
             raise RuntimeError("No available sensors")
         
-        # Assign valve and sensor using proper assignment methods
-        valve_id = self.valves_manager.assign_valve(plant_id)
-        sensor_port = self.sensor_manager.assign_sensor(str(plant_id))
+        # Assign valve and sensor; if specific IDs are provided (from server sync), use them
+        if valve_id is not None:
+            self.valves_manager.assign_specific_valve(plant_id, int(valve_id))
+        else:
+            valve_id = self.valves_manager.assign_valve(plant_id)
+
+        if sensor_port is not None:
+            self.sensor_manager.assign_specific_sensor(str(plant_id), sensor_port)
+        else:
+            sensor_port = self.sensor_manager.assign_sensor(str(plant_id))
         
         # Create valve and sensor objects
         valve = Valve(
