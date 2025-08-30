@@ -503,6 +503,65 @@ class SmartGardenPiClient:
                 "message": f"Error updating plant: {str(e)}"
             }
             await self.send_message("UPDATE_PLANT_RESPONSE", error_response)
+
+    async def handle_update_schedule_command(self, data: Dict[Any, Any]):
+        """Handle live schedule update for a plant from server.
+
+        Expected data:
+          { plant_id: int, scheduleData: { irrigation_days: ["Sun",...], irrigation_time: "HH:MM[:SS]" } }
+        """
+        try:
+            plant_id = data.get("plant_id")
+            schedule_data = data.get("scheduleData") or {}
+
+            if plant_id is None:
+                self.logger.error("UPDATE_SCHEDULE missing plant_id")
+                return
+
+            if plant_id not in self.engine.plants:
+                self.logger.error(f"UPDATE_SCHEDULE: Plant {plant_id} not found in engine")
+                return
+
+            # Normalize to engine format: list of {day: full-name, time: HH:MM}
+            engine_entries = []
+            days = (schedule_data or {}).get("irrigation_days") or []
+            time_str = (schedule_data or {}).get("irrigation_time")
+            if days and time_str:
+                for d in days:
+                    try:
+                        engine_entries.append({"day": str(d), "time": str(time_str)})
+                    except Exception:
+                        pass
+
+            plant = self.engine.plants[plant_id]
+            if not engine_entries:
+                # Clear any existing schedule
+                if getattr(plant, 'schedule', None):
+                    try:
+                        plant.schedule.clear_schedules()
+                    except Exception:
+                        pass
+                    plant.schedule = None
+                self.logger.info(f"UPDATE_SCHEDULE: Cleared schedule for plant {plant_id}")
+                return
+
+            # Create or update schedule
+            if getattr(plant, 'schedule', None):
+                try:
+                    plant.schedule.update_schedule(engine_entries)
+                    self.logger.info(f"UPDATE_SCHEDULE: Updated schedule for plant {plant_id} with {len(engine_entries)} entries")
+                except Exception as e:
+                    self.logger.error(f"Failed to update schedule for plant {plant_id}: {e}")
+            else:
+                try:
+                    from controller.irrigation.irrigation_schedule import IrrigationSchedule
+                    plant.schedule = IrrigationSchedule(plant, engine_entries, self.engine.irrigation_algorithm)
+                    self.logger.info(f"UPDATE_SCHEDULE: Attached new schedule for plant {plant_id} with {len(engine_entries)} entries")
+                except Exception as e:
+                    self.logger.error(f"Failed to attach new schedule for plant {plant_id}: {e}")
+
+        except Exception as e:
+            self.logger.error(f"Error in handle_update_schedule_command: {e}")
     
     async def handle_valve_status_request(self, data):
         """Handle valve status request from server."""
@@ -712,6 +771,9 @@ class SmartGardenPiClient:
             
             elif message_type == "UPDATE_PLANT":
                 await self.handle_update_plant_command(data)
+
+            elif message_type == "UPDATE_SCHEDULE":
+                await self.handle_update_schedule_command(message_data)
             
             elif message_type == "UPDATE_PLANT_RESPONSE":
                 self.logger.warning(f"Received UPDATE_PLANT_RESPONSE - this should not happen! This is likely an echo of our own response.")

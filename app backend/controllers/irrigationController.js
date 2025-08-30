@@ -56,6 +56,34 @@ async function handleUpdatePlantSchedule(data, ws, email) {
   if (!plant) return sendError(ws, 'UPDATE_SCHEDULE_FAIL', 'Plant not found in your garden');
   await updatePlantSchedule(plant.plant_id, days, time);
   sendSuccess(ws, 'UPDATE_SCHEDULE_SUCCESS', { message: 'Schedule updated' });
+
+  // Push updated schedule to Pi immediately if connected
+  try {
+    const result = require('../services/piCommunication').updatePlant({
+      plant_id: plant.plant_id,
+      name: plant.name,
+      ideal_moisture: plant.ideal_moisture,
+      water_limit: plant.water_limit,
+      dripper_type: plant.dripper_type
+    });
+    // Also send a dedicated schedule update message
+    const piSocket = require('../sockets/piSocket').getPiSocket();
+    if (piSocket) {
+      const schedulePayload = {
+        type: 'UPDATE_SCHEDULE',
+        data: {
+          plant_id: plant.plant_id,
+          scheduleData: {
+            irrigation_days: Array.isArray(days) ? days : [],
+            irrigation_time: time
+          }
+        }
+      };
+      try { piSocket.send(JSON.stringify(schedulePayload)); } catch {}
+    }
+  } catch (e) {
+    // Non-fatal: schedule still saved in DB; Pi will pick up on next sync
+  }
 }
 
 // Irrigate plant
