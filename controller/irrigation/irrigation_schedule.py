@@ -47,7 +47,7 @@ class IrrigationSchedule:
         irrigation_algorithm (IrrigationAlgorithm): Algorithm to run when scheduled time is reached.
     """
 
-    def __init__(self, plant: "Plant", schedule_data: List[Dict[str, str]], irrigation_algorithm: "IrrigationAlgorithm") -> None:
+    def __init__(self, plant: "Plant", schedule_data: List[Dict[str, str]], irrigation_algorithm: "IrrigationAlgorithm", loop=None) -> None:
         """
         Initializes the irrigation schedule.
 
@@ -62,6 +62,7 @@ class IrrigationSchedule:
         self.plant: Plant = plant
         self.schedule_data: List[Dict[str, str]] = schedule_data
         self.irrigation_algorithm: IrrigationAlgorithm = irrigation_algorithm
+        self.loop = loop
 
         self.jobs = []
         if schedule_data:
@@ -94,7 +95,22 @@ class IrrigationSchedule:
         """
         Launches the irrigation algorithm for the assigned plant in a separate thread.
         """
-        threading.Thread(target=self.irrigation_algorithm.irrigate, args=(self.plant,), daemon=True).start()
+        try:
+            import asyncio
+            if self.loop is not None:
+                # Schedule coroutine on main event loop thread-safely
+                asyncio.run_coroutine_threadsafe(
+                    self.irrigation_algorithm.irrigate(self.plant),
+                    self.loop
+                )
+            else:
+                # Fallback: run in a dedicated event loop (may limit WS logging)
+                def _runner():
+                    import asyncio as _asyncio
+                    _asyncio.run(self.irrigation_algorithm.irrigate(self.plant))
+                threading.Thread(target=_runner, daemon=True).start()
+        except Exception as e:
+            print(f"ERROR starting scheduled irrigation: {e}")
 
     def clear_schedules(self) -> None:
         """Cancel all registered jobs for this schedule instance."""

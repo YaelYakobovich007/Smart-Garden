@@ -140,12 +140,8 @@ const MainScreen = () => {
     }
 
     // Refresh plant list to remove the deleted plant
-    console.log('MainScreen: Refreshing plant list after deletion broadcast...');
     if (websocketService.isConnected()) {
       websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
-      console.log('MainScreen: GET_MY_PLANTS sent after deletion broadcast');
-    } else {
-      console.log('MainScreen: WebSocket not connected, cannot refresh plants after deletion broadcast');
     }
   };
 
@@ -187,7 +183,6 @@ const MainScreen = () => {
    * @param {Object} data - Server plant data
    */
   const handlePlantsReceived = (data) => {
-    console.log('MainScreen: Received plant data from server:', data.plants?.length || 0, 'plants');
     if (data.plants) {
       // Transform server data to match our plant format
       // Preserve existing sensor data to prevent flicker
@@ -254,7 +249,6 @@ const MainScreen = () => {
           };
           return transformed;
         });
-        console.log('MainScreen: Updated plant list with', transformedPlants.length, 'plants');
         return transformedPlants;
       });
 
@@ -341,8 +335,7 @@ const MainScreen = () => {
    * @param {Object} data - Error response data
    */
   const handlePlantsError = (data) => {
-    console.error('MainScreen: Failed to fetch plants:', data.message || data.reason || 'Unknown error');
-    console.log('MainScreen: Clearing plant list due to error');
+    console.error('Failed to fetch plants:', data.message);
     setPlants([]);
   };
 
