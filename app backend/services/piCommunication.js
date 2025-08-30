@@ -119,10 +119,7 @@ class PiCommunication {
                 }
             };
 
-            console.log('Sending IRRIGATE_PLANT to Pi:');
-            console.log(`   - Plant ID: ${plantId} (type: ${typeof plantId})`);
-            console.log(`   - session_id: ${sessionId}`);
-            console.log(`   - Full JSON: ${JSON.stringify(request)}`);
+            console.log(`[PI] Sending IRRIGATE_PLANT: id=${plantId}`);
 
             piSocket.send(JSON.stringify(request));
             return { success: true };
