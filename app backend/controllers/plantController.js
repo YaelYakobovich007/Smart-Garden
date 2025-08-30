@@ -2,7 +2,6 @@
 const { addPlant, getPlants, getPlantByName, deletePlantById, updatePlantDetails, getUserGardenId } = require('../models/plantModel');
 const { getUser } = require('../models/userModel');
 const { deleteIrrigationResultsByPlantId } = require('../models/irrigationModel');
-const { deleteScheduleByPlantId } = require('../models/plantScheduleModel');
 
 // Utils & Sessions
 const { sendSuccess, sendError } = require('../utils/wsResponses');
@@ -224,12 +223,6 @@ async function handleDeletePlant(data, ws, email) {
   // Delete irrigation events first
   await deleteIrrigationResultsByPlantId(plant.plant_id);
 
-  // Best-effort: clear schedule rows if you keep a separate table (ignore if not used)
-  try {
-    if (deleteScheduleByPlantId) {
-      await deleteScheduleByPlantId(plant.plant_id);
-    }
-  } catch { }
 
   // First check if Pi is connected and send removal request
   const piResult = piCommunication.removePlant(plant.plant_id);
