@@ -558,6 +558,28 @@ class SmartGardenPiClient:
                 "error_message": f"Failed to get valve status: {str(e)}"
             }
             await self.send_message("VALVE_STATUS_RESPONSE", error_response)
+
+    async def handle_restart_valve_request(self, data):
+        """Handle restart valve request from server."""
+        try:
+            plant_id = data.get("plant_id")
+            if not plant_id:
+                self.logger.error("No plant_id provided in restart valve request")
+                await self.send_message("RESTART_VALVE_RESPONSE", {"status": "error", "error_message": "Missing plant_id"})
+                return
+
+            self.logger.info(f"Received RESTART_VALVE request for plant {plant_id}")
+
+            success = await self.engine.restart_valve(int(plant_id))
+            if success:
+                await self.send_message("RESTART_VALVE_RESPONSE", {"status": "success", "plant_id": int(plant_id)})
+                self.logger.info(f"Successfully restarted valve for plant {plant_id}")
+            else:
+                await self.send_message("RESTART_VALVE_RESPONSE", {"status": "error", "plant_id": int(plant_id), "error_message": "restart_failed"})
+                self.logger.error(f"Failed to restart valve for plant {plant_id}")
+        except Exception as e:
+            self.logger.error(f"Error during restart valve: {e}")
+            await self.send_message("RESTART_VALVE_RESPONSE", {"status": "error", "plant_id": int(plant_id) if 'plant_id' in locals() else 0, "error_message": str(e)})
     
     async def handle_garden_sync(self, message: Dict[Any, Any]):
         """Handle GARDEN_SYNC message from server with garden and plants data."""
