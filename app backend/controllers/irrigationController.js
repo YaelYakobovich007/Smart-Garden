@@ -410,6 +410,16 @@ async function handleUnblockValve(data, ws, email) {
       plantName: plant.name
     });
 
+    // Broadcast unblocked to other garden members
+    try {
+      const { broadcastToGarden } = require('../services/gardenBroadcaster');
+      if (plant.garden_id) {
+        await broadcastToGarden(plant.garden_id, 'GARDEN_VALVE_UNBLOCKED', { plantId: plant.plant_id }, email);
+      }
+    } catch (e) {
+      console.log('Warning broadcasting valve unblocked:', e?.message);
+    }
+
   } catch (err) {
     console.error(`Failed to unblock valve for plant ${plant.plant_id}:`, err);
     sendError(ws, 'UNBLOCK_VALVE_FAIL', 'Failed to unblock valve. Please try again.');

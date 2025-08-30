@@ -568,6 +568,24 @@ const PlantDetail = () => {
     websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
     websocketService.onMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
 
+    // Valve restart/unblocked handlers to clear blocked banner immediately
+    const handleRestartValveSuccessDetail = (message) => {
+      const payload = message?.data || message;
+      const pid = payload?.plantId != null ? Number(payload.plantId) : null;
+      if (pid != null && plant?.id != null && Number(pid) === Number(plant.id)) {
+        setPlant(prev => ({ ...prev, valve_blocked: false }));
+      }
+    };
+    const handleGardenValveUnblocked = (message) => {
+      const payload = message?.data || message;
+      const pid = payload?.plantId != null ? Number(payload.plantId) : null;
+      if (pid != null && plant?.id != null && Number(pid) === Number(plant.id)) {
+        setPlant(prev => ({ ...prev, valve_blocked: false }));
+      }
+    };
+    websocketService.onMessage('RESTART_VALVE_SUCCESS', handleRestartValveSuccessDetail);
+    websocketService.onMessage('GARDEN_VALVE_UNBLOCKED', handleGardenValveUnblocked);
+
     return () => {
       websocketService.offMessage('IRRIGATE_SUCCESS', handleSuccess);
       websocketService.offMessage('IRRIGATE_FAIL', handleFail);
@@ -584,6 +602,8 @@ const PlantDetail = () => {
       websocketService.offMessage('TEST_VALVE_BLOCK_SUCCESS', handleTestValveBlockSuccess);
       websocketService.offMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
       websocketService.offMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
+      websocketService.offMessage('RESTART_VALVE_SUCCESS', handleRestartValveSuccessDetail);
+      websocketService.offMessage('GARDEN_VALVE_UNBLOCKED', handleGardenValveUnblocked);
     };
   }, [navigation, plant.name]);
 
