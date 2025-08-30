@@ -990,6 +990,7 @@ export const IrrigationProvider = ({ children }) => {
     startManualIrrigation,
     startSmartIrrigation,
     handleStopWatering,
+    restartValve,
     pauseTimer,
     resumeTimer,
     resetTimer,

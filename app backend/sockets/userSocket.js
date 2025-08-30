@@ -38,7 +38,7 @@ function handleUserSocket(ws) {
     } else if (data.type === 'PLANT_IDENTIFY') {
       console.log('🌱 Received PLANT_IDENTIFY message in userSocket');
       handlePlantIdentify(data, ws);
-    } else if (['UPDATE_PLANT_SCHEDULE', 'GET_IRRIGATION_RESULT', 'IRRIGATE_PLANT', 'STOP_IRRIGATION', 'OPEN_VALVE', 'CLOSE_VALVE', 'GET_VALVE_STATUS', 'UNBLOCK_VALVE', 'TEST_VALVE_BLOCK'].includes(data.type)) {
+    } else if (['UPDATE_PLANT_SCHEDULE', 'GET_IRRIGATION_RESULT', 'IRRIGATE_PLANT', 'STOP_IRRIGATION', 'OPEN_VALVE', 'CLOSE_VALVE', 'GET_VALVE_STATUS', 'UNBLOCK_VALVE', 'TEST_VALVE_BLOCK', 'RESTART_VALVE'].includes(data.type)) {
       handleIrrigationMessage(data, ws);
     } else if (['GET_USER_DETAILS', 'GET_USER_NAME', 'UPDATE_USER_DETAILS', 'FORGOT_PASSWORD', 'RESET_PASSWORD', 'VALIDATE_RESET_TOKEN'].includes(data.type)) {
       handleUserMessage(data, ws);

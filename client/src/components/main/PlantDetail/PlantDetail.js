@@ -61,6 +61,7 @@ const PlantDetail = () => {
     startManualIrrigation,
     startSmartIrrigation,
     handleStopWatering,
+    restartValve,
     pauseTimer,
     resumeTimer,
     resetTimer,
@@ -752,13 +753,25 @@ const PlantDetail = () => {
                The valve for this plant is currently blocked and cannot be operated. 
                Please troubleshoot the hardware issue to restore irrigation functionality.
              </Text>
-             <TouchableOpacity
-               style={styles.troubleshootButton}
-               onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
-             >
-               <Feather name="tool" size={20} color="#FFFFFF" />
-               <Text style={styles.troubleshootButtonText}>Troubleshoot Valve</Text>
-             </TouchableOpacity>
+             <View style={{ flexDirection: 'row', gap: 12 }}>
+               <TouchableOpacity
+                 style={[styles.troubleshootButton, pendingValveRequest && styles.disabledButton]}
+                 disabled={pendingValveRequest}
+                 onPress={() => restartValve(plant)}
+               >
+                 <Feather name="refresh-ccw" size={20} color="#FFFFFF" />
+                 <Text style={styles.troubleshootButtonText}>
+                   {pendingValveRequest ? 'Restarting…' : 'Restart Valve'}
+                 </Text>
+               </TouchableOpacity>
+               <TouchableOpacity
+                 style={styles.troubleshootButton}
+                 onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
+               >
+                 <Feather name="tool" size={20} color="#FFFFFF" />
+                 <Text style={styles.troubleshootButtonText}>Troubleshoot Valve</Text>
+               </TouchableOpacity>
+             </View>
            </View>
          )}
          
