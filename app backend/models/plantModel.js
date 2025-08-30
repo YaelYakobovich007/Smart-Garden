@@ -242,7 +242,7 @@ async function irrigatePlant(plantId) {
   // TODO: integrate with actual hardware/logic
 }
 
-// Delete a plant by id with optimistic locking
+// Delete a plant by id (no optimistic locking on version)
 async function deletePlantById(plantId, userId) {
   const client = await pool.connect();
 
@@ -256,9 +256,9 @@ async function deletePlantById(plantId, userId) {
       return { error: 'NO_GARDEN_MEMBERSHIP' };
     }
 
-    // Check if plant exists and belongs to user's garden with version
+    // Check if plant exists and belongs to user's garden
     const plantCheck = await client.query(
-      'SELECT plant_id, version FROM plants WHERE plant_id = $1 AND garden_id = $2 FOR UPDATE',
+      'SELECT plant_id FROM plants WHERE plant_id = $1 AND garden_id = $2 FOR UPDATE',
       [plantId, gardenId]
     );
 
@@ -267,17 +267,15 @@ async function deletePlantById(plantId, userId) {
       return { error: 'PLANT_NOT_FOUND' };
     }
 
-    const currentVersion = plantCheck.rows[0].version;
-
-    // Delete the plant with version check for optimistic locking
+    // Delete the plant
     const deleteResult = await client.query(
-      'DELETE FROM plants WHERE plant_id = $1 AND garden_id = $2 AND version = $3 RETURNING *',
-      [plantId, gardenId, currentVersion]
+      'DELETE FROM plants WHERE plant_id = $1 AND garden_id = $2 RETURNING *',
+      [plantId, gardenId]
     );
 
     if (deleteResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      return { error: 'CONCURRENT_MODIFICATION' };
+      return { error: 'DATABASE_ERROR' };
     }
 
     await client.query('COMMIT');

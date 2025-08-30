@@ -1196,6 +1196,14 @@ function handlePiSocket(ws) {
             return sendError(ws, 'DELETE_PLANT_FAIL', 'Pi removed plant but database deletion failed');
           }
 
+          // Best-effort: delete irrigation history after plant deletion (no-op if not present)
+          try {
+            const { deleteIrrigationResultsByPlantId } = require('../models/irrigationModel');
+            await deleteIrrigationResultsByPlantId(plantId);
+          } catch (historyErr) {
+            console.log(`[PI] Warning: Failed to delete irrigation history for plant ${plantId} - ${historyErr.message}`);
+          }
+
           // Broadcast successful deletion
           try {
             const gardenId = await getUserGardenId(user.id);

@@ -220,8 +220,7 @@ async function handleDeletePlant(data, ws, email) {
     console.log(`[PLANT] Warning: Failed to clear pending trackers - ${e?.message}`);
   }
 
-  // Delete irrigation events first
-  await deleteIrrigationResultsByPlantId(plant.plant_id);
+  // Do not delete irrigation history here; it will be cleaned after DB deletion succeeds
 
 
   // First check if Pi is connected and send removal request
