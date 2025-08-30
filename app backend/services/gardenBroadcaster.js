@@ -41,62 +41,7 @@ async function broadcastToGarden(gardenId, messageType, data, excludeEmail = nul
     }
 }
 
-/**
- * Broadcast plant added to all garden members
- * @param {number} gardenId - The garden ID
- * @param {Object} plant - The plant data
- * @param {string} excludeEmail - Email to exclude from broadcast
- */
-async function broadcastPlantAdded(gardenId, plant, excludeEmail) {
-    await broadcastToGarden(gardenId, 'PLANT_ADDED_TO_GARDEN', {
-        plant: plant,
-        message: `New plant "${plant.name}" was added to your garden`
-    }, excludeEmail);
-}
-
-/**
- * Broadcast plant deleted to all garden members
- * @param {number} gardenId - The garden ID
- * @param {Object} plant - The plant data
- * @param {string} excludeEmail - Email to exclude from broadcast
- */
-async function broadcastPlantDeleted(gardenId, plant, excludeEmail) {
-    await broadcastToGarden(gardenId, 'PLANT_DELETED_FROM_GARDEN', {
-        plant: plant,
-        message: `Plant "${plant.name}" was removed from your garden`
-    }, excludeEmail);
-}
-
-/**
- * Broadcast plant updated to all garden members
- * @param {number} gardenId - The garden ID
- * @param {Object} plant - The plant data
- * @param {string} excludeEmail - Email to exclude from broadcast
- */
-async function broadcastPlantUpdated(gardenId, plant, excludeEmail) {
-    await broadcastToGarden(gardenId, 'PLANT_UPDATED_IN_GARDEN', {
-        plant: plant,
-        message: `Plant "${plant.name}" was updated in your garden`
-    }, excludeEmail);
-}
-
-/**
- * Broadcast moisture update to all garden members
- * @param {number} gardenId - The garden ID
- * @param {Object} moistureData - The moisture data
- * @param {string} excludeEmail - Email to exclude from broadcast
- */
-async function broadcastMoistureUpdate(gardenId, moistureData, excludeEmail) {
-    await broadcastToGarden(gardenId, 'GARDEN_MOISTURE_UPDATE', {
-        moistureData: moistureData,
-        message: 'Plant moisture levels have been updated'
-    }, excludeEmail);
-}
 
 module.exports = {
-    broadcastToGarden,
-    broadcastPlantAdded,
-    broadcastPlantDeleted,
-    broadcastPlantUpdated,
-    broadcastMoistureUpdate
+    broadcastToGarden
 };

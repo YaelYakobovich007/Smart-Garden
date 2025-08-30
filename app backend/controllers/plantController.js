@@ -1,13 +1,22 @@
-const { addPlant, getPlants, getPlantByName, deletePlantById } = require('../models/plantModel');
+// Models
+const { addPlant, getPlants, getPlantByName, deletePlantById, updatePlantDetails, getUserGardenId } = require('../models/plantModel');
 const { getUser } = require('../models/userModel');
+const { deleteIrrigationResultsByPlantId } = require('../models/irrigationModel');
+const { deleteScheduleByPlantId } = require('../models/plantScheduleModel');
+
+// Utils & Sessions
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getEmailBySocket } = require('../models/userSessions');
+
+// Services
 const googleCloudStorage = require('../services/googleCloudStorage');
 const piCommunication = require('../services/piCommunication');
 const { addPendingPlant } = require('../services/pendingPlantsTracker');
 const { addPendingMoistureRequest } = require('../services/pendingMoistureTracker');
-
-const { storePendingUpdate } = require('../services/pendingUpdateTracker');
+const { storePendingUpdate, getPendingUpdate } = require('../services/pendingUpdateTracker');
+const { storePendingDeletion } = require('../services/pendingDeletionTracker');
+const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
+const { broadcastToGarden } = require('../services/gardenBroadcaster');
 
 // Test mode flag - set to true to allow plant creation without Pi
 const TEST_MODE = false
@@ -203,7 +212,7 @@ async function handleDeletePlant(data, ws, email) {
 
   // Best-effort: cancel any pending trackers for this plant
   try {
-    const { getPendingIrrigation } = require('../services/pendingIrrigationTracker');
+
     const pending = getPendingIrrigation(plant.plant_id);
     if (pending) {
       console.log(`[PLANT] Cancelling pending irrigation: plant=${plant.plant_id}`);
@@ -212,45 +221,37 @@ async function handleDeletePlant(data, ws, email) {
     console.log(`[PLANT] Warning: Failed to clear pending trackers - ${e?.message}`);
   }
 
-  // Inform Pi (non-blocking): remove plant and free hardware
-  try {
-    const piResult = piCommunication.removePlant(plant.plant_id);
-    if (!piResult.success) {
-      console.log(`[PLANT] Warning: Failed to send remove request to Pi - ${piResult.error}`);
-    }
-  } catch (e) {
-    console.log(`[PLANT] Error: Failed to send remove request to Pi - ${e?.message}`);
-  }
-
   // Delete irrigation events first
-  await require('../models/irrigationModel').deleteIrrigationResultsByPlantId(plant.plant_id);
+  await deleteIrrigationResultsByPlantId(plant.plant_id);
 
   // Best-effort: clear schedule rows if you keep a separate table (ignore if not used)
   try {
-    const { deleteScheduleByPlantId } = require('../models/plantScheduleModel');
     if (deleteScheduleByPlantId) {
       await deleteScheduleByPlantId(plant.plant_id);
     }
   } catch { }
 
-  // Delete the plant with optimistic locking
-  const deleteResult = await deletePlantById(plant.plant_id, user.id);
+  // First check if Pi is connected and send removal request
+  const piResult = piCommunication.removePlant(plant.plant_id);
 
-  if (deleteResult.error === 'PLANT_NOT_FOUND') {
-    return sendError(ws, 'DELETE_PLANT_FAIL', 'Plant not found in your garden');
+  if (!piResult.success) {
+    // Pi not connected - return error immediately
+    console.log(`[PLANT] Error: Pi not connected - cannot remove plant: plant=${plant.plant_id}`);
+    return sendError(ws, 'DELETE_PLANT_FAIL', 'Cannot delete plant: Pi controller is not connected');
   }
 
-  if (deleteResult.error === 'CONCURRENT_MODIFICATION') {
-    return sendError(ws, 'DELETE_PLANT_FAIL', 'Plant was modified by another user. Please refresh and try again.');
-  }
+  // Pi is connected - store pending deletion for when Pi responds
+  storePendingDeletion(plant.plant_id, ws, email, plant);
 
-  if (deleteResult.error) {
-    return sendError(ws, 'DELETE_PLANT_FAIL', 'Failed to delete plant. Please try again.');
-  }
+  // Send immediate acknowledgment to client
+  sendSuccess(ws, 'DELETE_PLANT_PENDING', {
+    message: `Plant "${plant.name}" deletion request sent to Pi controller. Please wait for confirmation.`,
+    plant_id: plant.plant_id,
+    pending: true
+  });
 
-  sendSuccess(ws, 'DELETE_PLANT_SUCCESS', { message: 'Plant and its irrigation events deleted' });
-
-  // Note: Broadcast will happen in piSocket.js after Pi processes removal
+  console.log(`[PLANT] Deletion request sent to Pi: plant=${plant.plant_id}`);
+  // Final success will be sent from piSocket.js after Pi confirms deletion
 }
 
 async function handleUpdatePlantDetails(data, ws, email) {
@@ -311,7 +312,7 @@ async function handleUpdatePlantDetails(data, ws, email) {
     }
 
     // Update plant details
-    const updatedPlant = await require('../models/plantModel').updatePlantDetails(user.id, plant.plant_id, {
+    const updatedPlant = await updatePlantDetails(user.id, plant.plant_id, {
       plantName: newPlantName?.trim(),
       desiredMoisture,
       waterLimit,
@@ -367,13 +368,11 @@ async function handleUpdatePlantDetails(data, ws, email) {
         if (!piResult.success) {
           console.log(`[PLANT] Warning: Failed to update on Pi - ${piResult.error}`);
           // Remove pending update since Pi update failed
-          const { getPendingUpdate } = require('../services/pendingUpdateTracker');
           getPendingUpdate(updatedPlant.plant_id);
         }
       } catch (piError) {
         console.log(`[PLANT] Error: Failed to update on Pi - ${piError.message}`);
         // Remove pending update since Pi update failed
-        const { getPendingUpdate } = require('../services/pendingUpdateTracker');
         getPendingUpdate(updatedPlant.plant_id);
       }
     } else {

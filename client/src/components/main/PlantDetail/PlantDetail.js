@@ -90,12 +90,12 @@ const PlantDetail = () => {
   // Refresh plant data (including target humidity) when screen gains focus
   useFocusEffect(
     React.useCallback(() => {
-    if (plant?.name && websocketService.isConnected()) {
+      if (plant?.name && websocketService.isConnected()) {
         // Get fresh moisture data
-      websocketService.sendMessage({
-        type: 'GET_PLANT_MOISTURE',
-        plantName: plant.name
-      });
+        websocketService.sendMessage({
+          type: 'GET_PLANT_MOISTURE',
+          plantName: plant.name
+        });
 
         // Get fresh plant details to ensure target humidity is current
         websocketService.sendMessage({
@@ -121,7 +121,7 @@ const PlantDetail = () => {
         setPlant(normalized);
         try {
           rehydrateFromPlants([normalized]);
-        } catch {}
+        } catch { }
       }
     };
 
@@ -332,7 +332,7 @@ const PlantDetail = () => {
         const imageUri = result.assets[0].uri;
         const base64 = await convertImageToBase64(imageUri);
         const filename = `plant_${plant?.id}_${Date.now()}.jpg`;
-        
+
         updatePlantDetails({
           imageData: {
             base64,
@@ -473,6 +473,13 @@ const PlantDetail = () => {
       console.log('🔄 PlantDetail: Irrigation skipped for', plant.name);
     };
 
+    const handleDeletePending = (data) => {
+      // Show loading message, don't close screen yet
+      Alert.alert('Delete Plant', data?.message || 'Deletion request sent to Pi controller...', [
+        { text: 'OK' }
+      ]);
+    };
+
     const handleDeleteSuccess = (data) => {
       Alert.alert('Delete Plant', data?.message || 'Plant deleted successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() }
@@ -557,6 +564,7 @@ const PlantDetail = () => {
     websocketService.onMessage('IRRIGATE_FAIL', handleFail);
     websocketService.onMessage('IRRIGATE_SKIPPED', handleSkipped);
     websocketService.onMessage('IRRIGATION_SKIPPED', handleSkipped);  // Handle both message types
+    websocketService.onMessage('DELETE_PLANT_PENDING', handleDeletePending);
     websocketService.onMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
     websocketService.onMessage('DELETE_PLANT_FAIL', handleDeleteFail);
     websocketService.onMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
@@ -592,6 +600,7 @@ const PlantDetail = () => {
       websocketService.offMessage('IRRIGATE_FAIL', handleFail);
       websocketService.offMessage('IRRIGATE_SKIPPED', handleSkipped);
       websocketService.offMessage('IRRIGATION_SKIPPED', handleSkipped);  // Handle both message types
+      websocketService.offMessage('DELETE_PLANT_PENDING', handleDeletePending);
       websocketService.offMessage('DELETE_PLANT_SUCCESS', handleDeleteSuccess);
       websocketService.offMessage('DELETE_PLANT_FAIL', handleDeleteFail);
       websocketService.offMessage('PLANT_MOISTURE_RESPONSE', handleMoistureSuccess);
@@ -697,33 +706,33 @@ const PlantDetail = () => {
         <View style={styles.plantConfigContainer}>
           <Text style={styles.sectionTitle}>Plant Configuration</Text>
           <View style={styles.configGrid}>
-                         <View style={styles.configItem}>
-               <View style={styles.configIconContainer}>
-                 <Feather name="activity" size={16} color="#4CAF50" />
-               </View>
-               <View style={styles.configInfo}>
-                 <Text style={styles.configLabel}>Dripper Type</Text>
-                 <Text style={styles.configValue}>{plant.dripper_type || '2L/h'}</Text>
-               </View>
-             </View>
-             <View style={styles.configItem}>
-               <View style={styles.configIconContainer}>
-                 <Feather name="droplet" size={16} color="#4CAF50" />
-               </View>
-               <View style={styles.configInfo}>
-                 <Text style={styles.configLabel}>Target Moisture</Text>
-                 <Text style={styles.configValue}>{plant.ideal_moisture || plant.desiredMoisture || 50}%</Text>
-               </View>
-             </View>
-             <View style={styles.configItem}>
-               <View style={styles.configIconContainer}>
-                 <Feather name="bar-chart-2" size={16} color="#4CAF50" />
-               </View>
-               <View style={styles.configInfo}>
-                 <Text style={styles.configLabel}>Water Limit</Text>
-                 <Text style={styles.configValue}>{plant.water_limit}L</Text>
-               </View>
-             </View>
+            <View style={styles.configItem}>
+              <View style={styles.configIconContainer}>
+                <Feather name="activity" size={16} color="#4CAF50" />
+              </View>
+              <View style={styles.configInfo}>
+                <Text style={styles.configLabel}>Dripper Type</Text>
+                <Text style={styles.configValue}>{plant.dripper_type || '2L/h'}</Text>
+              </View>
+            </View>
+            <View style={styles.configItem}>
+              <View style={styles.configIconContainer}>
+                <Feather name="droplet" size={16} color="#4CAF50" />
+              </View>
+              <View style={styles.configInfo}>
+                <Text style={styles.configLabel}>Target Moisture</Text>
+                <Text style={styles.configValue}>{plant.ideal_moisture || plant.desiredMoisture || 50}%</Text>
+              </View>
+            </View>
+            <View style={styles.configItem}>
+              <View style={styles.configIconContainer}>
+                <Feather name="bar-chart-2" size={16} color="#4CAF50" />
+              </View>
+              <View style={styles.configInfo}>
+                <Text style={styles.configLabel}>Water Limit</Text>
+                <Text style={styles.configValue}>{plant.water_limit}L</Text>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -742,18 +751,18 @@ const PlantDetail = () => {
           </View>
         </View>
 
-                 {/* Valve Blocked Warning */}
-         {plant.valve_blocked && (
-           <View style={styles.valveBlockedContainer}>
-             <View style={styles.valveBlockedHeader}>
-               <Feather name="alert-triangle" size={24} color="#F59E0B" />
-               <Text style={styles.valveBlockedTitle}>Tap is Blocked</Text>
-             </View>
-             <Text style={styles.valveBlockedDescription}>
-               The valve for this plant is currently blocked and cannot be operated. 
-               Please troubleshoot the hardware issue to restore irrigation functionality.
-             </Text>
-             <View style={{ flexDirection: 'row', gap: 12 }}>
+        {/* Valve Blocked Warning */}
+        {plant.valve_blocked && (
+          <View style={styles.valveBlockedContainer}>
+            <View style={styles.valveBlockedHeader}>
+              <Feather name="alert-triangle" size={24} color="#F59E0B" />
+              <Text style={styles.valveBlockedTitle}>Tap is Blocked</Text>
+            </View>
+            <Text style={styles.valveBlockedDescription}>
+              The valve for this plant is currently blocked and cannot be operated.
+              Please troubleshoot the hardware issue to restore irrigation functionality.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               <TouchableOpacity
                 style={styles.troubleshootButton}
                 onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
@@ -761,10 +770,10 @@ const PlantDetail = () => {
                 <Feather name="tool" size={20} color="#FFFFFF" />
                 <Text style={styles.troubleshootButtonText}>Diagnose</Text>
               </TouchableOpacity>
-             </View>
-           </View>
-         )}
-         
+            </View>
+          </View>
+        )}
+
 
 
         {/* 2. Smart Irrigation Section */}
@@ -773,8 +782,8 @@ const PlantDetail = () => {
           <Text style={styles.sectionDescription}>
             Smart irrigation automatically waters your plant based on soil moisture levels and optimal conditions.
           </Text>
-          <TouchableOpacity 
-            style={[styles.primaryButton, (isWateringActive || plant.valve_blocked) && styles.disabledButton]} 
+          <TouchableOpacity
+            style={[styles.primaryButton, (isWateringActive || plant.valve_blocked) && styles.disabledButton]}
             onPress={handleSmartIrrigation}
             disabled={isWateringActive || plant.valve_blocked}
           >
@@ -783,7 +792,7 @@ const PlantDetail = () => {
               {plant.valve_blocked ? 'Valve Blocked' : 'Start Smart Irrigation'}
             </Text>
           </TouchableOpacity>
-          
+
 
         </View>
 
@@ -800,12 +809,12 @@ const PlantDetail = () => {
           </TouchableOpacity>
 
           <View style={styles.valveButtonsContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.primaryButton,
                 styles.halfButton,
                 (isWateringActive || isManualMode || pendingValveRequest || plant.valve_blocked) && styles.disabledButton
-              ]} 
+              ]}
               onPress={() => {
                 // Open Valve button pressed
                 handleManualIrrigation();
@@ -818,8 +827,8 @@ const PlantDetail = () => {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.stopButton, styles.halfButton, (!isManualMode || plant.valve_blocked) && styles.disabledButton]} 
+            <TouchableOpacity
+              style={[styles.stopButton, styles.halfButton, (!isManualMode || plant.valve_blocked) && styles.disabledButton]}
               onPress={() => {
                 // Close Valve button pressed
                 handleStopWatering(plant.id);
@@ -863,12 +872,12 @@ const PlantDetail = () => {
       />
 
       {/* 7. Smart Irrigation Loader */}
-      <SmartIrrigationLoader 
+      <SmartIrrigationLoader
         isVisible={pendingIrrigationRequest}
       />
 
       {/* 8. Irrigation Overlay */}
-      <IrrigationOverlay 
+      <IrrigationOverlay
         isActive={isWateringActive && !pendingIrrigationRequest && (isManualMode || isSmartMode)}
         timeLeft={wateringTimeLeft}
         onStop={() => {
@@ -887,8 +896,8 @@ const PlantDetail = () => {
         <SafeAreaView style={styles.modalContainer}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
-            <TouchableOpacity 
-              onPress={() => setShowSettingsModal(false)} 
+            <TouchableOpacity
+              onPress={() => setShowSettingsModal(false)}
               style={styles.modalCloseButton}
             >
               <Feather name="x" size={24} color="#2C3E50" />
@@ -901,8 +910,8 @@ const PlantDetail = () => {
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             <View style={styles.settingsSection}>
               <Text style={styles.settingsSectionTitle}>Plant Configuration</Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.settingsItem}
                 onPress={() => {
                   setShowSettingsModal(false);
@@ -919,7 +928,7 @@ const PlantDetail = () => {
                 <Feather name="chevron-right" size={20} color="#C7C7CC" />
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.settingsItem}
                 onPress={() => {
                   setShowSettingsModal(false);
@@ -936,7 +945,7 @@ const PlantDetail = () => {
                 <Feather name="chevron-right" size={20} color="#C7C7CC" />
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.settingsItem}
                 onPress={() => {
                   setShowSettingsModal(false);
@@ -953,7 +962,7 @@ const PlantDetail = () => {
                 <Feather name="chevron-right" size={20} color="#C7C7CC" />
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.settingsItem}
                 onPress={() => {
                   setShowSettingsModal(false);
@@ -970,7 +979,7 @@ const PlantDetail = () => {
                 <Feather name="chevron-right" size={20} color="#C7C7CC" />
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.settingsItem}
                 onPress={() => {
                   setShowSettingsModal(false);
@@ -1019,8 +1028,8 @@ const PlantDetail = () => {
         <SafeAreaView style={styles.modalContainer}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
-            <TouchableOpacity 
-              onPress={() => setShowScheduleModal(false)} 
+            <TouchableOpacity
+              onPress={() => setShowScheduleModal(false)}
               style={styles.modalCloseButton}
             >
               <Feather name="x" size={24} color="#2C3E50" />

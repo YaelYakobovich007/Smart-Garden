@@ -4,6 +4,9 @@ const { completePendingPlant } = require('../services/pendingPlantsTracker');
 const { completePendingIrrigation } = require('../services/pendingIrrigationTracker');
 const { completePendingMoistureRequest } = require('../services/pendingMoistureTracker');
 const { broadcastToGarden } = require('../services/gardenBroadcaster');
+const { getPendingDeletion } = require('../services/pendingDeletionTracker');
+const { deletePlantById, getUserGardenId } = require('../models/plantModel');
+const { getUserByEmail } = require('../models/userModel');
 
 
 let piSocket = null;
@@ -121,6 +124,7 @@ function handlePiSocket(ws) {
                   },
                   message: `New plant "${plantData.name}" was added to your garden`
                 }, email);
+                console.log(`[BROADCAST] Plant addition sent: plant="${plantData.name}" garden=${gardenId}`);
               }
             } catch (broadcastError) {
               console.log(`[BROADCAST] Error: Failed to send plant addition - ${broadcastError.message}`);
@@ -600,7 +604,7 @@ function handlePiSocket(ws) {
               email: pendingInfo.email,
               errorMessage: responseData.error_message || 'Unknown error'
             });
-            console.log(`📱 Sent irrigation error notification to user ${pendingInfo.email}`);
+            console.log(` Sent irrigation error notification to user ${pendingInfo.email}`);
           }
 
           // Update valve status in database if it's a valve blocking error
@@ -608,7 +612,7 @@ function handlePiSocket(ws) {
             const { updateValveStatus, getPlantById } = require('../models/plantModel');
             try {
               await updateValveStatus(plantId, true);
-              console.log(`📊 Updated plant ${plantId} valve status to BLOCKED in database`);
+              console.log(` Updated plant ${plantId} valve status to BLOCKED in database`);
             } catch (err) {
               console.error(`Failed to update valve status for plant ${plantId}:`, err);
             }
@@ -655,7 +659,7 @@ function handlePiSocket(ws) {
       const pendingInfo = completePendingIrrigation(plantId);
 
       if (responseData.status === 'success') {
-        console.log(`🛑 Plant ${plantId} irrigation stopped successfully`);
+        console.log(` Plant ${plantId} irrigation stopped successfully`);
         console.log(`   - Reason: ${responseData.reason}`);
 
         // Save stop irrigation result to database
@@ -686,7 +690,7 @@ function handlePiSocket(ws) {
               message: `Plant "${pendingInfo?.plantData?.plant_name || plantId}" irrigation stopped successfully!`,
               result: irrigationResult
             });
-            console.log(`🛑 Notified client: Plant ${pendingInfo?.plantData?.plant_name || plantId} irrigation stopped!`);
+            console.log(` Notified client: Plant ${pendingInfo?.plantData?.plant_name || plantId} irrigation stopped!`);
           } else {
             console.log(`No pending client found for plant ${plantId} stop irrigation - result saved but client not notified`);
           }
@@ -725,7 +729,7 @@ function handlePiSocket(ws) {
 
       } else {
         // Stop irrigation failed
-        console.error(`❌ Plant ${plantId} stop irrigation failed: ${responseData.error_message}`);
+        console.error(`Plant ${plantId} stop irrigation failed: ${responseData.error_message}`);
 
         // Notify client of stop irrigation failure
         if (pendingInfo && pendingInfo.ws) {
@@ -991,7 +995,7 @@ function handlePiSocket(ws) {
           }
 
         } catch (err) {
-          console.error(`❌ Failed to save valve operation error result for plant ${plantId}:`, err);
+          console.error(`Failed to save valve operation error result for plant ${plantId}:`, err);
         }
       }
       return;
@@ -1167,24 +1171,57 @@ function handlePiSocket(ws) {
     if (data.type === 'REMOVE_PLANT_RESPONSE') {
       const responseData = data.data || {};
       const plantId = responseData.plant_id;
+
+      // Get pending deletion request
+      const pendingDeletion = getPendingDeletion(plantId);
+
+      if (!pendingDeletion) {
+        console.log(`[PI] Warning: No pending deletion found for plant ${plantId}`);
+        return;
+      }
+
+      const { ws, email, plantData } = pendingDeletion;
+
       if (responseData.status === 'success') {
         console.log(`[PI] Plant removed: id=${plantId}`);
 
-        // Broadcast plant removal to garden members
+        // Pi confirmed removal - now delete from database
         try {
-          const { getPlantById } = require('../models/plantModel');
-          const plant = await getPlantById(plantId);
-          if (plant && plant.garden_id) {
-            await broadcastToGarden(plant.garden_id, 'PLANT_DELETED_FROM_GARDEN', {
-              plant: plant,
-              message: `Plant "${plant.name}" was removed from your garden`
-            });
+
+          const user = await getUserByEmail(email);
+          const deleteResult = await deletePlantById(plantId, user.id);
+
+          if (deleteResult.error) {
+            console.log(`[PI] Error: Failed to delete from DB after Pi success - ${deleteResult.error}`);
+            return sendError(ws, 'DELETE_PLANT_FAIL', 'Pi removed plant but database deletion failed');
           }
-        } catch (broadcastError) {
-          console.log(`[BROADCAST] Error: Failed to send plant removal - ${broadcastError.message}`);
+
+          // Broadcast successful deletion
+          try {
+            const gardenId = await getUserGardenId(user.id);
+            if (gardenId) {
+              await broadcastToGarden(gardenId, 'PLANT_DELETED_FROM_GARDEN', {
+                plant: plantData,
+                message: `Plant "${plantData.name}" was removed from your garden`
+              }, null); // Send to all users including the one who deleted
+              console.log(`[BROADCAST] Plant deletion sent: plant="${plantData.name}" garden=${gardenId}`);
+            }
+          } catch (broadcastError) {
+            console.log(`[PI] Error: Failed to broadcast deletion - ${broadcastError.message}`);
+          }
+
+          // Send success to client
+          sendSuccess(ws, 'DELETE_PLANT_SUCCESS', { message: 'Plant deleted successfully' });
+
+        } catch (dbError) {
+          console.log(`[PI] Error: Database deletion failed - ${dbError.message}`);
+          sendError(ws, 'DELETE_PLANT_FAIL', 'Failed to complete plant deletion');
         }
+
       } else {
         console.log(`[PI] Error: Failed to remove plant - id=${plantId} error=${responseData.error_message}`);
+        // Pi failed to remove - send error to client
+        sendError(ws, 'DELETE_PLANT_FAIL', `Pi failed to remove plant: ${responseData.error_message}`);
       }
       return;
     }
