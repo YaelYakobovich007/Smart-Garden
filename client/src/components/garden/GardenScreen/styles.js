@@ -303,6 +303,60 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 8,
     },
+    modalOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+    },
+    modalContent: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        width: '100%',
+        maxWidth: 420,
+        padding: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#2C3E50',
+        fontFamily: 'Nunito_700Bold',
+    },
+    modalPicker: {
+        width: '100%',
+    },
+    inputLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#2C3E50',
+        marginBottom: 8,
+        fontFamily: 'Nunito_600SemiBold',
+    },
+    pickerDisplayText: {
+        color: '#2C3E50',
+        fontSize: 16,
+        fontFamily: 'Nunito_400Regular',
+    },
+    pickerPlaceholder: {
+        color: '#95A5A6',
+        fontFamily: 'Nunito_400Regular',
+    },
 });
 
 export default styles;

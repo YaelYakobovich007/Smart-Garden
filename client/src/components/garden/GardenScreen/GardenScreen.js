@@ -19,6 +19,7 @@ import {
     Alert,
     ActivityIndicator,
     Share,
+    Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -26,6 +27,8 @@ import { Feather } from '@expo/vector-icons';
 
 // Import services
 import websocketService from '../../../services/websocketService';
+import locationService from '../../../services/locationService';
+import { Picker } from '@react-native-picker/picker';
 
 // Import styles
 import styles from './styles';
@@ -43,6 +46,16 @@ const GardenScreen = () => {
     const [loading, setLoading] = useState(false);
     const [userRole, setUserRole] = useState('member'); // 'admin' or 'member'
 
+    // Location update state (admin-only)
+    const [showLocationModal, setShowLocationModal] = useState(false);
+    const [selectedCountry, setSelectedCountry] = useState('');
+    const [selectedCity, setSelectedCity] = useState('');
+    const [countries, setCountries] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [savingLocation, setSavingLocation] = useState(false);
+    const [showCountryPicker, setShowCountryPicker] = useState(false);
+    const [showCityPicker, setShowCityPicker] = useState(false);
+
     /**
      * Load garden details and members
      */
@@ -50,6 +63,9 @@ const GardenScreen = () => {
         if (gardenData && gardenData.id) {
             loadGardenDetails();
             loadGardenMembers();
+        }
+        if (garden?.role) {
+            setUserRole(garden.role);
         }
     }, []); // Only run once when component mounts
 
@@ -187,6 +203,18 @@ const GardenScreen = () => {
             );
         };
 
+        // Update handlers for garden location updates
+        const handleUpdateGardenSuccess = (d) => {
+            setSavingLocation(false);
+            if (d?.garden) setGardenData(d.garden);
+            setShowLocationModal(false);
+        };
+
+        const handleUpdateGardenFail = (d) => {
+            setSavingLocation(false);
+            Alert.alert('Update Failed', d?.reason || 'Failed to update garden location');
+        };
+
         // Register message handlers
         websocketService.onMessage('GET_GARDEN_DETAILS_SUCCESS', handleGardenDetails);
         websocketService.onMessage('GET_GARDEN_DETAILS_FAIL', handleGardenError);
@@ -194,6 +222,8 @@ const GardenScreen = () => {
         websocketService.onMessage('GET_GARDEN_MEMBERS_FAIL', handleGardenError);
         websocketService.onMessage('LEAVE_GARDEN_SUCCESS', handleLeaveGardenSuccess);
         websocketService.onMessage('LEAVE_GARDEN_FAIL', handleGardenError);
+        websocketService.onMessage('UPDATE_GARDEN_SUCCESS', handleUpdateGardenSuccess);
+        websocketService.onMessage('UPDATE_GARDEN_FAIL', handleUpdateGardenFail);
 
         // Cleanup
         return () => {
@@ -203,6 +233,8 @@ const GardenScreen = () => {
             websocketService.offMessage('GET_GARDEN_MEMBERS_FAIL', handleGardenError);
             websocketService.offMessage('LEAVE_GARDEN_SUCCESS', handleLeaveGardenSuccess);
             websocketService.offMessage('LEAVE_GARDEN_FAIL', handleGardenError);
+            websocketService.offMessage('UPDATE_GARDEN_SUCCESS', handleUpdateGardenSuccess);
+            websocketService.offMessage('UPDATE_GARDEN_FAIL', handleUpdateGardenFail);
         };
     }, []);
 
@@ -243,7 +275,48 @@ const GardenScreen = () => {
         );
     };
 
-    
+    // Open location modal (admin only)
+    const openLocationModal = () => {
+        try {
+            const list = locationService.getCountries();
+            setCountries(list || []);
+        } catch {
+            setCountries([]);
+        }
+        // Prefill with current garden location
+        setSelectedCountry(gardenData?.country || '');
+        setSelectedCity(gardenData?.city || '');
+        // Preload cities for selected country
+        if (gardenData?.country) {
+            try {
+                const cityList = locationService.getCitiesForCountry(gardenData.country) || [];
+                setCities(cityList);
+            } catch {
+                setCities([]);
+            }
+        } else {
+            setCities([]);
+        }
+        setShowLocationModal(true);
+    };
+
+    // Save updated garden location
+    const handleSaveLocation = () => {
+        if (!selectedCountry || !selectedCity) return;
+        if (!websocketService.isConnected()) {
+            Alert.alert('Error', 'Not connected to server. Please try again.');
+            return;
+        }
+        setSavingLocation(true);
+        websocketService.sendMessage({
+            type: 'UPDATE_GARDEN',
+            gardenId: gardenData.id,
+            country: selectedCountry,
+            city: selectedCity
+        });
+    };
+
+
 
 
 
@@ -317,6 +390,14 @@ const GardenScreen = () => {
                             <Text style={styles.gardenSubtitle}>
                                 {members.length} member{members.length !== 1 ? 's' : ''} • Created {new Date(gardenData.created_at).toLocaleDateString()}
                             </Text>
+                            {(gardenData.city || gardenData.country) && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                    <Feather name="map-pin" size={14} color="#7F8C8D" />
+                                    <Text style={{ marginLeft: 6, fontSize: 12, color: '#7F8C8D' }}>
+                                        {[gardenData.city, gardenData.country].filter(Boolean).join(', ')}
+                                    </Text>
+                                </View>
+                            )}
                         </View>
                     </View>
 
@@ -351,6 +432,15 @@ const GardenScreen = () => {
                                 </View>
                                 <Text style={styles.quickActionText}>Invite Friends</Text>
                             </TouchableOpacity>
+
+                            {userRole === 'admin' && (
+                                <TouchableOpacity style={styles.quickActionCard} onPress={() => openLocationModal()}>
+                                    <View style={styles.quickActionIcon}>
+                                        <Feather name="map-pin" size={18} color="#22C55E" />
+                                    </View>
+                                    <Text style={styles.quickActionText}>Change Location</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </View>
                 </View>
@@ -410,6 +500,75 @@ const GardenScreen = () => {
                     </View>
                 </View>
             )}
+
+            {/* Update Location Modal (Admin Only) */}
+            <Modal visible={showLocationModal} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Update Garden Location</Text>
+                            <TouchableOpacity onPress={() => setShowLocationModal(false)}>
+                                <Feather name="x" size={24} color="#333" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.inputLabel}>Country</Text>
+                        <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 8, marginBottom: 16 }}>
+                            <Picker
+                                selectedValue={selectedCountry}
+                                onValueChange={(val) => {
+                                    setSelectedCountry(val);
+                                    setSelectedCity('');
+                                    try {
+                                        const list = locationService.getCitiesForCountry(val) || [];
+                                        setCities(list);
+                                    } catch {
+                                        setCities([]);
+                                    }
+                                }}
+                                style={styles.modalPicker}
+                            >
+                                <Picker.Item label="Select Country" value="" />
+                                {(countries || []).map((c) => (
+                                    <Picker.Item key={c.code} label={c.name} value={c.name} />
+                                ))}
+                            </Picker>
+                        </View>
+
+                        <Text style={styles.inputLabel}>City</Text>
+                        <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 8, marginBottom: 16 }}>
+                            <Picker
+                                enabled={!!selectedCountry}
+                                selectedValue={selectedCity}
+                                onValueChange={(val) => setSelectedCity(val)}
+                                style={styles.modalPicker}
+                            >
+                                <Picker.Item label={selectedCountry ? 'Select City' : 'Select a country first'} value="" />
+                                {(cities || []).map((city) => (
+                                    <Picker.Item key={city} label={city} value={city} />
+                                ))}
+                            </Picker>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                            <TouchableOpacity onPress={() => setShowLocationModal(false)} style={[styles.inviteCodeButton, { borderColor: '#BDC3C7' }]}>
+                                <Text style={[styles.inviteCodeButtonText, { color: '#607D8B' }]}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleSaveLocation}
+                                disabled={!selectedCountry || !selectedCity || savingLocation}
+                                style={[styles.inviteCodeButton, { borderColor: (!selectedCountry || !selectedCity || savingLocation) ? '#BDC3C7' : '#4CAF50' }]}
+                            >
+                                <Text style={[styles.inviteCodeButtonText, { color: (!selectedCountry || !selectedCity || savingLocation) ? '#BDC3C7' : '#4CAF50' }]}>
+                                    {savingLocation ? 'Saving...' : 'Save'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Removed separate pickers; both controls live in the main modal above */}
         </SafeAreaView>
     );
 };

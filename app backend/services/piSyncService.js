@@ -1,5 +1,6 @@
-const { getGardenByInviteCode: getGardenByInviteCodeModel } = require('../models/gardenModel');
+const { getGardenByInviteCode: getGardenByInviteCodeModel, getGardenById } = require('../models/gardenModel');
 const { getPlantsByGardenId } = require('../models/plantModel');
+const { getLatLonForCountryCity } = require('../services/locationService');
 
 /**
  * Get garden by invite code (family code)
@@ -34,6 +35,22 @@ async function getGardenPlantsWithHardware(gardenId) {
         console.log(`[SYNC] Getting plants: garden=${gardenId}`);
         const plants = await getPlantsByGardenId(gardenId);
 
+        // Resolve garden coordinates once (plants inherit garden location)
+        let coords = null;
+        try {
+            const garden = await getGardenById(gardenId);
+            if (garden?.country && garden?.city) {
+                coords = await getLatLonForCountryCity(garden.country, garden.city);
+                if (coords) {
+                    console.log(`[SYNC] Garden coords resolved: lat=${coords.lat} lon=${coords.lon}`);
+                } else {
+                    console.log(`[SYNC] Garden coords not found for ${garden.country}/${garden.city}`);
+                }
+            }
+        } catch (e) {
+            console.log(`[SYNC] Failed resolving garden coords: ${e.message}`);
+        }
+
         // Filter only plants that have hardware assigned (sensor_port and valve_id)
         const plantsWithHardware = plants.filter(plant =>
             plant.sensor_port !== null &&
@@ -51,6 +68,8 @@ async function getGardenPlantsWithHardware(gardenId) {
             dripperType: plant.dripper_type || '2L/h',
             sensor_port: plant.sensor_port,
             valve_id: plant.valve_id,
+            lat: coords?.lat,
+            lon: coords?.lon,
             scheduleData: {
                 irrigation_days: plant.irrigation_days || null,
                 irrigation_time: plant.irrigation_time || null

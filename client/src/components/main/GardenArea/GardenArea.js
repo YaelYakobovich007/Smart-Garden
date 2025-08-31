@@ -39,6 +39,14 @@ const GardenArea = ({ garden, gardenLoading, onCreateOrJoinGarden }) => {
                       ))}
                     </View>
                   </View>
+                  {garden.city || garden.country ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                      <Feather name="map-pin" size={14} color="#6B7280" />
+                      <Text style={{ marginLeft: 6, fontSize: 12, color: '#6B7280' }}>
+                        {[garden.city, garden.country].filter(Boolean).join(', ')}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
               <View style={styles.gardenCardFooter}>

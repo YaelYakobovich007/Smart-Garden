@@ -18,6 +18,7 @@ import {
     Alert,
     ScrollView,
     ActivityIndicator,
+    Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -25,6 +26,8 @@ import { Feather } from '@expo/vector-icons';
 
 // Import services
 import websocketService from '../../../services/websocketService';
+import locationService from '../../../services/locationService';
+import { Picker } from '@react-native-picker/picker';
 
 
 
@@ -41,7 +44,12 @@ const CreateOrJoinGardenScreen = () => {
 
     // Create garden form
     const [gardenName, setGardenName] = useState('');
-    const [maxMembers, setMaxMembers] = useState('5');
+    const [selectedCountry, setSelectedCountry] = useState('');
+    const [selectedCity, setSelectedCity] = useState('');
+    const [countries, setCountries] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [showCountryPicker, setShowCountryPicker] = useState(false);
+    const [showCityPicker, setShowCityPicker] = useState(false);
 
     // Join garden form
     const [inviteCode, setInviteCode] = useState('');
@@ -56,6 +64,16 @@ const CreateOrJoinGardenScreen = () => {
             return;
         }
 
+        if (!selectedCountry) {
+            Alert.alert('Error', 'Please select a country');
+            return;
+        }
+
+        if (!selectedCity) {
+            Alert.alert('Error', 'Please select a city');
+            return;
+        }
+
         if (!websocketService.isConnected()) {
             Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
             return;
@@ -67,8 +85,9 @@ const CreateOrJoinGardenScreen = () => {
         try {
             websocketService.sendMessage({
                 type: 'CREATE_GARDEN',
-                name: gardenName.trim(),
-                max_members: parseInt(maxMembers) || 5
+                gardenName: gardenName.trim(),
+                country: selectedCountry,
+                city: selectedCity
             });
         } catch (error) {
             console.error('Error creating garden:', error);
@@ -166,6 +185,34 @@ const CreateOrJoinGardenScreen = () => {
         };
     }, [navigation, gardenName]);
 
+    // Load countries on mount
+    React.useEffect(() => {
+        try {
+            const list = locationService.getCountries();
+            setCountries(list || []);
+        } catch (e) {
+            setCountries([]);
+        }
+    }, []);
+
+    // Load cities when country changes
+    React.useEffect(() => {
+        if (!selectedCountry) {
+            setCities([]);
+            setSelectedCity('');
+            return;
+        }
+        try {
+            const list = locationService.getCitiesForCountry(selectedCountry) || [];
+            setCities(list);
+            // reset city if it no longer exists
+            if (list.length && !list.includes(selectedCity)) setSelectedCity('');
+        } catch (e) {
+            setCities([]);
+            setSelectedCity('');
+        }
+    }, [selectedCountry]);
+
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
@@ -259,24 +306,42 @@ const CreateOrJoinGardenScreen = () => {
                             />
                         </View>
 
+                        {/* Country selector */}
                         <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Maximum Members</Text>
-                            <TextInput
+                            <Text style={styles.inputLabel}>Country</Text>
+                            <TouchableOpacity
                                 style={styles.textInput}
-                                value={maxMembers}
-                                onChangeText={setMaxMembers}
-                                placeholder="5"
-                                placeholderTextColor="#95A5A6"
-                                keyboardType="numeric"
-                                maxLength={2}
-                            />
-                            <Text style={styles.inputHint}>Maximum number of members (including you)</Text>
+                                onPress={() => setShowCountryPicker(true)}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={{ color: selectedCountry ? '#2C3E50' : '#95A5A6' }}>
+                                    {selectedCountry || 'Select Country'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* City selector */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.inputLabel}>City</Text>
+                            <TouchableOpacity
+                                style={styles.textInput}
+                                onPress={() => setShowCityPicker(true)}
+                                disabled={!selectedCountry}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={{ color: selectedCity ? '#2C3E50' : '#95A5A6' }}>
+                                    {selectedCity || (selectedCountry ? 'Select City' : 'Select a country first')}
+                                </Text>
+                            </TouchableOpacity>
                         </View>
 
                         <TouchableOpacity
-                            style={[styles.submitButton, !gardenName.trim() && styles.submitButtonDisabled]}
+                            style={[
+                                styles.submitButton,
+                                (!gardenName.trim() || !selectedCountry || !selectedCity) && styles.submitButtonDisabled
+                            ]}
                             onPress={handleCreateGarden}
-                            disabled={!gardenName.trim() || loading}
+                            disabled={!gardenName.trim() || !selectedCountry || !selectedCity || loading}
                         >
                             <Text style={styles.submitButtonText}>Create Garden</Text>
                         </TouchableOpacity>
@@ -293,6 +358,54 @@ const CreateOrJoinGardenScreen = () => {
                     </View>
                 </View>
             )}
+
+            {/* Country Picker Modal */}
+            <Modal visible={showCountryPicker} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select Country</Text>
+                            <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
+                                <Feather name="x" size={24} color="#333" />
+                            </TouchableOpacity>
+                        </View>
+                        <Picker
+                            selectedValue={selectedCountry}
+                            onValueChange={(val) => { setSelectedCountry(val); setShowCountryPicker(false); }}
+                            style={styles.modalPicker}
+                        >
+                            <Picker.Item label="Select Country" value="" />
+                            {(countries || []).map((c) => (
+                                <Picker.Item key={c.code} label={c.name} value={c.name} />
+                            ))}
+                        </Picker>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* City Picker Modal */}
+            <Modal visible={showCityPicker} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select City</Text>
+                            <TouchableOpacity onPress={() => setShowCityPicker(false)}>
+                                <Feather name="x" size={24} color="#333" />
+                            </TouchableOpacity>
+                        </View>
+                        <Picker
+                            selectedValue={selectedCity}
+                            onValueChange={(val) => { setSelectedCity(val); setShowCityPicker(false); }}
+                            style={styles.modalPicker}
+                        >
+                            <Picker.Item label={selectedCountry ? 'Select City' : 'Select a country first'} value="" />
+                            {(cities || []).map((city) => (
+                                <Picker.Item key={city} label={city} value={city} />
+                            ))}
+                        </Picker>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
