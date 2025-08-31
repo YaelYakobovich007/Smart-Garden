@@ -116,9 +116,16 @@ class SmartGardenEngine:
             simulation_mode=False
         )
         
+        # Pass the shared port lock from sensor manager
+        try:
+            port_lock = self.sensor_manager.get_port_lock(sensor_port)
+        except Exception:
+            port_lock = None
+
         sensor = Sensor(
             simulation_mode=False,
-            port=sensor_port
+            port=sensor_port,
+            port_lock=port_lock
         )
         
         # Parse dripper type from string

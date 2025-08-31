@@ -44,6 +44,25 @@ export const IrrigationProvider = ({ children }) => {
     }, STOP_SUPPRESSION_MS + 200);
   };
 
+  // Track that we've already shown a final popup for a plant (avoid duplicate popups
+  // when both IRRIGATE_PLANT_RESPONSE and IRRIGATION_COMPLETE arrive)
+  const finalNotifiedRef = useRef(new Set());
+  const wasFinalNotified = (plantId) => {
+    if (plantId == null) return false;
+    return finalNotifiedRef.current.has(Number(plantId));
+  };
+  const markFinalNotified = (plantId, ttlMs = 15000) => {
+    if (plantId == null) return;
+    const pid = Number(plantId);
+    finalNotifiedRef.current.add(pid);
+    // Auto-clear after TTL to avoid stale state
+    setTimeout(() => finalNotifiedRef.current.delete(pid), ttlMs);
+  };
+  const clearFinalNotified = (plantId) => {
+    if (plantId == null) return;
+    finalNotifiedRef.current.delete(Number(plantId));
+  };
+
   const wasRecentlyStopped = (plantId) => {
     const now = Date.now();
     if (plantId != null) {
@@ -157,6 +176,8 @@ export const IrrigationProvider = ({ children }) => {
   const rehydrateIrrigationStarted = (plantId, mode = 'smart', durationMinutes = null) => {
     if (plantId == null) return;
     const now = Date.now();
+    // New run -> clear any previous final-notified flag
+    clearFinalNotified(plantId);
     if (String(mode).toLowerCase() === 'manual') {
       const minutes = Number(durationMinutes || 0);
       const endAt = minutes > 0 ? now + minutes * 60 * 1000 : null;
@@ -712,7 +733,7 @@ export const IrrigationProvider = ({ children }) => {
         });
 
         // Show final confirmation ONLY for the requester (who pressed Stop)
-        if (wasRecentlyStopped(targetPlantId)) {
+        if (wasRecentlyStopped(targetPlantId) && !wasFinalNotified(targetPlantId)) {
           const prev = wateringPlantsRef.current.get(targetPlantId);
           const wasScheduled = prev?.currentMode === 'scheduled';
           if (wasScheduled) {
@@ -720,6 +741,7 @@ export const IrrigationProvider = ({ children }) => {
           } else {
             Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation stopped successfully!');
           }
+          markFinalNotified(targetPlantId);
         }
       } else {
         // Failsafe: clear any plants that might be stuck
@@ -956,8 +978,9 @@ export const IrrigationProvider = ({ children }) => {
       }
 
       // Show completion popup only if this wasn't a user-initiated stop
-      if (!wasRecentlyStopped(targetPlantId)) {
+      if (!wasRecentlyStopped(targetPlantId) && !wasFinalNotified(targetPlantId)) {
         Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation completed successfully!');
+        if (targetPlantId != null) markFinalNotified(targetPlantId);
       }
     };
 

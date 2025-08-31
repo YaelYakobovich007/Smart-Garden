@@ -26,13 +26,15 @@ class Sensor:
         simulation_mode=False,
         initial_moisture=30.0,
         port=DEFAULT_PORT,
-        baudrate=DEFAULT_BAUDRATE
+        baudrate=DEFAULT_BAUDRATE,
+        port_lock=None
     ):
         self.simulation_mode = simulation_mode
         self.simulated_value = initial_moisture
         self.simulated_temperature = 25.0  # Default temperature in simulation
         self.port = port
         self.baudrate = baudrate
+        self._port_lock = port_lock  # asyncio.Lock shared per port
 
     async def read(self):
         """
@@ -61,17 +63,25 @@ class Sensor:
         print(f"   Parity: N")
         print(f"   Timeout: 1s")
         
-        client = AsyncModbusSerialClient(
-            port=self.port,
-            baudrate=self.baudrate,
-            parity='N',
-            stopbits=1,
-            bytesize=8,
-            timeout=1,
-        )
+        # Serialize access to the serial port
+        lock = self._port_lock
+        if lock is None:
+            # Fallback: create a private lock if not provided
+            import asyncio
+            lock = asyncio.Lock()
 
-        # Connect to the Modbus client
-        async with client as modbus_client:
+        async with lock:
+            client = AsyncModbusSerialClient(
+                port=self.port,
+                baudrate=self.baudrate,
+                parity='N',
+                stopbits=1,
+                bytesize=8,
+                timeout=1,
+            )
+
+            # Connect to the Modbus client
+            async with client as modbus_client:
             print(f"🔗 Connection status: {'✅ CONNECTED' if modbus_client.connected else '❌ FAILED'}")
             
             if not modbus_client.connected:
