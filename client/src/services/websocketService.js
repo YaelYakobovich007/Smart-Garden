@@ -332,6 +332,15 @@ class WebSocketService {
     this.send(message);
   }
 
+  // Diagnostics: Check Pi power supply
+  checkPowerSupply(plantName) {
+    const message = {
+      type: 'CHECK_POWER_SUPPLY',
+      plantName
+    };
+    this.send(message);
+  }
+
   // Heartbeat management
   startHeartbeat() {
     this.stopHeartbeat();

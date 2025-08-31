@@ -45,14 +45,6 @@ const ValveTroubleshootingScreen = () => {
       icon: 'settings',
       completed: false,
       status: 'pending'
-    },
-    {
-      id: 'blockage',
-      title: 'Check for Blockages',
-      description: 'Inspect water lines and valve for physical obstructions',
-      icon: 'alert-triangle',
-      completed: false,
-      status: 'pending'
     }
   ]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -197,7 +189,7 @@ const ValveTroubleshootingScreen = () => {
       return;
     }
 
-    const steps = ['sensor', 'valve', 'power', 'blockage'];
+    const steps = ['sensor', 'valve', 'power'];
     for (let i = 0; i < steps.length; i++) {
       const stepId = steps[i];
       setCurrentStep(i);
@@ -212,10 +204,10 @@ const ValveTroubleshootingScreen = () => {
         websocketService.checkValveMechanism(plantName);
         const res = await waitForMessage('CHECK_VALVE_MECHANISM_SUCCESS', 'CHECK_VALVE_MECHANISM_FAIL');
         setDiagnosticSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, status: res.ok ? 'passed' : 'failed', completed: true } : s)));
-      } else {
-        // For now, simulate checks for power and blockage
-        await new Promise((r) => setTimeout(r, 1200));
-        setDiagnosticSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, status: 'passed', completed: true } : s)));
+      } else if (stepId === 'power') {
+        websocketService.checkPowerSupply(plantName);
+        const res = await waitForMessage('CHECK_POWER_SUPPLY_SUCCESS', 'CHECK_POWER_SUPPLY_FAIL');
+        setDiagnosticSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, status: res.ok ? 'passed' : 'failed', completed: true } : s)));
       }
 
       // Inter-step pause for better UX pacing (skip after last step)
@@ -365,7 +357,7 @@ const ValveTroubleshootingScreen = () => {
           <Text style={styles.bannerBullet}>• Sensor connections and readings</Text>
           <Text style={styles.bannerBullet}>• Valve mechanism functionality</Text>
           <Text style={styles.bannerBullet}>• Power supply status</Text>
-          <Text style={styles.bannerBullet}>• Physical blockages in the system</Text>
+          {/* Blockage step removed */}
         </View>
 
         {/* Manual Checks Section (moved after blue instructions) */}
@@ -427,22 +419,22 @@ const ValveTroubleshootingScreen = () => {
             )}
           </View>
 
-          <View style={{ gap: 12 }}>
+          <View style={{ gap: 16 }}>
             {diagnosticSteps.map((step, index) => (
               <View key={step.id} style={[styles.stepContainer, { borderWidth: 2, ...renderStatusStyles(step.status) }]}>
                 <View style={styles.stepHeader}>
-                  <View style={{ padding: 8, borderRadius: 8, backgroundColor: (
+                  <View style={{ padding: 10, borderRadius: 10, backgroundColor: (
                     step.status === 'checking' ? '#DBEAFE' : step.status === 'passed' ? '#DBEAFE' : step.status === 'failed' ? '#FECACA' : '#F3F4F6'
                   ) }}>
                     {renderIcon(step.status, step.icon)}
                   </View>
                   <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={{ fontWeight: '600', color: (
+                    <Text style={{ fontWeight: '700', fontSize: 18, color: (
                       step.status === 'passed' ? '#065F46' : step.status === 'failed' ? '#991B1B' : step.status === 'checking' ? '#1E40AF' : '#111827'
                     )}}>
                       {step.title}
                     </Text>
-                    <Text style={{ fontSize: 12, color: (
+                    <Text style={{ fontSize: 14, lineHeight: 20, color: (
                       step.status === 'passed' ? '#047857' : step.status === 'failed' ? '#B91C1C' : step.status === 'checking' ? '#1D4ED8' : '#6B7280'
                     )}}>
                       {step.status === 'checking' ? 'Checking...' :
@@ -451,10 +443,10 @@ const ValveTroubleshootingScreen = () => {
                        step.description}
                     </Text>
                   </View>
-                  <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: (
+                  <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: (
                     step.status === 'passed' ? '#A7F3D0' : step.status === 'failed' ? '#FECACA' : step.status === 'checking' ? '#BFDBFE' : '#E5E7EB'
                   ) }}>
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: (
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: (
                       step.status === 'passed' ? '#065F46' : step.status === 'failed' ? '#991B1B' : step.status === 'checking' ? '#1E40AF' : '#374151'
                     )}}>
                       {step.status === 'checking' ? 'Testing' : step.status === 'passed' ? 'Passed' : step.status === 'failed' ? 'Failed' : 'Pending'}

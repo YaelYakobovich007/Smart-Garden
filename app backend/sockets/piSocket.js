@@ -1196,6 +1196,27 @@ function handlePiSocket(ws) {
       return;
     }
 
+    // Handle CHECK_POWER_SUPPLY_RESPONSE from Pi
+    if (data.type === 'CHECK_POWER_SUPPLY_RESPONSE') {
+      const responseData = data.data || {};
+      const plantId = Number(responseData.plant_id || 0);
+      const pendingInfo = completePendingIrrigation(plantId || 0);
+
+      if (pendingInfo && pendingInfo.ws) {
+        if (responseData.status === 'success') {
+          const ok = !!responseData.ok;
+          if (ok) {
+            sendSuccess(pendingInfo.ws, 'CHECK_POWER_SUPPLY_SUCCESS', responseData);
+          } else {
+            sendError(pendingInfo.ws, 'CHECK_POWER_SUPPLY_FAIL', responseData);
+          }
+        } else {
+          sendError(pendingInfo.ws, 'CHECK_POWER_SUPPLY_FAIL', responseData);
+        }
+      }
+      return;
+    }
+
     // Handle CHECK_SENSOR_CONNECTION_RESPONSE from Pi
     if (data.type === 'CHECK_SENSOR_CONNECTION_RESPONSE') {
       const responseData = data.data || {};

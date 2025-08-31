@@ -167,7 +167,7 @@ export const styles = StyleSheet.create({
   stepContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     shadowColor: '#000',
