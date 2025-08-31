@@ -209,7 +209,7 @@ const MainScreen = () => {
           }
           const normalizedTime = plant.irrigation_time || null;
           const inferredMode = (normalizedDays && normalizedDays.length > 0 && normalizedTime) ? 'scheduled' : 'smart';
-          
+
           // Debug logging for watering mode inference
           console.log(' Watering Mode Debug:', {
             plantName: plant.name,
@@ -1065,15 +1065,15 @@ const MainScreen = () => {
             </View>
           )}
 
-                     {/* Garden Area Section */}
-           <View style={styles.gardenAreaSection}>
-                           <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  {garden ? 'Garden Area' : 'Garden'}
-                </Text>
-              </View>
-              <View style={styles.titleSeparator} />
-            
+          {/* Garden Area Section */}
+          <View style={styles.gardenAreaSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {garden ? 'Garden Area' : 'Garden'}
+              </Text>
+            </View>
+            <View style={styles.titleSeparator} />
+
             {/* Garden Status Banner */}
             {!gardenLoading && (
               <View style={styles.gardenStatusContainer}>
@@ -1103,15 +1103,15 @@ const MainScreen = () => {
                         </View>
                       </View>
                     </View>
-                                         <View style={styles.gardenCardFooter}>
-                       <View style={styles.gardenCardStat}>
-                         <Text style={styles.gardenCardStatText}>Active Garden</Text>
-                       </View>
-                       <View style={styles.gardenCardStat}>
-                         <Feather name="clock" size={16} color="#16A34A" />
-                         <Text style={styles.gardenCardStatText}>24/7 Monitoring</Text>
-                       </View>
-                     </View>
+                    <View style={styles.gardenCardFooter}>
+                      <View style={styles.gardenCardStat}>
+                        <Text style={styles.gardenCardStatText}>Active Garden</Text>
+                      </View>
+                      <View style={styles.gardenCardStat}>
+                        <Feather name="clock" size={16} color="#16A34A" />
+                        <Text style={styles.gardenCardStatText}>24/7 Monitoring</Text>
+                      </View>
+                    </View>
                   </View>
                 ) : (
                   <TouchableOpacity onPress={handleCreateOrJoinGarden} style={styles.gardenCardEmpty}>

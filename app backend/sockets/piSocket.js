@@ -114,7 +114,10 @@ function handlePiSocket(ws) {
 
             // Broadcast plant addition to other garden members
             try {
-              const gardenId = await require('../models/plantModel').getUserGardenId(pendingInfo.userId);
+              // pendingInfo does not include userId; resolve via email
+              const { getUser } = require('../models/userModel');
+              const user = await getUser(email);
+              const gardenId = user ? await require('../models/plantModel').getUserGardenId(user.id) : null;
               if (gardenId) {
                 await broadcastToGarden(gardenId, 'PLANT_ADDED_TO_GARDEN', {
                   plant: {
