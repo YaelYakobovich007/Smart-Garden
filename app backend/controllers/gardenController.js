@@ -35,7 +35,7 @@ async function handleGardenMessage(data, ws) {
 
 // Create a new garden
 async function handleCreateGarden(data, ws, email) {
-    const { gardenName } = data;
+    const { gardenName, country, city } = data;
 
     if (!gardenName || typeof gardenName !== 'string' || gardenName.trim().length === 0) {
         return sendError(ws, 'CREATE_GARDEN_FAIL', 'Garden name is required and must be a non-empty string');
@@ -52,8 +52,17 @@ async function handleCreateGarden(data, ws, email) {
             return sendError(ws, 'CREATE_GARDEN_FAIL', 'User not found');
         }
 
-        // Create garden
-        const result = await createGarden(user.id, gardenName.trim());
+        // Require valid country and city
+        const { isValidLocation, isValidCountryAndCity } = require('../utils/validators');
+        if (!isValidLocation(country, city)) {
+            return sendError(ws, 'CREATE_GARDEN_FAIL', 'Country and city are required');
+        }
+        if (!isValidCountryAndCity(country, city)) {
+            return sendError(ws, 'CREATE_GARDEN_FAIL', 'Invalid country or city');
+        }
+
+        // Create garden (with optional country/city)
+        const result = await createGarden(user.id, gardenName.trim(), country, city);
 
         if (result.error === 'USER_ALREADY_ADMIN') {
             return sendError(ws, 'CREATE_GARDEN_FAIL', 'You already manage a garden. You can only be admin of one garden at a time.');
@@ -61,6 +70,10 @@ async function handleCreateGarden(data, ws, email) {
 
         if (result.error === 'USER_ALREADY_MEMBER') {
             return sendError(ws, 'CREATE_GARDEN_FAIL', 'You are already a member of a garden. You can only be connected to one garden at a time.');
+        }
+
+        if (result.error === 'INVALID_LOCATION') {
+            return sendError(ws, 'CREATE_GARDEN_FAIL', 'Country and city are required');
         }
 
         if (result.error === 'DATABASE_ERROR') {
@@ -74,6 +87,8 @@ async function handleCreateGarden(data, ws, email) {
                 name: result.garden.name,
                 admin_user_id: result.garden.admin_user_id,
                 invite_code: result.inviteCode,
+                country: result.garden.country,
+                city: result.garden.city,
                 created_at: result.garden.created_at
             },
             inviteCode: result.inviteCode,
@@ -118,7 +133,7 @@ async function handleGetUserGardens(data, ws, email) {
                     member_count: garden.member_count,
                     joined_at: garden.joined_at
                 })),
-                defaultGarden: gardens[0] // Most recent garden
+                defaultGarden: gardens[0]
             });
         }
 
@@ -330,7 +345,7 @@ async function handleLeaveGarden(data, ws, email) {
 
 // Update garden details (admin only)
 async function handleUpdateGarden(data, ws, email) {
-    const { gardenId, name, max_members } = data;
+    const { gardenId, name, max_members, country, city } = data;
 
     if (!gardenId) {
         return sendError(ws, 'UPDATE_GARDEN_FAIL', 'Garden ID is required');
@@ -351,6 +366,14 @@ async function handleUpdateGarden(data, ws, email) {
         const updates = {};
         if (name !== undefined) updates.name = name;
         if (max_members !== undefined) updates.max_members = max_members;
+        if (country !== undefined || city !== undefined) {
+            const { isValidLocation, isValidCountryAndCity } = require('../utils/validators');
+            if (!isValidLocation(country, city) || !isValidCountryAndCity(country, city)) {
+                return sendError(ws, 'UPDATE_GARDEN_FAIL', 'Invalid country or city');
+            }
+            updates.country = country;
+            updates.city = city;
+        }
 
         if (Object.keys(updates).length === 0) {
             return sendError(ws, 'UPDATE_GARDEN_FAIL', 'No updates provided');
