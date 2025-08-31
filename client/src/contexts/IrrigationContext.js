@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
+import { useUI } from '../components/ui/UIProvider';
 import websocketService from '../services/websocketService';
 
 const IrrigationContext = createContext();
@@ -13,6 +14,7 @@ export const useIrrigation = () => {
 };
 
 export const IrrigationProvider = ({ children }) => {
+  const { showAlert } = useUI();
   // Per-plant irrigation state - each plant has its own watering state
   const [wateringPlants, setWateringPlants] = useState(new Map()); // Map of plantId -> watering state
   const [pendingValveRequests, setPendingValveRequests] = useState(new Set()); // Set of plantIds with pending requests
@@ -61,6 +63,16 @@ export const IrrigationProvider = ({ children }) => {
   const clearFinalNotified = (plantId) => {
     if (plantId == null) return;
     finalNotifiedRef.current.delete(Number(plantId));
+  };
+
+  // Normalize decimal numbers in messages (trim trailing zeros like 0.300000 -> 0.3, 1.0000 -> 1)
+  const normalizeMessageNumbers = (msg) => {
+    if (typeof msg !== 'string') return msg;
+    try {
+      return msg.replace(/(\d+\.\d+)/g, (m) => String(parseFloat(m)));
+    } catch {
+      return msg;
+    }
   };
 
   const wasRecentlyStopped = (plantId) => {
@@ -979,7 +991,9 @@ export const IrrigationProvider = ({ children }) => {
 
       // Show completion popup only if this wasn't a user-initiated stop
       if (!wasRecentlyStopped(targetPlantId) && !wasFinalNotified(targetPlantId)) {
-        Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation completed successfully!');
+        const rawMsg = data?.message || 'Smart irrigation completed successfully!';
+        const formatted = normalizeMessageNumbers(rawMsg);
+        showAlert({ title: 'Smart Irrigation', message: formatted, okText: 'OK' });
         if (targetPlantId != null) markFinalNotified(targetPlantId);
       }
     };

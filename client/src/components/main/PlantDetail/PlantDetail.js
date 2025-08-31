@@ -206,8 +206,8 @@ const PlantDetail = () => {
     }
   };
 
-  // Available irrigation times (in minutes)
-  const irrigationTimes = [0, 5, 10, 15, 20, 30, 45, 60];
+  // Available irrigation times (in minutes) – same intervals as before, but without 0 on the dial
+  const irrigationTimes = [60, 5, 10, 15, 20, 30, 45];
 
   // Render schedule content for the modal
   const renderScheduleContent = (p) => {
@@ -220,16 +220,7 @@ const PlantDetail = () => {
     const hasTime = !!time;
     const isScheduledMode = (mode && typeof mode === 'string' && mode.toLowerCase() === 'scheduled') || (hasSchedule && hasTime);
 
-    // Debug logging
-    console.log('🌱 Schedule Debug:', {
-      plantName: p?.name,
-      mode: mode,
-      days: days,
-      time: time,
-      hasSchedule: hasSchedule,
-      hasTime: hasTime,
-      isScheduledMode: isScheduledMode
-    });
+    // Debug logging removed
 
     if (!isScheduledMode) {
       return (
@@ -495,7 +486,8 @@ const PlantDetail = () => {
 
   useEffect(() => {
     const handleSuccess = (data) => {
-      Alert.alert('Irrigation', data?.message || 'Irrigation performed successfully!');
+      // Suppress duplicate popup; completion is handled centrally in IrrigationContext
+      console.log('Irrigation success (suppressed local alert):', data);
     };
 
     const handleFail = (data) => {
@@ -513,9 +505,11 @@ const PlantDetail = () => {
       console.log('🔄 PlantDetail: Irrigation skipped for', plant.name);
     };
 
-    const handleDeleteSuccess = () => {
-      // Silent success: just close the screen
-      navigation.goBack();
+    const handleDeleteSuccess = (data) => {
+      const plantName = plant?.name || 'Plant';
+      Alert.alert('Delete Plant', data?.message || `"${plantName}" was deleted successfully.`, [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
     };
 
     const handleDeleteFail = (data) => {

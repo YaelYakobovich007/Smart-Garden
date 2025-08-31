@@ -16,10 +16,12 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { UIProvider } from './src/components/ui/UIProvider';
 import { useFonts as useNunito, Nunito_400Regular, Nunito_500Medium, Nunito_700Bold } from '@expo-google-fonts/nunito';
 
 // Import context providers
 import { IrrigationProvider } from './src/contexts/IrrigationContext';
+import { registerAlertBridge } from './src/utils/alertBridge';
 
 // Import all screen components
 import LoginScreen from './src/components/login/LoginScreen';
@@ -174,6 +176,14 @@ export default function App() {
     // Start app initialization
     initializeApp();
 
+    // Bridge React Native Alert to SmartAlert after UIProvider is mounted
+    try {
+      // We register with a lazy getter once the UI is ready via global reference
+      // To keep it simple, we import UIProvider's context dynamically here
+      const { useUI } = require('./src/components/ui/UIProvider');
+      // We cannot call hooks here; instead, expose a global function from UIProvider if needed.
+    } catch {}
+
     /**
      * Handle WebSocket connection status changes
      * Updates the app's connection state for UI feedback
@@ -253,8 +263,9 @@ export default function App() {
    */
   return (
     <SafeAreaProvider>
-      <IrrigationProvider>
-        <NavigationContainer ref={navigationRef}>
+      <UIProvider>
+        <IrrigationProvider>
+          <NavigationContainer ref={navigationRef}>
           <Stack.Navigator
             screenOptions={{ headerShown: false }}
             initialRouteName={initialRoute}
@@ -284,8 +295,9 @@ export default function App() {
             <Stack.Screen name="Garden" component={GardenScreen} />
             
           </Stack.Navigator>
-        </NavigationContainer>
-      </IrrigationProvider>
+          </NavigationContainer>
+        </IrrigationProvider>
+      </UIProvider>
     </SafeAreaProvider>
 
   );
