@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,11 @@ const ValveTroubleshootingScreen = () => {
   
   const [currentStep, setCurrentStep] = useState(0);
   const [isUnblocking, setIsUnblocking] = useState(false);
+  const [diagRunning, setDiagRunning] = useState(false);
+  const [diag, setDiag] = useState({
+    sensor: { status: 'pending', details: null },
+    valve: { status: 'pending', details: null }
+  });
 
   const troubleshootingSteps = [
     {
@@ -115,6 +120,50 @@ const ValveTroubleshootingScreen = () => {
     }
   };
 
+  // Diagnostics handlers
+  useEffect(() => {
+    const onSensorOk = (msg) => {
+      setDiag((prev) => ({ ...prev, sensor: { status: 'success', details: msg } }));
+      // Next step: valve check
+      websocketService.checkValveMechanism(plantName);
+    };
+    const onSensorFail = (msg) => {
+      setDiag((prev) => ({ ...prev, sensor: { status: 'fail', details: msg } }));
+      // Still proceed to valve check to give more info
+      websocketService.checkValveMechanism(plantName);
+    };
+    const onValveOk = (msg) => {
+      setDiag((prev) => ({ ...prev, valve: { status: 'success', details: msg } }));
+      setDiagRunning(false);
+    };
+    const onValveFail = (msg) => {
+      setDiag((prev) => ({ ...prev, valve: { status: 'fail', details: msg } }));
+      setDiagRunning(false);
+    };
+
+    websocketService.onMessage('CHECK_SENSOR_CONNECTION_SUCCESS', onSensorOk);
+    websocketService.onMessage('CHECK_SENSOR_CONNECTION_FAIL', onSensorFail);
+    websocketService.onMessage('CHECK_VALVE_MECHANISM_SUCCESS', onValveOk);
+    websocketService.onMessage('CHECK_VALVE_MECHANISM_FAIL', onValveFail);
+
+    return () => {
+      websocketService.offMessage('CHECK_SENSOR_CONNECTION_SUCCESS', onSensorOk);
+      websocketService.offMessage('CHECK_SENSOR_CONNECTION_FAIL', onSensorFail);
+      websocketService.offMessage('CHECK_VALVE_MECHANISM_SUCCESS', onValveOk);
+      websocketService.offMessage('CHECK_VALVE_MECHANISM_FAIL', onValveFail);
+    };
+  }, [plantName]);
+
+  const startDiagnostics = () => {
+    if (!websocketService.isConnected()) {
+      Alert.alert('Connection Error', 'Unable to connect to the system. Please try again later.', [{ text: 'OK' }]);
+      return;
+    }
+    setDiag({ sensor: { status: 'running', details: null }, valve: { status: 'pending', details: null } });
+    setDiagRunning(true);
+    websocketService.checkSensorConnection(plantName);
+  };
+
   const renderStep = (step, index) => {
     const isActive = index === currentStep;
     const isCompleted = index < currentStep;
@@ -200,6 +249,59 @@ const ValveTroubleshootingScreen = () => {
           <Feather name="alert-triangle" size={32} color="#F59E0B" />
           <Text style={styles.plantName}>{plantName}</Text>
           <Text style={styles.plantStatus}>Tap is currently blocked</Text>
+        </View>
+
+        {/* Automated diagnostics */}
+        <View style={styles.stepsContainer}>
+          <View style={styles.stepContainer}>
+            <View style={styles.stepHeader}>
+              <View style={[styles.stepNumber, (diag.sensor.status === 'success') && styles.completedStep]}>
+                {diag.sensor.status === 'success' ? (
+                  <Feather name="check" size={20} color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.stepNumberText}>S</Text>
+                )}
+              </View>
+              <View style={styles.stepTitleContainer}>
+                <Text style={styles.stepTitle}>Sensor Connection</Text>
+                <Text style={styles.stepDescription}>
+                  {diag.sensor.status === 'pending' && 'Pending'}
+                  {diag.sensor.status === 'running' && 'Checking...'}
+                  {diag.sensor.status === 'success' && 'OK'}
+                  {diag.sensor.status === 'fail' && 'Failed'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.stepContainer}>
+            <View style={styles.stepHeader}>
+              <View style={[styles.stepNumber, (diag.valve.status === 'success') && styles.completedStep]}>
+                {diag.valve.status === 'success' ? (
+                  <Feather name="check" size={20} color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.stepNumberText}>V</Text>
+                )}
+              </View>
+              <View style={styles.stepTitleContainer}>
+                <Text style={styles.stepTitle}>Valve Mechanism</Text>
+                <Text style={styles.stepDescription}>
+                  {diag.valve.status === 'pending' && 'Pending'}
+                  {diag.valve.status === 'running' && 'Checking...'}
+                  {diag.valve.status === 'success' && 'OK'}
+                  {diag.valve.status === 'fail' && 'Issue detected'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.completeStepButton, diagRunning && styles.unblockButtonDisabled]}
+            onPress={startDiagnostics}
+            disabled={diagRunning}
+          >
+            <Text style={styles.completeStepButtonText}>{diagRunning ? 'Running…' : 'Start Diagnostics'}</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.stepsContainer}>

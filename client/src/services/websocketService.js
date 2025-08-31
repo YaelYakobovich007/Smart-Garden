@@ -312,6 +312,26 @@ class WebSocketService {
     this.send(message);
   }
 
+  // Diagnostics: Check sensor connection for a plant by name (server resolves id)
+  checkSensorConnection(plantName, timeoutSeconds = 5) {
+    const message = {
+      type: 'CHECK_SENSOR_CONNECTION',
+      plantName,
+      timeoutSeconds
+    };
+    this.send(message);
+  }
+
+  // Diagnostics: Check valve mechanism via safe pulse
+  checkValveMechanism(plantName, pulseSeconds = 0.6) {
+    const message = {
+      type: 'CHECK_VALVE_MECHANISM',
+      plantName,
+      pulseSeconds
+    };
+    this.send(message);
+  }
+
   // Heartbeat management
   startHeartbeat() {
     this.stopHeartbeat();

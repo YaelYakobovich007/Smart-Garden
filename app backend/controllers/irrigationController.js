@@ -18,6 +18,8 @@ const irrigationHandlers = {
   OPEN_VALVE: handleOpenValve,
   CLOSE_VALVE: handleCloseValve,
   RESTART_VALVE: handleRestartValve,
+  CHECK_SENSOR_CONNECTION: handleCheckSensorConnection,
+  CHECK_VALVE_MECHANISM: handleCheckValveMechanism,
   GET_IRRIGATION_RESULT: handleGetIrrigationResult,
   GET_VALVE_STATUS: handleGetValveStatus,
   UNBLOCK_VALVE: handleUnblockValve,
@@ -429,6 +431,46 @@ async function handleGetValveStatus(data, ws, email) {
     console.log(`[VALVE] Error: Failed to get status - ${piResult.error}`);
     return sendError(ws, 'GET_VALVE_STATUS_FAIL',
       'Pi controller not connected. Cannot get valve status. Please try again when Pi is online.');
+  }
+}
+
+// Diagnostics: Check sensor connection
+async function handleCheckSensorConnection(data, ws, email) {
+  const { plantName, timeoutSeconds } = data;
+  if (!plantName) return sendError(ws, 'CHECK_SENSOR_CONNECTION_FAIL', 'Missing plantName');
+
+  const user = await getUser(email);
+  if (!user) return sendError(ws, 'CHECK_SENSOR_CONNECTION_FAIL', 'User not found');
+
+  const plant = await getPlantByName(user.id, plantName);
+  if (!plant) return sendError(ws, 'CHECK_SENSOR_CONNECTION_FAIL', 'Plant not found in your garden');
+
+  const result = piCommunication.checkSensorConnection(plant.plant_id, Number(timeoutSeconds) || 5);
+  if (result.success) {
+    const { addPendingIrrigation } = require('../services/pendingIrrigationTracker');
+    addPendingIrrigation(plant.plant_id, ws, email, { plant_id: plant.plant_id, plant_name: plant.name, request_type: 'CHECK_SENSOR_CONNECTION' });
+  } else {
+    return sendError(ws, 'CHECK_SENSOR_CONNECTION_FAIL', 'Pi controller not connected. Please try again when Pi is online.');
+  }
+}
+
+// Diagnostics: Check valve mechanism (safe pulse)
+async function handleCheckValveMechanism(data, ws, email) {
+  const { plantName, pulseSeconds } = data;
+  if (!plantName) return sendError(ws, 'CHECK_VALVE_MECHANISM_FAIL', 'Missing plantName');
+
+  const user = await getUser(email);
+  if (!user) return sendError(ws, 'CHECK_VALVE_MECHANISM_FAIL', 'User not found');
+
+  const plant = await getPlantByName(user.id, plantName);
+  if (!plant) return sendError(ws, 'CHECK_VALVE_MECHANISM_FAIL', 'Plant not found in your garden');
+
+  const result = piCommunication.checkValveMechanism(plant.plant_id, typeof pulseSeconds === 'number' ? pulseSeconds : 0.6);
+  if (result.success) {
+    const { addPendingIrrigation } = require('../services/pendingIrrigationTracker');
+    addPendingIrrigation(plant.plant_id, ws, email, { plant_id: plant.plant_id, plant_name: plant.name, request_type: 'CHECK_VALVE_MECHANISM' });
+  } else {
+    return sendError(ws, 'CHECK_VALVE_MECHANISM_FAIL', 'Pi controller not connected. Please try again when Pi is online.');
   }
 }
 

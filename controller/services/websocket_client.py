@@ -5,6 +5,14 @@ import logging
 from typing import Optional, Dict, Any
 from controller.engine.smart_garden_engine import SmartGardenEngine
 from controller.dto.irrigation_result import IrrigationResult
+from controller.dto.check_sensor_connection import (
+    CheckSensorConnectionRequest,
+    CheckSensorConnectionResponse,
+)
+from controller.dto.check_valve_mechanism import (
+    CheckValveMechanismRequest,
+    CheckValveMechanismResponse,
+)
 
 #my ip is 192.168.68.74
 class SmartGardenPiClient:
@@ -462,6 +470,93 @@ class SmartGardenPiClient:
             )
             await self.send_message("VALVE_STATUS_RESPONSE", error_result.to_websocket_data())
 
+    async def handle_check_sensor_connection(self, data: Dict[Any, Any]):
+        """Handle CHECK_SENSOR_CONNECTION request: attempt a live sensor read."""
+        try:
+            request = CheckSensorConnectionRequest.from_websocket_data(data or {})
+            plant_id = request.plant_id
+            if plant_id not in self.engine.plants:
+                response = CheckSensorConnectionResponse.error(plant_id, "Plant not found")
+                await self.send_message("CHECK_SENSOR_CONNECTION_RESPONSE", response.to_websocket_data())
+                return
+
+            # Ask engine for complete sensor data (moisture, temperature)
+            sensor_data = await self.engine.get_plant_sensor_data(plant_id)
+            try:
+                sensor_port = self.engine.sensor_manager.get_sensor_port(str(plant_id))
+            except Exception:
+                sensor_port = None
+
+            if sensor_data is None:
+                response = CheckSensorConnectionResponse.error(plant_id, "sensor_read_failed", sensor_port=sensor_port)
+            else:
+                moisture, temperature = sensor_data
+                response = CheckSensorConnectionResponse.success(
+                    plant_id=plant_id,
+                    moisture=moisture,
+                    temperature=temperature,
+                    sensor_port=sensor_port,
+                    message="Sensor responded"
+                )
+
+            await self.send_message("CHECK_SENSOR_CONNECTION_RESPONSE", response.to_websocket_data())
+        except Exception as e:
+            try:
+                plant_id = (data or {}).get("plant_id", 0)
+                response = CheckSensorConnectionResponse.error(int(plant_id) if plant_id else 0, str(e))
+                await self.send_message("CHECK_SENSOR_CONNECTION_RESPONSE", response.to_websocket_data())
+            except Exception:
+                await self.send_message("CHECK_SENSOR_CONNECTION_RESPONSE", {"plant_id": 0, "status": "error", "error_message": str(e)})
+
+    async def handle_check_valve_mechanism(self, data: Dict[Any, Any]):
+        """Handle CHECK_VALVE_MECHANISM: brief pulse open/close then report status."""
+        try:
+            request = CheckValveMechanismRequest.from_websocket_data(data or {})
+            plant_id = request.plant_id
+            if plant_id not in self.engine.plants:
+                response = CheckValveMechanismResponse.error(plant_id, "Plant not found")
+                await self.send_message("CHECK_VALVE_MECHANISM_RESPONSE", response.to_websocket_data())
+                return
+
+            # Perform a safe pulse using restart_valve
+            success = await self.engine.restart_valve(plant_id)
+            status_data = self.engine.get_detailed_valve_status(plant_id) or {}
+            valve_id = None
+            is_open = None
+            is_blocked = None
+            try:
+                plant = self.engine.plants[plant_id]
+                valve_id = getattr(plant.valve, 'valve_id', None)
+                is_open = getattr(plant.valve, 'is_open', None)
+                is_blocked = getattr(plant.valve, 'is_blocked', None)
+            except Exception:
+                pass
+
+            if success:
+                response = CheckValveMechanismResponse.success(
+                    plant_id=plant_id,
+                    valve_id=valve_id,
+                    is_open=bool(is_open) if is_open is not None else False,
+                    is_blocked=bool(is_blocked) if is_blocked is not None else False,
+                    status_data=status_data,
+                    message="Valve pulse completed"
+                )
+            else:
+                response = CheckValveMechanismResponse.error(
+                    plant_id=plant_id,
+                    error_message="valve_pulse_failed",
+                    status_data=status_data
+                )
+
+            await self.send_message("CHECK_VALVE_MECHANISM_RESPONSE", response.to_websocket_data())
+        except Exception as e:
+            try:
+                plant_id = (data or {}).get("plant_id", 0)
+                response = CheckValveMechanismResponse.error(int(plant_id) if plant_id else 0, str(e))
+                await self.send_message("CHECK_VALVE_MECHANISM_RESPONSE", response.to_websocket_data())
+            except Exception:
+                await self.send_message("CHECK_VALVE_MECHANISM_RESPONSE", {"plant_id": 0, "status": "error", "error_message": str(e)})
+
     async def handle_update_plant_command(self, data: Dict[Any, Any]):
         """Handle update plant request from server."""
         try:
@@ -775,6 +870,12 @@ class SmartGardenPiClient:
             
             elif message_type == "VALVE_STATUS":
                 await self.handle_valve_status_request(message_data)
+            
+            elif message_type == "CHECK_SENSOR_CONNECTION":
+                await self.handle_check_sensor_connection(message_data)
+            
+            elif message_type == "CHECK_VALVE_MECHANISM":
+                await self.handle_check_valve_mechanism(message_data)
             
             elif message_type == "UPDATE_PLANT":
                 await self.handle_update_plant_command(data)

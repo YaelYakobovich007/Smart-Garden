@@ -1196,6 +1196,59 @@ function handlePiSocket(ws) {
       return;
     }
 
+    // Handle CHECK_SENSOR_CONNECTION_RESPONSE from Pi
+    if (data.type === 'CHECK_SENSOR_CONNECTION_RESPONSE') {
+      const responseData = data.data || {};
+      const plantId = Number(responseData.plant_id);
+      const pendingInfo = completePendingIrrigation(plantId);
+
+      if (pendingInfo && pendingInfo.ws) {
+        if (responseData.status === 'success') {
+          sendSuccess(pendingInfo.ws, 'CHECK_SENSOR_CONNECTION_SUCCESS', {
+            plant_id: plantId,
+            moisture: responseData.moisture,
+            temperature: responseData.temperature,
+            sensor_port: responseData.sensor_port,
+            is_connected: responseData.is_connected,
+            message: responseData.message
+          });
+        } else {
+          sendError(pendingInfo.ws, 'CHECK_SENSOR_CONNECTION_FAIL', {
+            plant_id: plantId,
+            error_message: responseData.error_message || 'sensor_read_failed'
+          });
+        }
+      }
+      return;
+    }
+
+    // Handle CHECK_VALVE_MECHANISM_RESPONSE from Pi
+    if (data.type === 'CHECK_VALVE_MECHANISM_RESPONSE') {
+      const responseData = data.data || {};
+      const plantId = Number(responseData.plant_id);
+      const pendingInfo = completePendingIrrigation(plantId);
+
+      if (pendingInfo && pendingInfo.ws) {
+        if (responseData.status === 'success') {
+          sendSuccess(pendingInfo.ws, 'CHECK_VALVE_MECHANISM_SUCCESS', {
+            plant_id: plantId,
+            valve_id: responseData.valve_id,
+            is_open: responseData.is_open,
+            is_blocked: responseData.is_blocked,
+            status_data: responseData.status_data,
+            message: responseData.message
+          });
+        } else {
+          sendError(pendingInfo.ws, 'CHECK_VALVE_MECHANISM_FAIL', {
+            plant_id: plantId,
+            error_message: responseData.error_message || 'valve_pulse_failed',
+            status_data: responseData.status_data
+          });
+        }
+      }
+      return;
+    }
+
     // Handle REMOVE_PLANT_RESPONSE from Pi
     if (data.type === 'REMOVE_PLANT_RESPONSE') {
       const responseData = data.data || {};
