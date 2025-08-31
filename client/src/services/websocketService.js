@@ -107,7 +107,15 @@ class WebSocketService {
 
         // Call registered message handlers for specific message types
         if (this.messageHandlers.has(data.type)) {
-          this.messageHandlers.get(data.type)(data);
+          const entry = this.messageHandlers.get(data.type);
+          if (Array.isArray(entry)) {
+            // Iterate a shallow copy to avoid mutation during dispatch
+            [...entry].forEach(fn => {
+              try { fn && fn(data); } catch (e) { console.error('Handler error:', e?.message); }
+            });
+          } else if (typeof entry === 'function') {
+            try { entry(data); } catch (e) { console.error('Handler error:', e?.message); }
+          }
         }
       } catch (error) {
         console.error('Error parsing WebSocket message:', error);
@@ -221,7 +229,16 @@ class WebSocketService {
    * @param {function} handler - The handler function to call
    */
   onMessage(type, handler) {
-    this.messageHandlers.set(type, handler);
+    const existing = this.messageHandlers.get(type);
+    if (!existing) {
+      this.messageHandlers.set(type, handler);
+      return;
+    }
+    if (Array.isArray(existing)) {
+      existing.push(handler);
+    } else if (typeof existing === 'function') {
+      this.messageHandlers.set(type, [existing, handler]);
+    }
   }
 
   /**
@@ -231,8 +248,14 @@ class WebSocketService {
    * @param {function} handler - The handler function to remove
    */
   offMessage(type, handler) {
-    // Only remove if the handler matches the currently registered one
-    if (this.messageHandlers.get(type) === handler) {
+    const existing = this.messageHandlers.get(type);
+    if (!existing) return;
+    if (Array.isArray(existing)) {
+      const next = existing.filter(fn => fn !== handler);
+      if (next.length === 0) this.messageHandlers.delete(type); else this.messageHandlers.set(type, next);
+      return;
+    }
+    if (existing === handler) {
       this.messageHandlers.delete(type);
     }
   }
@@ -297,7 +320,7 @@ class WebSocketService {
       if (!this.isConnected()) return;
       try {
         this.ws.send(JSON.stringify({ type: 'PING', ts: Date.now() }));
-      } catch {}
+      } catch { }
     }, this.heartbeatIntervalMs);
   }
 
