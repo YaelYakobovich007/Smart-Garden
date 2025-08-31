@@ -25,6 +25,8 @@ class PiCommunication {
                     desiredMoisture: parseFloat(plantData.ideal_moisture),
                     waterLimit: parseFloat(plantData.water_limit),
                     dripperType: plantData.dripper_type || '2L/h',
+                    lat: typeof plantData.lat === 'number' ? plantData.lat : undefined,
+                    lon: typeof plantData.lon === 'number' ? plantData.lon : undefined,
                     scheduleData: {
                         irrigation_days: plantData.irrigation_days || null,
                         irrigation_time: plantData.irrigation_time || null

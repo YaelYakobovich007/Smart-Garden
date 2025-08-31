@@ -395,6 +395,32 @@ async function handleUpdateGarden(data, ws, email) {
             message: 'Garden updated successfully'
         });
 
+        // If location changed, push updated coordinates to Pi for all plants in this garden
+        try {
+            if (updates.country !== undefined || updates.city !== undefined) {
+                const { getLatLonForCountryCity } = require('../services/locationService');
+                const { getPlantsByGardenId } = require('../models/plantModel');
+                const { getPiSocket } = require('../sockets/piSocket');
+                const piSocket = getPiSocket();
+                if (piSocket) {
+                    const coords = await getLatLonForCountryCity(result.garden.country, result.garden.city);
+                    if (coords) {
+                        const plants = await getPlantsByGardenId(gardenId);
+                        for (const plant of plants) {
+                            try {
+                                piSocket.send(JSON.stringify({
+                                    type: 'UPDATE_PLANT_LOCATION',
+                                    data: { plant_id: plant.plant_id, lat: coords.lat, lon: coords.lon }
+                                }));
+                            } catch (e) { }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            // Best-effort only
+        }
+
         console.log(`[GARDEN] Updated: id=${gardenId} user=${user.full_name} email=${email}`);
 
     } catch (error) {

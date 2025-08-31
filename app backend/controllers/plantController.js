@@ -145,6 +145,22 @@ async function handleAddPlant(data, ws, email) {
     // Note: In test mode, no Pi involved, so no broadcast for now
   } else {
     // Production mode: Require Pi connection
+    // Enrich with lat/lon from garden location if possible
+    try {
+      const { getGardenById } = require('../models/gardenModel');
+      const { getLatLonForCountryCity } = require('../services/locationService');
+      const garden = await getGardenById(result.plant.garden_id);
+      if (garden?.country && garden?.city) {
+        const coords = await getLatLonForCountryCity(garden.country, garden.city);
+        if (coords) {
+          result.plant.lat = coords.lat;
+          result.plant.lon = coords.lon;
+        }
+      }
+    } catch (e) {
+      // Non-fatal: proceed without coords if lookup fails
+    }
+
     const piResult = piCommunication.addPlant(result.plant);
 
     if (piResult.success) {

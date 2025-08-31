@@ -85,8 +85,8 @@ class AddPlantHandler:
                 plant_id=plant_id,
                 desired_moisture=desired_moisture,
                 schedule_data=engine_schedule_data,
-                plant_lat=32.7940,  # Default coordinates (Israel)
-                plant_lon=34.9896,
+                plant_lat=float(data.get("lat", 32.7940)),
+                plant_lon=float(data.get("lon", 34.9896)),
                 pipe_diameter=1.0,   # Default values - could be made configurable
                 flow_rate=0.05,
                 water_limit=water_limit,

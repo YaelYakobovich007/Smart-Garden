@@ -660,11 +660,16 @@ class SmartGardenPiClient:
                     raw_valve_id = plant_data.get("valve_id")
                     valve_id = int(raw_valve_id) if raw_valve_id is not None else None
                     
+                    # Lat/Lon from server if provided
+                    plant_lat = float(plant_data.get("lat", 32.7940))
+                    plant_lon = float(plant_data.get("lon", 34.9896))
+
                     self.logger.info(f"Adding plant {plant_id} to engine:")
                     self.logger.info(f"  - Desired Moisture: {desired_moisture}%")
                     self.logger.info(f"  - Water Limit: {water_limit}L")
                     self.logger.info(f"  - Dripper Type: {dripper_type}")
                     self.logger.info(f"  - Schedule: {schedule_data}")
+                    self.logger.info(f"  - Lat/Lon: {plant_lat},{plant_lon}")
                     
                     # Convert schedule_data to engine format
                     engine_schedule_data = None
@@ -685,6 +690,8 @@ class SmartGardenPiClient:
                         plant_id=plant_id,
                         desired_moisture=desired_moisture,
                         schedule_data=engine_schedule_data,
+                        plant_lat=plant_lat,
+                        plant_lon=plant_lon,
                         water_limit=water_limit,
                         dripper_type=dripper_type,
                         sensor_port=sensor_port,
@@ -774,6 +781,19 @@ class SmartGardenPiClient:
 
             elif message_type == "UPDATE_SCHEDULE":
                 await self.handle_update_schedule_command(message_data)
+
+            elif message_type == "UPDATE_PLANT_LOCATION":
+                try:
+                    plant_id = int((message_data or {}).get("plant_id"))
+                    lat = float((message_data or {}).get("lat"))
+                    lon = float((message_data or {}).get("lon"))
+                    if plant_id in self.engine.plants:
+                        plant = self.engine.plants[plant_id]
+                        plant.lat = lat
+                        plant.lon = lon
+                        self.logger.info(f"Updated plant {plant_id} location to {lat},{lon}")
+                except Exception as e:
+                    self.logger.error(f"Failed to update plant location: {e}")
             
             elif message_type == "UPDATE_PLANT_RESPONSE":
                 self.logger.warning(f"Received UPDATE_PLANT_RESPONSE - this should not happen! This is likely an echo of our own response.")
