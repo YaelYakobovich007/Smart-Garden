@@ -383,14 +383,14 @@ export const IrrigationProvider = ({ children }) => {
     });
     
     // Send appropriate stop message based on irrigation type
-    if (plantName) {
+    if (plantName || plantId) {
       if (isSmartIrrigation) {
         // For smart irrigation, send STOP_IRRIGATION message
         console.log('🛑 Stopping smart irrigation for plant:', plantName);
-        websocketService.sendMessage({
-          type: 'STOP_IRRIGATION',
-          plantName: plantName
-        });
+        const payload = { type: 'STOP_IRRIGATION' };
+        if (plantName) payload.plantName = plantName;
+        if (plantId) payload.plantId = plantId;
+        websocketService.sendMessage(payload);
       } else {
         // For manual irrigation, send CLOSE_VALVE message
         console.log('🛑 Stopping manual irrigation (closing valve) for plant:', plantName);
@@ -1021,9 +1021,15 @@ export const IrrigationProvider = ({ children }) => {
       const pid = payload?.plantId != null ? Number(payload.plantId) : null;
       const mode = payload?.mode || 'smart';
       const duration = payload?.duration_minutes || null;
+      const plantName = payload?.plantName || null;
+      const sessionId = payload?.sessionId || payload?.session_id || null;
       if (pid != null) {
         // Store mode so Stop can show specific messaging for scheduled case
-        updatePlantWateringState(pid, { currentMode: String(mode).toLowerCase() });
+        updatePlantWateringState(pid, {
+          currentMode: String(mode).toLowerCase(),
+          currentPlant: plantName || null,
+          irrigationSessionId: sessionId || null,
+        });
         rehydrateIrrigationStarted(pid, mode, duration);
       }
     };

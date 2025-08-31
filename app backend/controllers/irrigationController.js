@@ -145,11 +145,11 @@ async function handleIrrigatePlant(data, ws, email) {
 async function handleStopIrrigation(data, ws, email) {
   console.log(`[IRRIGATION] Stop request received: ${JSON.stringify(data)}`);
 
-  const { plantName } = data;
+  const { plantName, plantId } = data;
 
-  if (!plantName) {
-    console.log('[IRRIGATION] Error: Missing plantName');
-    return sendError(ws, 'STOP_IRRIGATION_FAIL', 'Missing plantName');
+  if (!plantName && (plantId == null)) {
+    console.log('[IRRIGATION] Error: Missing plantName/plantId');
+    return sendError(ws, 'STOP_IRRIGATION_FAIL', 'Missing plant identifier');
   }
 
   console.log(`[IRRIGATION] Looking up user: ${email}`);
@@ -160,10 +160,16 @@ async function handleStopIrrigation(data, ws, email) {
     return sendError(ws, 'STOP_IRRIGATION_FAIL', 'User not found');
   }
 
-  console.log(`[IRRIGATION] Looking up plant: name=${plantName} user=${user.id}`);
-  const plant = await getPlantByName(user.id, plantName);
+  let plant;
+  if (plantId != null) {
+    console.log(`[IRRIGATION] Looking up plant by id=${plantId} user=${user.id}`);
+    plant = await require('../models/plantModel').getPlantById(Number(plantId));
+  } else {
+    console.log(`[IRRIGATION] Looking up plant: name=${plantName} user=${user.id}`);
+    plant = await getPlantByName(user.id, plantName);
+  }
   if (!plant) {
-    console.log(`[IRRIGATION] Error: Plant not found - name=${plantName} user=${user.id}`);
+    console.log(`[IRRIGATION] Error: Plant not found - ${plantName || plantId} user=${user.id}`);
     return sendError(ws, 'STOP_IRRIGATION_FAIL', 'Plant not found');
   }
 
@@ -186,7 +192,8 @@ async function handleStopIrrigation(data, ws, email) {
   if (piResult.success) {
     console.log('[IRRIGATION] Stop request sent successfully');
     sendSuccess(ws, 'STOP_IRRIGATION_SUCCESS', {
-      plantName: plantName,
+      plantId: plant.plant_id,
+      plantName: plant.name,
       message: 'Stop request sent successfully'
     });
   } else {

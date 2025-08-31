@@ -278,7 +278,7 @@ function handlePiSocket(ws) {
         } else {
           // If irrigation will be skipped, notify the client
           if (pendingInfo.ws) {
-            sendSuccess(pendingInfo.ws, 'IRRIGATE_SKIPPED', {
+            sendSuccess(pendingInfo.ws, 'IRRIGATION_SKIPPED', {
               message: `Irrigation skipped for plant "${pendingInfo.plantData.plant_name}": ${decisionData.reason}`,
               plantName: pendingInfo.plantData.plant_name,
               plantId: plantId,
