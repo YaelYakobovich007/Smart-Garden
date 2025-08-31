@@ -97,17 +97,78 @@ class IrrigationSchedule:
         """
         try:
             import asyncio
+            from uuid import uuid4
             if self.loop is not None:
                 # Schedule coroutine on main event loop thread-safely
-                asyncio.run_coroutine_threadsafe(
-                    self.irrigation_algorithm.irrigate(self.plant),
+                session_id = str(uuid4())
+                # Notify server that irrigation started (scheduled)
+                try:
+                    if getattr(self.irrigation_algorithm, 'websocket_client', None):
+                        self.irrigation_algorithm.websocket_client.logger.info(
+                            f"Sending IRRIGATION_STARTED for scheduled run: plant={self.plant.plant_id} session={session_id}")
+                        asyncio.run_coroutine_threadsafe(
+                            self.irrigation_algorithm.websocket_client.send_message(
+                                "IRRIGATION_STARTED",
+                                {"plant_id": self.plant.plant_id, "session_id": session_id, "mode": "scheduled"}
+                            ),
+                            self.loop
+                        )
+                except Exception as e:
+                    print(f"Failed to send IRRIGATION_STARTED: {e}")
+
+                future = asyncio.run_coroutine_threadsafe(
+                    self.irrigation_algorithm.irrigate(self.plant, session_id=session_id),
                     self.loop
                 )
+
+                def _on_done(fut):
+                    try:
+                        result = fut.result()
+                        # Ensure session id is attached
+                        if getattr(result, 'session_id', None) is None:
+                            try:
+                                result.session_id = session_id
+                            except Exception:
+                                pass
+                        if getattr(self.irrigation_algorithm, 'websocket_client', None):
+                            payload = result.to_websocket_data()
+                            # Send final result to server
+                            try:
+                                asyncio.run_coroutine_threadsafe(
+                                    self.irrigation_algorithm.websocket_client.send_message(
+                                        "IRRIGATE_PLANT_RESPONSE", payload
+                                    ),
+                                    self.loop
+                                )
+                            except Exception as e:
+                                print(f"Failed to send IRRIGATE_PLANT_RESPONSE: {e}")
+                    except Exception as e:
+                        print(f"Scheduled irrigation task error: {e}")
+
+                future.add_done_callback(_on_done)
             else:
                 # Fallback: run in a dedicated event loop (may limit WS logging)
                 def _runner():
                     import asyncio as _asyncio
-                    _asyncio.run(self.irrigation_algorithm.irrigate(self.plant))
+                    from uuid import uuid4 as _uuid4
+                    sid = str(_uuid4())
+                    # Best-effort IRRIGATION_STARTED
+                    try:
+                        if getattr(self.irrigation_algorithm, 'websocket_client', None):
+                            _asyncio.run(self.irrigation_algorithm.websocket_client.send_message(
+                                "IRRIGATION_STARTED", {"plant_id": self.plant.plant_id, "session_id": sid, "mode": "scheduled"}
+                            ))
+                    except Exception:
+                        pass
+                    result = _asyncio.run(self.irrigation_algorithm.irrigate(self.plant, session_id=sid))
+                    try:
+                        if getattr(self.irrigation_algorithm, 'websocket_client', None):
+                            payload = result.to_websocket_data()
+                            _asyncio.run(self.irrigation_algorithm.websocket_client.send_message(
+                                "IRRIGATE_PLANT_RESPONSE", payload
+                            ))
+                    except Exception:
+                        pass
                 threading.Thread(target=_runner, daemon=True).start()
         except Exception as e:
             print(f"ERROR starting scheduled irrigation: {e}")
