@@ -116,6 +116,7 @@ class SmartGardenEngine:
             simulation_mode=False
         )
         
+
         # Pass the shared port lock from sensor manager
         try:
             port_lock = self.sensor_manager.get_port_lock(sensor_port)
