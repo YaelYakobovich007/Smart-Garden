@@ -136,6 +136,13 @@ def signal_handler(signum, frame):
     """Handle shutdown signals gracefully"""
     logger.info(f"Received signal {signum}. Shutting down...")
     if client_runner:
+        try:
+            # Best-effort: close valves and stop irrigations first
+            if getattr(client_runner, 'engine', None):
+                loop = asyncio.get_event_loop()
+                loop.create_task(client_runner.engine.stop_all_irrigations_and_close_valves())
+        except Exception as e:
+            logger.warning(f"Shutdown cleanup failed: {e}")
         asyncio.create_task(client_runner.stop())
 
 async def main():

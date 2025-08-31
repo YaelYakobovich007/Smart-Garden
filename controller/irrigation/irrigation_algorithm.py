@@ -459,6 +459,9 @@ class IrrigationAlgorithm:
             if i < num_measurements - 1:
                 await asyncio.sleep(1.0)
         
+        if not measurements:
+            print("WARNING - No moisture measurements collected; returning 0.0 to avoid division by zero")
+            return 0.0
         average = sum(measurements) / len(measurements)
         print(f"Average moisture: {average:.1f}% (from {measurements})")
         return average

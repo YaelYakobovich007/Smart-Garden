@@ -329,6 +329,22 @@ class SmartGardenEngine:
             print(f"ERROR: Failed to close valve: {e}")
             return False
 
+    async def stop_all_irrigations_and_close_valves(self) -> None:
+        """Gracefully stop all irrigations and close all valves (used on shutdown)."""
+        try:
+            for plant_id, plant in list(self.plants.items()):
+                try:
+                    await self.stop_irrigation(plant_id)
+                except Exception as e:
+                    print(f"WARN - stop_irrigation failed for plant {plant_id}: {e}")
+                try:
+                    if getattr(plant, 'valve', None):
+                        plant.valve.request_close()
+                except Exception as e:
+                    print(f"WARN - valve close on shutdown failed for plant {plant_id}: {e}")
+        except Exception as e:
+            print(f"ERROR - stop_all_irrigations_and_close_valves failed: {e}")
+
     def remove_plant(self, plant_id: int) -> bool:
         """
         Safely remove a plant from the system: cancel irrigation, close valve,
