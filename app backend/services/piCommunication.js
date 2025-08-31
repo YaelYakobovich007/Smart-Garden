@@ -317,6 +317,58 @@ class PiCommunication {
     }
 
     /**
+     * Send CHECK_SENSOR_CONNECTION request to Pi (no waiting)
+     */
+    checkSensorConnection(plantId, timeoutSeconds = 5) {
+        const piSocket = getPiSocket();
+        if (!piSocket) {
+            console.log('[PI] Not connected - cannot check sensor connection');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        try {
+            const request = {
+                type: 'CHECK_SENSOR_CONNECTION',
+                data: {
+                    plant_id: plantId,
+                    timeout_seconds: timeoutSeconds
+                }
+            };
+            piSocket.send(JSON.stringify(request));
+            return { success: true };
+        } catch (error) {
+            console.error('Error sending CHECK_SENSOR_CONNECTION to Pi:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Send CHECK_VALVE_MECHANISM request to Pi (no waiting)
+     */
+    checkValveMechanism(plantId, pulseSeconds = 0.6) {
+        const piSocket = getPiSocket();
+        if (!piSocket) {
+            console.log('[PI] Not connected - cannot check valve mechanism');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        try {
+            const request = {
+                type: 'CHECK_VALVE_MECHANISM',
+                data: {
+                    plant_id: plantId,
+                    pulse_seconds: pulseSeconds
+                }
+            };
+            piSocket.send(JSON.stringify(request));
+            return { success: true };
+        } catch (error) {
+            console.error('Error sending CHECK_VALVE_MECHANISM to Pi:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
      * Send RESTART_VALVE request to Pi (no waiting)
      */
     restartValve(plantId) {
