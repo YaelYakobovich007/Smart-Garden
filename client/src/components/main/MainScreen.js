@@ -363,6 +363,7 @@ const MainScreen = () => {
       // Now that we're authenticated, request plants and garden data
       websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
       websocketService.sendMessage({ type: 'GET_USER_GARDENS' });
+      websocketService.sendMessage({ type: 'GET_WEATHER' });
     } else {
       console.log('No fullName in response data');
     }

@@ -95,13 +95,13 @@ const ProfileSettingsScreen = () => {
     }
     setLoadingAction('name');
     sendWithOneTimeHandler(
-      'UPDATE_FULL_NAME_SUCCESS',
-      'UPDATE_FULL_NAME_FAIL',
-      { type: 'UPDATE_FULL_NAME', newName: newFullName.trim() },
+      'UPDATE_USER_DETAILS_SUCCESS',
+      'UPDATE_USER_DETAILS_FAIL',
+      { type: 'UPDATE_USER_DETAILS', newName: newFullName.trim() },
       () => {
         setLoadingAction(null);
         setNewFullName('');
-        Alert.alert('Success', 'Your name has been updated.');
+        websocketService.send({ type: 'GET_USER_DETAILS' });
       },
       (err) => {
         setLoadingAction(null);
@@ -117,12 +117,12 @@ const ProfileSettingsScreen = () => {
     }
     setLoadingAction('location');
     sendWithOneTimeHandler(
-      'UPDATE_LOCATION_SUCCESS',
-      'UPDATE_LOCATION_FAIL',
-      { type: 'UPDATE_LOCATION', country: selectedCountry, city: selectedCity },
+      'UPDATE_USER_DETAILS_SUCCESS',
+      'UPDATE_USER_DETAILS_FAIL',
+      { type: 'UPDATE_USER_DETAILS', country: selectedCountry, city: selectedCity },
       () => {
         setLoadingAction(null);
-        Alert.alert('Success', 'Your location has been updated.');
+        websocketService.send({ type: 'GET_USER_DETAILS' });
       },
       (err) => {
         setLoadingAction(null);
@@ -138,14 +138,14 @@ const ProfileSettingsScreen = () => {
     }
     setLoadingAction('password');
     sendWithOneTimeHandler(
-      'UPDATE_PASSWORD_SUCCESS',
-      'UPDATE_PASSWORD_FAIL',
-      { type: 'UPDATE_PASSWORD', currentPassword, newPassword },
+      'UPDATE_USER_DETAILS_SUCCESS',
+      'UPDATE_USER_DETAILS_FAIL',
+      { type: 'UPDATE_USER_DETAILS', currentPassword, newPassword },
       () => {
         setLoadingAction(null);
         setCurrentPassword('');
         setNewPassword('');
-        Alert.alert('Success', 'Your password has been updated.');
+        // Silent success
       },
       (err) => {
         setLoadingAction(null);
