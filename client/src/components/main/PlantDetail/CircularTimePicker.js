@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,25 +17,30 @@ const CircularTimePicker = ({
   visible, 
   onClose, 
   onTimeSelected, 
-  initialTime = 0,
-  timeOptions = [0, 5, 10, 15, 20, 30, 45, 60]
+  initialTime = 60,
+  // Clock-style: 60 at top, then ascending 5..55 clockwise back to 60
+  timeOptions = [60, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
 }) => {
-  const [selectedDuration, setSelectedDuration] = useState(initialTime);
+  const [selectedDuration, setSelectedDuration] = useState(initialTime === 0 ? 60 : initialTime);
   const [isDragging, setIsDragging] = useState(false);
 
   const circleRadius = 120;
   const centerX = 160;
   const centerY = 160;
 
+  // Place 60 at the top (-90 degrees), advance clockwise by equal segments
+  const BASE_ANGLE = -90; // degrees (top)
   const getAngleFromDuration = (duration) => {
-    const index = timeOptions.indexOf(duration);
-    return (index * (360 / timeOptions.length));
+    const index = Math.max(0, timeOptions.indexOf(duration));
+    return BASE_ANGLE + (index * (360 / timeOptions.length));
   };
 
   const getDurationFromAngle = (angle) => {
-    let normalizedAngle = (angle % 360 + 360) % 360;
     const segmentSize = 360 / timeOptions.length;
-    const segmentIndex = Math.round(normalizedAngle / segmentSize) % timeOptions.length;
+    // Normalize so that BASE_ANGLE maps to index 0
+    let normalized = (angle - BASE_ANGLE) % 360;
+    normalized = (normalized + 360) % 360;
+    const segmentIndex = Math.round(normalized / segmentSize) % timeOptions.length;
     return timeOptions[segmentIndex];
   };
 
@@ -63,23 +68,24 @@ const CircularTimePicker = ({
   });
 
   const formatDuration = (minutes) => {
-    if (minutes === 0) {
-      return '0m';
-    }
-    if (minutes >= 60) {
-      return '1h';
-    }
+    if (minutes >= 60) return '60m';
+    if (minutes % 5 === 0) return `${minutes}m`;
     return `${minutes}m`;
   };
 
   const handleStartTimer = () => {
-    if (selectedDuration === 0) {
-      // Don't allow starting with 0 minutes
-      return;
-    }
+    // No explicit 0; 60 acts as the top like a regular clock
     onTimeSelected(selectedDuration);
     onClose();
   };
+
+  // Reset selection each time the modal opens
+  useEffect(() => {
+    if (visible) {
+      // Start with no selection (0) so the dial shows only the base circle
+      setSelectedDuration(0);
+    }
+  }, [visible, initialTime]);
 
   const renderCircularPicker = () => {
     const angle = getAngleFromDuration(selectedDuration);
@@ -88,7 +94,7 @@ const CircularTimePicker = ({
     const handleY = Math.sin(radian) * circleRadius + centerY;
 
     // Selection arc path
-    const startAngle = 0;
+    const startAngle = BASE_ANGLE;
     const endAngle = getAngleFromDuration(selectedDuration);
     const startRadian = (startAngle * Math.PI) / 180;
     const endRadian = (endAngle * Math.PI) / 180;
@@ -114,9 +120,9 @@ const CircularTimePicker = ({
       <View style={styles.circularPicker} {...panResponder.panHandlers}>
         <View style={styles.outerCircle} />
         
-        {/* Time markers and labels */}
+        {/* Time markers and labels (60 at top, descending clockwise) */}
         {timeOptions.map((time, index) => {
-          const markerAngle = (index * (360 / timeOptions.length));
+          const markerAngle = BASE_ANGLE + (index * (360 / timeOptions.length));
           const markerRadian = (markerAngle * Math.PI) / 180;
           const markerRadius = 130;
           const markerX = Math.cos(markerRadian) * markerRadius + centerX;
@@ -142,7 +148,7 @@ const CircularTimePicker = ({
                   styles.timeLabel,
                   {
                     left: labelX - 12,
-                    top: labelY - 8,
+                    top: labelY - 6,
                   }
                 ]}
               >
@@ -152,13 +158,13 @@ const CircularTimePicker = ({
           );
         })}
         
-        {/* Selection arc - only show if a valid time is selected */}
+        {/* Selection arc - show for any selected duration */}
         {selectedDuration > 0 && (
           <Svg style={styles.svgOverlay} width={320} height={320}>
             <Path
               d={pathData}
-              fill="rgba(34, 197, 94, 0.15)"
-              stroke="rgba(34, 197, 94, 0.3)"
+              fill="rgba(76, 175, 80, 0.15)"
+              stroke="#4CAF50"
               strokeWidth="2"
             />
           </Svg>
@@ -171,8 +177,8 @@ const CircularTimePicker = ({
               cx="160"
               cy="160"
               r="120"
-              fill="rgba(34, 197, 94, 0.15)"
-              stroke="rgba(34, 197, 94, 0.3)"
+              fill="rgba(76, 175, 80, 0.15)"
+              stroke="#4CAF50"
               strokeWidth="2"
             />
           </Svg>
@@ -186,7 +192,7 @@ const CircularTimePicker = ({
               {
                 left: handleX - 16,
                 top: handleY - 16,
-                backgroundColor: isDragging ? '#059669' : '#10b981',
+                backgroundColor: isDragging ? '#43A047' : '#4CAF50',
                 transform: [{ scale: isDragging ? 1.25 : 1 }],
               }
             ]}
@@ -197,7 +203,7 @@ const CircularTimePicker = ({
         
         {/* Center indicator */}
         <View style={styles.centerIndicator}>
-          <Feather name="clock" size={20} color="#10b981" />
+          <Feather name="clock" size={20} color="#FFFFFF" />
         </View>
       </View>
     );
@@ -221,7 +227,7 @@ const CircularTimePicker = ({
           
           <View style={styles.modalHeader}>
             <View style={styles.iconContainer}>
-              <Feather name="clock" size={28} color="#10b981" />
+              <Feather name="clock" size={28} color="#4CAF50" />
             </View>
             <Text style={styles.modalTitle}>Set Timer</Text>
             <Text style={styles.modalSubtitle}>Drag the handle to select your desired duration</Text>
@@ -303,7 +309,8 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#dcfce7',
+    // Soft green tint using the app's green
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -313,11 +320,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 8,
+    fontFamily: 'Nunito_700Bold',
   },
   modalSubtitle: {
     fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
+    fontFamily: 'Nunito_400Regular',
   },
   circularPicker: {
     width: 320,
@@ -349,6 +358,8 @@ const styles = StyleSheet.create({
     color: '#374151',
     width: 24,
     textAlign: 'center',
+    lineHeight: 14,
+    fontFamily: 'Nunito_600SemiBold',
   },
   svgOverlay: {
     position: 'absolute',
@@ -381,9 +392,8 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'white',
-    borderWidth: 4,
-    borderColor: '#10b981',
+    backgroundColor: '#4CAF50',
+    borderWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -401,13 +411,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 4,
+    fontFamily: 'Nunito_700Bold',
   },
   durationLabel: {
     fontSize: 14,
     color: '#6b7280',
+    fontFamily: 'Nunito_400Regular',
   },
   startButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#4CAF50',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -417,6 +429,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+    fontFamily: 'Nunito_700Bold',
   },
   disabledButton: {
     backgroundColor: '#d1d5db',

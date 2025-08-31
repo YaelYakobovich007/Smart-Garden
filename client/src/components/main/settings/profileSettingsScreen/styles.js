@@ -69,11 +69,13 @@ export const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         color: '#2C3E50',
+        fontFamily: 'Nunito_700Bold',
     },
     heroSubtitle: {
         marginTop: 4,
         fontSize: 13,
         color: '#4B5563',
+        fontFamily: 'Nunito_400Regular',
     },
     card: {
         backgroundColor: '#FFFFFF',
@@ -97,6 +99,7 @@ export const styles = StyleSheet.create({
         fontSize: 13,
         color: '#6B7280',
         marginBottom: 10,
+        fontFamily: 'Nunito_400Regular',
     },
     // Unified section spacing and divider
     sectionUnified: {
@@ -129,6 +132,7 @@ export const styles = StyleSheet.create({
         height: 48,
         color: '#333',
         fontSize: 16,
+        fontFamily: 'Nunito_400Regular',
     },
     button: {
         paddingVertical: 12,
@@ -157,6 +161,7 @@ export const styles = StyleSheet.create({
     linkText: {
         color: '#2563EB',
         fontWeight: '600',
+        fontFamily: 'Nunito_600SemiBold',
     },
     buttonIconLeft: {
         marginRight: 6,
@@ -189,9 +194,11 @@ export const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333',
         flex: 1,
+        fontFamily: 'Nunito_400Regular',
     },
     pickerPlaceholder: {
         color: '#888',
+        fontFamily: 'Nunito_400Regular',
     },
     pickerIcon: {
         marginLeft: 8,

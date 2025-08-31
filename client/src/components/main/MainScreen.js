@@ -102,11 +102,6 @@ const MainScreen = () => {
   const handlePlantAddedToGarden = (data) => {
     console.log('Plant added to garden by another user:', data);
 
-    // Show notification to user
-    if (data.message) {
-      Alert.alert('Garden Update', data.message, [{ text: 'OK' }]);
-    }
-
     // Refresh plant list to show the new plant
     if (websocketService.isConnected()) {
       websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
@@ -134,11 +129,6 @@ const MainScreen = () => {
    */
   const handlePlantDeletedFromGarden = (data) => {
     console.log('Plant deleted from garden by another user:', data);
-
-    // Show notification to user
-    if (data.message) {
-      Alert.alert('Garden Update', data.message, [{ text: 'OK' }]);
-    }
 
     // Refresh plant list to remove the deleted plant
     if (websocketService.isConnected()) {
