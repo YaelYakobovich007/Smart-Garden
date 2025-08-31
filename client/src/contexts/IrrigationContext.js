@@ -18,7 +18,7 @@ export const IrrigationProvider = ({ children }) => {
   // Per-plant irrigation state - each plant has its own watering state
   const [wateringPlants, setWateringPlants] = useState(new Map()); // Map of plantId -> watering state
   const [pendingValveRequests, setPendingValveRequests] = useState(new Set()); // Set of plantIds with pending requests
-  
+
   // Use ref to track current state without causing re-renders
   const wateringPlantsRef = useRef(new Map());
   // Track plants we've already notified as skipped to avoid duplicate alerts
@@ -237,11 +237,11 @@ export const IrrigationProvider = ({ children }) => {
   // Countdown timer effect with improved accuracy
   useEffect(() => {
     const intervals = new Map();
-    
+
     // Function to check and manage timers for all watering plants
     const checkAndManageTimers = () => {
       const currentWateringPlants = wateringPlantsRef.current;
-      
+
       currentWateringPlants.forEach((state, plantId) => {
         if (state.isWateringActive && state.wateringTimeLeft > 0 && !state.pendingValveRequest && state.timerStartTime && state.timerEndTime) {
           // Only create interval if one doesn't exist
@@ -249,7 +249,7 @@ export const IrrigationProvider = ({ children }) => {
             const interval = setInterval(() => {
               const now = Date.now();
               const remainingTime = Math.max(0, Math.ceil((state.timerEndTime - now) / 1000));
-              
+
               if (remainingTime <= 0) {
                 console.log(`⏰ Timer completed for plant ${plantId} - valve should be closed`);
                 updatePlantWateringState(plantId, {
@@ -269,7 +269,7 @@ export const IrrigationProvider = ({ children }) => {
                 updatePlantWateringState(plantId, { wateringTimeLeft: remainingTime });
               }
             }, 100); // Update more frequently for better accuracy
-            
+
             intervals.set(plantId, interval);
             updatePlantWateringState(plantId, { timerInterval: interval });
           }
@@ -282,13 +282,13 @@ export const IrrigationProvider = ({ children }) => {
         }
       });
     };
-    
+
     // Check for new watering plants every second
     const checkInterval = setInterval(checkAndManageTimers, 1000);
-    
+
     // Initial check
     checkAndManageTimers();
-    
+
     return () => {
       // Clean up all intervals
       intervals.forEach((interval) => {
@@ -339,42 +339,42 @@ export const IrrigationProvider = ({ children }) => {
   };
 
   // Start smart irrigation
-      const startSmartIrrigation = (plant) => {
-      console.log('🚰 startSmartIrrigation called for plant:', plant?.name, 'ID:', plant?.id);
-      
-      if (!plant?.name) {
-        Alert.alert('Error', 'Plant name is missing.');
-        return;
-      }
+  const startSmartIrrigation = (plant) => {
+    console.log('🚰 startSmartIrrigation called for plant:', plant?.name, 'ID:', plant?.id);
 
-      if (!websocketService.isConnected()) {
-        Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
-        return;
-      }
+    if (!plant?.name) {
+      Alert.alert('Error', 'Plant name is missing.');
+      return;
+    }
 
-      const plantId = plant.id;
-      console.log('🚰 Setting watering state for plant ID:', plantId);
-      
-      // First clear any existing state
+    if (!websocketService.isConnected()) {
+      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
+      return;
+    }
+
+    const plantId = plant.id;
+    console.log('🚰 Setting watering state for plant ID:', plantId);
+
+    // First clear any existing state
+    updatePlantWateringState(plantId, {
+      isManualMode: false,
+      isSmartMode: false,
+      isWateringActive: false,
+      wateringTimeLeft: 0,
+      timerStartTime: null,
+      timerEndTime: null,
+      timerInterval: null,
+      currentPlant: null
+    });
+
+    // Then set the pending state
+    setTimeout(() => {
       updatePlantWateringState(plantId, {
-        isManualMode: false,
-        isSmartMode: false,
-        isWateringActive: false,
-        wateringTimeLeft: 0,
-        timerStartTime: null,
-        timerEndTime: null,
-        timerInterval: null,
-        currentPlant: null
+        isSmartMode: true,
+        pendingIrrigationRequest: true,
+        currentPlant: plant.name  // Store just the plant name string
       });
-      
-      // Then set the pending state
-      setTimeout(() => {
-        updatePlantWateringState(plantId, {
-          isSmartMode: true,
-          pendingIrrigationRequest: true,
-          currentPlant: plant.name  // Store just the plant name string
-        });
-      }, 0);
+    }, 0);
 
     const message = {
       type: 'IRRIGATE_PLANT',
@@ -388,20 +388,20 @@ export const IrrigationProvider = ({ children }) => {
   // Stop irrigation for a specific plant
   const handleStopWatering = (plantId) => {
     const state = getPlantWateringState(plantId);
-    
+
     console.log('🛑 handleStopWatering called for plant ID:', plantId);
     console.log('🛑 Current state:', state);
     console.log('🛑 isSmartMode before clearing:', state.isSmartMode);
     console.log('🛑 isManualMode before clearing:', state.isManualMode);
-    
+
     // Get plant name from state before clearing
     const isSmartIrrigation = state.isSmartMode;
     const plantName = state.currentPlant;  // currentPlant is the plant name string
-    
+
     console.log('🛑 Stopping irrigation:', { plantId, plantName, state });
     // Mark this plant as recently stopped right away to suppress any in-flight IRRIGATE_FAIL
     markRecentlyStopped(plantId);
-    
+
     // Clear all states immediately
     updatePlantWateringState(plantId, {
       isWateringActive: false,
@@ -414,7 +414,7 @@ export const IrrigationProvider = ({ children }) => {
       pendingIrrigationRequest: false,
       currentPlant: null
     });
-    
+
     // Send appropriate stop message based on irrigation type
     if (plantName || plantId) {
       if (isSmartIrrigation) {
@@ -453,7 +453,7 @@ export const IrrigationProvider = ({ children }) => {
     if (state.timerStartTime && state.timerEndTime) {
       const now = Date.now();
       const remainingTime = Math.max(0, Math.ceil((state.timerEndTime - now) / 1000));
-      
+
       if (remainingTime > 0) {
         updatePlantWateringState(plantId, { wateringTimeLeft: remainingTime, isWateringActive: true });
       } else {
@@ -548,10 +548,15 @@ export const IrrigationProvider = ({ children }) => {
             currentPlant: null,
             irrigationSessionId: null
           });
+          try { rehydrateIrrigationStopped(targetPlantId); } catch { }
 
           // Show a clear user message and mark as notified to avoid duplicate alert on IRRIGATE_SKIPPED
           skipAlertedPlantIdsRef.current.add(targetPlantId);
-          Alert.alert('Smart Irrigation', 'Irrigation is not required at this time.');
+          const reason = payload?.reason || payload?.data?.reason;
+          const decisionMsg = reason === 'rain_expected'
+            ? 'Watering skipped due to rain expected today.'
+            : 'Irrigation is not required at this time.';
+          Alert.alert('Smart Irrigation', decisionMsg);
         } else {
           // Will irrigate → stop showing the checking loader; wait for IRRIGATION_STARTED
           updatePlantWateringState(targetPlantId, {
@@ -575,14 +580,14 @@ export const IrrigationProvider = ({ children }) => {
           }
         });
       }
-      
+
       if (targetPlantId) {
         const state = wateringPlantsRef.current.get(targetPlantId);
         if (state && state.pendingValveRequest) {
           const now = Date.now();
           const durationMinutes = Number(payload?.valve_data?.duration_minutes || state.selectedTime || 0);
           const durationMs = durationMinutes * 60 * 1000;
-          
+
           updatePlantWateringState(targetPlantId, {
             timerStartTime: now,
             timerEndTime: now + durationMs,
@@ -591,7 +596,7 @@ export const IrrigationProvider = ({ children }) => {
             isManualMode: true,
             isWateringActive: true
           });
-          
+
           Alert.alert('Valve Control', data?.message || 'Valve opened successfully! Timer started.');
         }
       }
@@ -599,7 +604,7 @@ export const IrrigationProvider = ({ children }) => {
 
     const handleOpenValveFail = (data) => {
       // Failed to open valve
-      
+
       // Find the plant by name in the watering plants
       let targetPlantId = null;
       wateringPlantsRef.current.forEach((state, plantId) => {
@@ -607,7 +612,7 @@ export const IrrigationProvider = ({ children }) => {
           targetPlantId = plantId;
         }
       });
-      
+
       if (targetPlantId) {
         updatePlantWateringState(targetPlantId, {
           isManualMode: false,
@@ -617,13 +622,13 @@ export const IrrigationProvider = ({ children }) => {
           pendingValveRequest: false
         });
       }
-      
+
       Alert.alert('Valve Control', data?.message || 'Failed to open valve. Timer not started.');
     };
 
     const handleCloseValveSuccess = (data) => {
       // Valve closed successfully
-      
+
       // Find the plant by name in the watering plants
       let targetPlantId = null;
       wateringPlantsRef.current.forEach((state, plantId) => {
@@ -631,7 +636,7 @@ export const IrrigationProvider = ({ children }) => {
           targetPlantId = plantId;
         }
       });
-      
+
       if (targetPlantId) {
         updatePlantWateringState(targetPlantId, {
           isManualMode: false,
@@ -643,7 +648,7 @@ export const IrrigationProvider = ({ children }) => {
           timerInterval: null
         });
       }
-      
+
       Alert.alert('Valve Control', data?.message || 'Valve closed successfully!');
     };
 
@@ -655,13 +660,13 @@ export const IrrigationProvider = ({ children }) => {
     const handleIrrigationStarted = (data) => {
       // Smart irrigation actually started (backend now only sends this when irrigation really begins)
       console.log('🚰 IrrigationContext: IRRIGATION_STARTED received (irrigation actually began):', data);
-      
+
       const payload = data?.data || data;
       const sessionId = payload?.sessionId || payload?.session_id || null;
       const plantName = payload?.plantName;
       const pidFromPayload = payload?.plantId != null ? Number(payload.plantId) : null;
       let targetPlantId = resolveTargetPlantId(sessionId, pidFromPayload, plantName);
-      
+
       if (targetPlantId) {
         console.log('🚰 IrrigationContext: Setting isWateringActive: true for plant ID:', targetPlantId);
         // First clear the pending request to hide the loader
@@ -669,7 +674,7 @@ export const IrrigationProvider = ({ children }) => {
           pendingIrrigationRequest: false,
           irrigationSessionId: sessionId || wateringPlantsRef.current.get(targetPlantId)?.irrigationSessionId || null
         });
-        
+
         // Then in the next tick, update the irrigation state
         setTimeout(() => {
           updatePlantWateringState(targetPlantId, {
@@ -678,7 +683,7 @@ export const IrrigationProvider = ({ children }) => {
             currentPlant: plantName || data.plantName     // Store plant name string
           });
         }, 0);
-        
+
         console.log('🚰 IrrigationContext: Loading indicator should disappear, irrigation overlay should appear');
       } else {
         console.log('🚰 IrrigationContext: No target plant found for IRRIGATION_STARTED');
@@ -867,9 +872,12 @@ export const IrrigationProvider = ({ children }) => {
       // Smart irrigation was skipped (not necessary)
       console.log('🔄 IrrigationContext: Irrigation skipped:', data);
       const sessionId = data?.sessionId || data?.session_id;
-      
+      const plantIdFromPayload = (data?.plantId != null ? Number(data.plantId) : null)
+        ?? (data?.plant_id != null ? Number(data.plant_id) : null)
+        ?? (data?.result?.plant_id != null ? Number(data.result.plant_id) : null);
+
       // Find the plant by name in the watering plants
-      let targetPlantId = resolveTargetPlantId(sessionId, null, null);
+      let targetPlantId = resolveTargetPlantId(sessionId, plantIdFromPayload, data?.plantName || null);
       if (targetPlantId == null) {
         wateringPlantsRef.current.forEach((state, plantId) => {
           if (targetPlantId == null && (state.pendingIrrigationRequest || state.isSmartMode)) {
@@ -877,10 +885,10 @@ export const IrrigationProvider = ({ children }) => {
           }
         });
       }
-      
+
       if (targetPlantId) {
         console.log('🔄 IrrigationContext: Clearing irrigation state for skipped irrigation, plant ID:', targetPlantId);
-        
+
         // Clear all irrigation states immediately
         updatePlantWateringState(targetPlantId, {
           isManualMode: false,
@@ -894,9 +902,11 @@ export const IrrigationProvider = ({ children }) => {
           currentPlant: null,
           irrigationSessionId: null
         });
-        
+        // Belt-and-suspenders: ensure any overlays/icons are cleared
+        try { rehydrateIrrigationStopped(targetPlantId); } catch { }
+
         console.log('🔄 IrrigationContext: State cleared - overlay should disappear');
-        
+
         // Avoid duplicate alert if we already showed the decision message
         const alreadyNotified = skipAlertedPlantIdsRef.current.has(targetPlantId);
         if (alreadyNotified) {
@@ -905,7 +915,11 @@ export const IrrigationProvider = ({ children }) => {
         } else {
           // Show alert for user feedback after a short delay to ensure UI has updated
           setTimeout(() => {
-            Alert.alert('Smart Irrigation', data?.message || 'Irrigation was skipped - not necessary at this time.');
+            const reason = data?.reason || data?.data?.reason;
+            const skipMsg = reason === 'rain_expected'
+              ? 'Watering skipped due to rain expected today.'
+              : (data?.message || 'Irrigation was skipped - not necessary at this time.');
+            Alert.alert('Smart Irrigation', skipMsg);
           }, 100);
         }
       } else {
@@ -1001,7 +1015,7 @@ export const IrrigationProvider = ({ children }) => {
     const handleStopIrrigationSuccess = (data) => {
       // Smart irrigation stopped successfully
       console.log('🛑 Stop irrigation success:', data);
-      
+
       // Find the plant by name in the watering plants
       let targetPlantId = null;
       wateringPlantsRef.current.forEach((state, plantId) => {
@@ -1009,7 +1023,7 @@ export const IrrigationProvider = ({ children }) => {
           targetPlantId = plantId;
         }
       });
-      
+
       if (targetPlantId) {
         const prevState = wateringPlantsRef.current.get(targetPlantId);
         updatePlantWateringState(targetPlantId, {
@@ -1024,13 +1038,13 @@ export const IrrigationProvider = ({ children }) => {
         // Clear stored mode now to avoid stale state
         updatePlantWateringState(targetPlantId, { currentMode: null });
       }
-      
+
     };
 
     const handleStopIrrigationFail = (data) => {
       // Smart irrigation stop failed
       console.log('🛑 Stop irrigation failed:', data);
-      
+
       Alert.alert('Smart Irrigation', data?.message || 'Failed to stop smart irrigation.');
     };
 
@@ -1150,7 +1164,7 @@ export const IrrigationProvider = ({ children }) => {
     getPlantWateringState,
     getWateringPlants,
     isAnyPlantWatering,
-    
+
     // Functions
     startManualIrrigation,
     startSmartIrrigation,
