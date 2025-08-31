@@ -82,52 +82,52 @@ class Sensor:
 
             # Connect to the Modbus client
             async with client as modbus_client:
-            print(f"🔗 Connection status: {'✅ CONNECTED' if modbus_client.connected else '❌ FAILED'}")
-            
-            if not modbus_client.connected:
-                print(f"❌ Could not connect to Modbus sensor on {self.port}")
-                return None
-            
-            try:
-                print(f"📖 Reading registers from sensor 1...")
-                print(f"   Register address: 1")
-                print(f"   Register count: 2")
+                print(f"🔗 Connection status: {'✅ CONNECTED' if modbus_client.connected else '❌ FAILED'}")
                 
-                # Read two registers starting from address 1 (matching mbpoll command)
-                # Try without unit parameter first
-                result = await modbus_client.read_input_registers(
-                    address=0,
-                    count=2
-                )
-
-                if result.isError():
-                    print(f"❌ Modbus error: {result}")
+                if not modbus_client.connected:
+                    print(f"❌ Could not connect to Modbus sensor on {self.port}")
                     return None
-
-                print(f"✅ Register read successful!")
                 
-                # Process raw register values (matching mbpoll output)
-                register_1 = result.registers[0]
-                register_2 = result.registers[1]
+                try:
+                    print(f"📖 Reading registers from sensor 1...")
+                    print(f"   Register address: 1")
+                    print(f"   Register count: 2")
+                    
+                    # Read two registers starting from address 1 (matching mbpoll command)
+                    # Try without unit parameter first
+                    result = await modbus_client.read_input_registers(
+                        address=0,
+                        count=2
+                    )
+                    
+                    if result.isError():
+                        print(f"❌ Modbus error: {result}")
+                        return None
+                    
+                    print(f"✅ Register read successful!")
+                    
+                    # Process raw register values (matching mbpoll output)
+                    register_1 = result.registers[0]
+                    register_2 = result.registers[1]
+                    
+                    print(f"📊 Raw register values:")
+                    print(f"   Register 1: {register_1}")
+                    print(f"   Register 2: {register_2}")
+                    
+                    # Convert to moisture and temperature (adjust these calculations based on your sensor)
+                    # For now, using simple conversion - you may need to adjust based on your sensor specs
+                    moisture = register_1 / 10.0 if register_1 > 0 else 0.0
+                    temperature = register_2 / 10.0 if register_2 > 0 else 0.0
+                    
+                    print(f"🌱 Processed values:")
+                    print(f"   Moisture: {moisture:.1f}%")
+                    print(f"   Temperature: {temperature:.1f}°C")
+                    
+                    return moisture, temperature
                 
-                print(f"📊 Raw register values:")
-                print(f"   Register 1: {register_1}")
-                print(f"   Register 2: {register_2}")
-                
-                # Convert to moisture and temperature (adjust these calculations based on your sensor)
-                # For now, using simple conversion - you may need to adjust based on your sensor specs
-                moisture = register_1 / 10.0 if register_1 > 0 else 0.0
-                temperature = register_2 / 10.0 if register_2 > 0 else 0.0
-                
-                print(f"🌱 Processed values:")
-                print(f"   Moisture: {moisture:.1f}%")
-                print(f"   Temperature: {temperature:.1f}°C")
-                
-                return moisture, temperature
-            
-            except ModbusException as e:
-                print(f"❌ Modbus exception: {e}")
-                return None
+                except ModbusException as e:
+                    print(f"❌ Modbus exception: {e}")
+                    return None
             
 
     def update_simulated_value(self, amount):
