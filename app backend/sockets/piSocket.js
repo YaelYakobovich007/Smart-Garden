@@ -288,6 +288,13 @@ function handlePiSocket(ws) {
               reason: decisionData.reason
             });
           }
+          // Persist irrigation state: ensure mode is cleared on decision skip
+          try {
+            const { updateIrrigationState } = require('../models/plantModel');
+            await updateIrrigationState(Number(plantId), { mode: 'none', startAt: null, endAt: null, sessionId: null });
+          } catch (e) {
+            console.warn('Failed to clear irrigation state on decision skip:', e.message);
+          }
         }
 
         // Send email notification if available
@@ -457,7 +464,7 @@ function handlePiSocket(ws) {
                 initial_moisture: responseData.moisture
               }
             });
-            console.log(`📱 Sent irrigation completion notification to user ${pendingInfo.email}`);
+            console.log(`[NOTIFY] Sent irrigation completion notification to user ${pendingInfo.email}`);
           }
 
         } catch (err) {
@@ -557,7 +564,7 @@ function handlePiSocket(ws) {
               });
             }, 500);
 
-            console.log(`ℹ️ Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation skipped`);
+            console.log(`[NOTIFY]: Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation skipped`);
           }
 
           // Send user notification about irrigation being skipped
@@ -568,16 +575,16 @@ function handlePiSocket(ws) {
               email: pendingInfo.email,
               reason: responseData.reason
             });
-            console.log(`📱 Sent irrigation skipped notification to user ${pendingInfo.email}`);
+            console.log(`[NOTIFY] Sent irrigation skipped notification to user ${pendingInfo.email}`);
           }
 
         } catch (err) {
-          console.error(`❌ Failed to save skipped irrigation result for plant ${plantId}:`, err);
+          console.error(`[ERROR] Failed to save skipped irrigation result for plant ${plantId}:`, err);
         }
 
       } else {
         // Irrigation failed
-        console.error(`❌ Plant ${plantId} irrigation failed: ${responseData.error_message}`);
+        console.error(`[ERROR] Plant ${plantId} irrigation failed: ${responseData.error_message}`);
 
         // Check if it's a valve blocking error - more specific detection
         const isValveBlocked = responseData.error_message &&
