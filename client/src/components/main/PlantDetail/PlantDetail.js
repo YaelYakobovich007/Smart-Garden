@@ -783,7 +783,7 @@ const PlantDetail = () => {
               The valve for this plant is currently blocked and cannot be operated.
               Please troubleshoot the hardware issue to restore irrigation functionality.
             </Text>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end' }}>
               <TouchableOpacity
                 style={styles.troubleshootButton}
                 onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}

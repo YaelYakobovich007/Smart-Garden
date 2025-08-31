@@ -317,6 +317,31 @@ class PiCommunication {
     }
 
     /**
+     * Send CHECK_POWER_SUPPLY request to Pi (no waiting)
+     */
+    checkPowerSupply(plantId) {
+        const piSocket = getPiSocket();
+        if (!piSocket) {
+            console.log('[PI] Not connected - cannot check power supply');
+            return { success: false, error: 'Pi not connected' };
+        }
+
+        try {
+            const request = {
+                type: 'CHECK_POWER_SUPPLY',
+                data: {
+                    plant_id: plantId
+                }
+            };
+            piSocket.send(JSON.stringify(request));
+            return { success: true };
+        } catch (error) {
+            console.error('Error sending CHECK_POWER_SUPPLY to Pi:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
      * Send CHECK_SENSOR_CONNECTION request to Pi (no waiting)
      */
     checkSensorConnection(plantId, timeoutSeconds = 5) {

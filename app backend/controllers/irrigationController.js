@@ -24,6 +24,7 @@ const irrigationHandlers = {
   GET_VALVE_STATUS: handleGetValveStatus,
   UNBLOCK_VALVE: handleUnblockValve,
   TEST_VALVE_BLOCK: handleTestValveBlock,
+  CHECK_POWER_SUPPLY: handleCheckPowerSupply,
   UNBLOCK_VALVE: handleUnblockValve,
   TEST_VALVE_BLOCK: handleTestValveBlock
 };
@@ -43,6 +44,25 @@ async function handleIrrigationMessage(data, ws) {
   } catch (err) {
     console.log(`[IRRIGATION] Error handling message: ${err.message}`);
     sendError(ws, 'IRRIGATION_ERROR', 'Internal server error');
+  }
+}
+// Diagnostics: Check Pi power supply health
+async function handleCheckPowerSupply(data, ws, email) {
+  const { plantName } = data;
+  if (!plantName) return sendError(ws, 'CHECK_POWER_SUPPLY_FAIL', 'Missing plantName');
+
+  const user = await getUser(email);
+  if (!user) return sendError(ws, 'CHECK_POWER_SUPPLY_FAIL', 'User not found');
+
+  const plant = await getPlantByName(user.id, plantName);
+  if (!plant) return sendError(ws, 'CHECK_POWER_SUPPLY_FAIL', 'Plant not found in your garden');
+
+  const result = require('../services/piCommunication').checkPowerSupply(plant.plant_id);
+  if (result.success) {
+    const { addPendingIrrigation } = require('../services/pendingIrrigationTracker');
+    addPendingIrrigation(plant.plant_id, ws, email, { plant_id: plant.plant_id, plant_name: plant.name, request_type: 'CHECK_POWER_SUPPLY' });
+  } else {
+    return sendError(ws, 'CHECK_POWER_SUPPLY_FAIL', 'Pi controller not connected. Please try again when Pi is online.');
   }
 }
 
