@@ -773,10 +773,26 @@ class SmartGardenEngine:
 
         plant = self.plants[plant_id]
         async with self._lock:
+            # Snapshot original blocked state and temporarily clear block so we can test hardware
+            original_blocked = getattr(plant.valve, 'is_blocked', False)
+            if original_blocked:
+                print("Restart: valve was BLOCKED - temporarily unblocking to test hardware pulse")
+                try:
+                    plant.valve.unblock()
+                except Exception:
+                    try:
+                        plant.valve.is_blocked = False
+                    except Exception:
+                        pass
+
             try:
-                # Ensure closed
+                # Ensure closed first (now unblocked temporarily)
                 print("Ensuring valve closed before restart...")
-                plant.valve.request_close()
+                try:
+                    plant.valve.request_close()
+                except Exception as e_close:
+                    # If it was already closed or controller tolerated, continue
+                    print(f"Restart: initial close attempt notice: {e_close}")
 
                 # Pulse open briefly then close
                 print("Brief open/close pulse...")
@@ -784,26 +800,27 @@ class SmartGardenEngine:
                 await asyncio.sleep(0.6)
                 plant.valve.request_close()
 
-                # Unblock if previously blocked
+                # Success - leave unblocked
                 try:
                     plant.valve.unblock()
                 except Exception:
-                    # Fallback if valve object uses attribute
                     if hasattr(plant.valve, 'is_blocked'):
                         plant.valve.is_blocked = False
-                print(" Valve restart succeeded")
+                print("Valve restart succeeded")
                 return True
             except Exception as e:
                 print(f"Valve restart failed for plant {plant_id}: {e}")
-                # Keep (or set) blocked state and ensure closed
+                # Ensure closed and mark blocked
                 try:
+                    # We already temporarily unblocked; ensure close regardless
                     plant.valve.request_close()
                 except Exception:
                     pass
                 try:
                     plant.valve.block()
                 except Exception:
-                    pass
+                    if hasattr(plant.valve, 'is_blocked'):
+                        plant.valve.is_blocked = True
                 return False
 
     async def _close_valve_after_duration(self, plant_id: int, duration_seconds: int) -> None:

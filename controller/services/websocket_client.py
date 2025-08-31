@@ -13,6 +13,10 @@ from controller.dto.check_valve_mechanism import (
     CheckValveMechanismRequest,
     CheckValveMechanismResponse,
 )
+from controller.dto.check_power_supply import (
+    CheckPowerSupplyRequest,
+    CheckPowerSupplyResponse,
+)
 
 #my ip is 192.168.68.74
 class SmartGardenPiClient:
@@ -557,6 +561,71 @@ class SmartGardenPiClient:
             except Exception:
                 await self.send_message("CHECK_VALVE_MECHANISM_RESPONSE", {"plant_id": 0, "status": "error", "error_message": str(e)})
 
+    async def handle_check_power_supply(self, data: Dict[Any, Any]):
+        """Handle CHECK_POWER_SUPPLY: read Pi throttled flags and report OK/Fail."""
+        try:
+            request = CheckPowerSupplyRequest.from_websocket_data(data or {})
+
+            async def _read_throttled() -> Dict[str, Any]:
+                import asyncio, re
+                # vcgencmd path
+                try:
+                    proc = await asyncio.create_subprocess_exec(
+                        'vcgencmd', 'get_throttled',
+                        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                    )
+                    out, _ = await proc.communicate()
+                    text = out.decode().strip()
+                    m = re.search(r'throttled=0x([0-9a-fA-F]+)', text)
+                    if m:
+                        val = int(m.group(1), 16)
+                        return {
+                            'raw': val,
+                            'under_voltage_now': bool(val & (1 << 0)),
+                            'freq_capped_now': bool(val & (1 << 1)),
+                            'throttled_now': bool(val & (1 << 2)),
+                            'under_voltage_since_boot': bool(val & (1 << 16)),
+                            'freq_capped_since_boot': bool(val & (1 << 17)),
+                            'throttled_since_boot': bool(val & (1 << 18)),
+                            'source': 'vcgencmd'
+                        }
+                except Exception:
+                    pass
+
+                # dmesg fallback
+                try:
+                    proc = await asyncio.create_subprocess_shell(
+                        "dmesg | grep -i 'under-voltage' | tail -1",
+                        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                    )
+                    out, _ = await proc.communicate()
+                    hit = out.decode().strip()
+                    return {
+                        'raw': None,
+                        'under_voltage_now': 'detected' in hit.lower(),
+                        'freq_capped_now': None,
+                        'throttled_now': None,
+                        'under_voltage_since_boot': bool(hit),
+                        'freq_capped_since_boot': None,
+                        'throttled_since_boot': None,
+                        'source': 'dmesg'
+                    }
+                except Exception:
+                    return {'raw': None, 'source': 'none'}
+
+            data_flags = await _read_throttled()
+            ok = not bool(data_flags.get('under_voltage_now')) and not bool(data_flags.get('throttled_now'))
+            message = 'Power supply OK' if ok else 'Power supply issue detected'
+            response = CheckPowerSupplyResponse.success(ok=ok, data=data_flags, plant_id=request.plant_id, message=message)
+            await self.send_message('CHECK_POWER_SUPPLY_RESPONSE', response.to_websocket_data())
+        except Exception as e:
+            try:
+                plant_id = (data or {}).get('plant_id')
+                response = CheckPowerSupplyResponse.error(str(e), plant_id=plant_id)
+                await self.send_message('CHECK_POWER_SUPPLY_RESPONSE', response.to_websocket_data())
+            except Exception:
+                await self.send_message('CHECK_POWER_SUPPLY_RESPONSE', { 'status': 'error', 'ok': False, 'error_message': str(e) })
+
     async def handle_update_plant_command(self, data: Dict[Any, Any]):
         """Handle update plant request from server."""
         try:
@@ -876,6 +945,9 @@ class SmartGardenPiClient:
             
             elif message_type == "CHECK_VALVE_MECHANISM":
                 await self.handle_check_valve_mechanism(message_data)
+
+            elif message_type == "CHECK_POWER_SUPPLY":
+                await self.handle_check_power_supply(message_data)
             
             elif message_type == "UPDATE_PLANT":
                 await self.handle_update_plant_command(data)
