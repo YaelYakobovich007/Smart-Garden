@@ -52,7 +52,6 @@ export default function AddPlantScreen() {
     waterLimit: 1.0,
     dripperType: '2L/h', // Default dripper type
     image: null,
-    useSchedule: false,
     schedule: {
       days: [false, false, false, false, false, false, false],
       time: new Date(),
@@ -83,7 +82,9 @@ export default function AddPlantScreen() {
       // Show success message with care data if available
       let message = `Successfully identified as: ${identifiedPlantType} (${Math.round(confidence * 100)}% confidence)`;
       if (careData) {
-        message += `\n\n🌱 Care Recommendations:\n• Optimal Moisture: ${careData.optimalMoisture}%\n• Watering: ${careData.wateringFrequency}\n• ${careData.wateringTips}`;
+        message += `\n\n🌱 Care Recommendations:\n• Optimal Moisture: ${careData.optimalMoisture}%\n• Watering: ${careData.wateringFrequency}`;
+        // Guidance: days can be chosen per recommendation or user preference
+        message += `\n\nYou can choose the number of watering days according to our recommendation or as you wish.`;
       }
 
       Alert.alert(
@@ -179,6 +180,17 @@ export default function AddPlantScreen() {
       newErrors.dripperType = 'Please select a valid dripper type';
     }
 
+    // Require schedule: at least one day and a time
+    const hasAnyDay = Array.isArray(formData.schedule?.days)
+      ? formData.schedule.days.some(Boolean)
+      : false;
+    if (!hasAnyDay) {
+      newErrors.scheduleDays = 'Please select at least one watering day';
+    }
+    if (!formData.schedule?.time) {
+      newErrors.scheduleTime = 'Please choose a watering time';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -191,16 +203,12 @@ export default function AddPlantScreen() {
     if (validateForm()) {
       setIsSaving(true);
       try {
-        // Prepare irrigation schedule data if enabled
-        let irrigationDays = null;
-        let irrigationTime = null;
-        if (formData.useSchedule) {
-          irrigationDays = DAYS.filter((day, idx) => formData.schedule.days[idx]);
-          // Format time as 'HH:mm'
-          const t = formData.schedule.time;
-          const pad = (n) => n.toString().padStart(2, '0');
-          irrigationTime = `${pad(t.getHours())}:${pad(t.getMinutes())}`;
-        }
+        // Prepare irrigation schedule data (required)
+        const irrigationDays = DAYS.filter((day, idx) => formData.schedule.days[idx]);
+        // Format time as 'HH:mm'
+        const t = formData.schedule.time;
+        const pad = (n) => n.toString().padStart(2, '0');
+        const irrigationTime = `${pad(t.getHours())}:${pad(t.getMinutes())}`;
 
         // Process image data if an image is selected
         let imageData = null;
@@ -643,66 +651,68 @@ export default function AddPlantScreen() {
               <Feather name="calendar" size={20} color="#4CAF50" />
               <Text style={styles.sectionTitle}>Watering Schedule</Text>
             </View>
-            <Switch
-              value={formData.useSchedule}
-              onValueChange={(value) => updateFormData('useSchedule', value)}
-              trackColor={{ false: '#D1D5DB', true: '#22C55E' }}
-              thumbColor={formData.useSchedule ? '#FFFFFF' : '#F9FAFB'}
-            />
           </View>
 
-          {formData.useSchedule && (
-            <>
-              <Text style={styles.scheduleDescription}>
-                Select the days when you want your plant to be watered
-              </Text>
+          <Text style={styles.scheduleDescription}>
+            Select the days when you want your plant to be watered
+          </Text>
 
-              <View style={styles.daysContainer}>
-                {DAYS.map((day, index) => (
-                  <TouchableOpacity
-                    key={day}
-                    style={[
-                      styles.dayButton,
-                      formData.schedule.days[index] && styles.dayButtonActive,
-                    ]}
-                    onPress={() => toggleDay(index)}
-                  >
-                    <Text
-                      style={[
-                        styles.dayText,
-                        formData.schedule.days[index] && styles.dayTextActive,
-                      ]}
-                    >
-                      {day}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
+          <View style={styles.daysContainer}>
+            {DAYS.map((day, index) => (
               <TouchableOpacity
-                style={styles.timeContainer}
-                onPress={() => setShowTimePicker(true)}
+                key={day}
+                style={[
+                  styles.dayButton,
+                  formData.schedule.days[index] && styles.dayButtonActive,
+                ]}
+                onPress={() => toggleDay(index)}
               >
-                <View style={styles.labelContainer}>
-                  <Feather name="clock" size={20} color="#4CAF50" />
-                  <Text style={styles.label}>Watering Time</Text>
-                </View>
-                <Text style={styles.timeText}>
-                  {formData.schedule.time.toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                  }).replace('.', '').toUpperCase()}
+                <Text
+                  style={[
+                    styles.dayText,
+                    formData.schedule.days[index] && styles.dayTextActive,
+                  ]}
+                >
+                  {day}
                 </Text>
               </TouchableOpacity>
-            </>
+            ))}
+          </View>
+
+          {errors.scheduleDays && (
+            <View style={styles.errorContainer}>
+              <Feather name="alert-circle" size={16} color="#EF4444" />
+              <Text style={styles.errorText}>{errors.scheduleDays}</Text>
+            </View>
           )}
 
-          {!formData.useSchedule && (
-            <Text style={styles.algorithmText}>
-              Your plant will be watered using our smart algorithm based on humidity levels and plant needs.
+          <TouchableOpacity
+            style={styles.timeContainer}
+            onPress={() => setShowTimePicker(true)}
+          >
+            <View style={styles.labelContainer}>
+              <Feather name="clock" size={20} color="#4CAF50" />
+              <Text style={styles.label}>Watering Time</Text>
+            </View>
+            <Text style={styles.timeText}>
+              {formData.schedule.time.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              }).replace('.', '').toUpperCase()}
             </Text>
+          </TouchableOpacity>
+
+          {errors.scheduleTime && (
+            <View style={styles.errorContainer}>
+              <Feather name="alert-circle" size={16} color="#EF4444" />
+              <Text style={styles.errorText}>{errors.scheduleTime}</Text>
+            </View>
           )}
+
+          <Text style={styles.hintText}>
+            Tip: It is recommended to water in the morning hours. You can choose days as you wish or follow our recommendations.
+          </Text>
         </View>
 
         {/* Save Button */}
@@ -764,13 +774,13 @@ export default function AddPlantScreen() {
           <View style={styles.centerModalContent}>
             <Text style={styles.modalTitle}>Choose Time</Text>
             <View style={styles.timePickerContainer}>
-        <DateTimePicker
-          value={formData.schedule.time}
-          mode="time"
-          is24Hour={true}
+              <DateTimePicker
+                value={formData.schedule.time}
+                mode="time"
+                is24Hour={true}
                 display={Platform.OS === 'ios' ? 'spinner' : 'clock'}
-          onChange={handleTimeChange}
-        />
+                onChange={handleTimeChange}
+              />
             </View>
             <View style={styles.modalActionsRow}>
               <TouchableOpacity style={styles.modalActionButton} onPress={() => setShowTimePicker(false)}>
