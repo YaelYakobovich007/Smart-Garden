@@ -68,7 +68,8 @@ export const IrrigationProvider = ({ children }) => {
       selectedTime: 0,
       timerStartTime: null,
       timerEndTime: null,
-      timerInterval: null
+      timerInterval: null,
+      currentMode: null
     };
   };
 
@@ -86,7 +87,8 @@ export const IrrigationProvider = ({ children }) => {
         timerStartTime: null,
         timerEndTime: null,
         timerInterval: null,
-        irrigationSessionId: null
+        irrigationSessionId: null,
+        currentMode: null
       };
       const newState = { ...currentState, ...updates };
       newMap.set(plantId, newState);
@@ -957,6 +959,7 @@ export const IrrigationProvider = ({ children }) => {
       });
       
       if (targetPlantId) {
+        const prevState = wateringPlantsRef.current.get(targetPlantId);
         updatePlantWateringState(targetPlantId, {
           isSmartMode: false,
           isWateringActive: false,
@@ -965,9 +968,18 @@ export const IrrigationProvider = ({ children }) => {
         });
         // Mark this plant as recently stopped to suppress cancellation failures
         markRecentlyStopped(targetPlantId);
+
+        // Show specific message if a scheduled run was stopped
+        const wasScheduled = prevState?.currentMode === 'scheduled';
+        if (wasScheduled) {
+          Alert.alert('Scheduled Irrigation', 'Scheduled irrigation was stopped for today. It will run again on the next scheduled day.');
+        } else {
+          Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation stopped successfully!');
+        }
+        // Clear stored mode
+        updatePlantWateringState(targetPlantId, { currentMode: null });
       }
       
-      Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation stopped successfully!');
     };
 
     const handleStopIrrigationFail = (data) => {
@@ -1002,6 +1014,26 @@ export const IrrigationProvider = ({ children }) => {
     websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
     websocketService.onMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
     websocketService.onMessage('VALVE_BLOCKED', handleValveBlocked);
+
+    // Garden-wide broadcasts (scheduled/manual/smart started/stopped)
+    const handleGardenIrrigationStarted = (message) => {
+      const payload = message?.data || message;
+      const pid = payload?.plantId != null ? Number(payload.plantId) : null;
+      const mode = payload?.mode || 'smart';
+      const duration = payload?.duration_minutes || null;
+      if (pid != null) {
+        // Store mode so Stop can show specific messaging for scheduled case
+        updatePlantWateringState(pid, { currentMode: String(mode).toLowerCase() });
+        rehydrateIrrigationStarted(pid, mode, duration);
+      }
+    };
+    const handleGardenIrrigationStopped = (message) => {
+      const payload = message?.data || message;
+      const pid = payload?.plantId != null ? Number(payload.plantId) : null;
+      if (pid != null) rehydrateIrrigationStopped(pid);
+    };
+    websocketService.onMessage('GARDEN_IRRIGATION_STARTED', handleGardenIrrigationStarted);
+    websocketService.onMessage('GARDEN_IRRIGATION_STOPPED', handleGardenIrrigationStopped);
 
     // Restart valve responses
     const handleRestartValveSuccess = (msg) => {
@@ -1054,6 +1086,8 @@ export const IrrigationProvider = ({ children }) => {
       websocketService.offMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
       websocketService.offMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
       websocketService.offMessage('VALVE_BLOCKED', handleValveBlocked);
+      websocketService.offMessage('GARDEN_IRRIGATION_STARTED', handleGardenIrrigationStarted);
+      websocketService.offMessage('GARDEN_IRRIGATION_STOPPED', handleGardenIrrigationStopped);
       websocketService.offMessage('RESTART_VALVE_SUCCESS', handleRestartValveSuccess);
       websocketService.offMessage('RESTART_VALVE_FAIL', handleRestartValveFail);
     };

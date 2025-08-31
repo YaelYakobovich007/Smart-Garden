@@ -303,6 +303,32 @@ function handlePiSocket(ws) {
       return;
     }
 
+    // Handle IRRIGATION_STARTED (scheduled runs) from Pi
+    if (data.type === 'IRRIGATION_STARTED') {
+      try {
+        const payload = data.data || data;
+        const plantId = Number(payload.plant_id ?? payload.plantId);
+        const sessionId = payload.session_id || payload.sessionId || null;
+        const mode = payload.mode || 'scheduled';
+
+        if (Number.isFinite(plantId)) {
+          const { getPlantById } = require('../models/plantModel');
+          const plant = await getPlantById(plantId);
+          if (plant?.garden_id) {
+            await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STARTED', {
+              plantId: plantId,
+              plantName: plant.name,
+              mode: mode,
+              sessionId: sessionId
+            }, null);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to handle IRRIGATION_STARTED from Pi:', e.message);
+      }
+      return;
+    }
+
     // Handle IRRIGATION_PROGRESS messages from Pi
     if (data.type === 'IRRIGATION_PROGRESS') {
       const progressData = data.data || {};
