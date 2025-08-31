@@ -20,8 +20,11 @@ async function generateUniqueInviteCode() {
 }
 
 // Create a new garden
-async function createGarden(adminUserId, gardenName) {
+async function createGarden(adminUserId, gardenName, country, city) {
     try {
+        if (!country || !city) {
+            return { error: 'INVALID_LOCATION' };
+        }
         // Check if user already has a garden as admin
         const existingGarden = await pool.query(
             'SELECT id FROM gardens WHERE admin_user_id = $1 AND is_active = true',
@@ -45,12 +48,12 @@ async function createGarden(adminUserId, gardenName) {
         // Generate unique invite code
         const inviteCode = await generateUniqueInviteCode();
 
-        // Create garden
+        // Create garden (country/city optional)
         const gardenResult = await pool.query(`
-      INSERT INTO gardens (name, admin_user_id, invite_code)
-      VALUES ($1, $2, $3)
+      INSERT INTO gardens (name, admin_user_id, invite_code, country, city)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
-    `, [gardenName, adminUserId, inviteCode]);
+    `, [gardenName, adminUserId, inviteCode, country, city]);
 
         const garden = gardenResult.rows[0];
 
@@ -71,7 +74,7 @@ async function createGarden(adminUserId, gardenName) {
 async function getGardenById(gardenId) {
     try {
         const result = await pool.query(`
-      SELECT g.*, u.full_name as admin_name, u.country, u.city
+      SELECT g.*, u.full_name as admin_name
       FROM gardens g
       JOIN users u ON g.admin_user_id = u.id
       WHERE g.id = $1 AND g.is_active = true
@@ -88,7 +91,7 @@ async function getGardenById(gardenId) {
 async function getUserGardens(userId) {
     try {
         const result = await pool.query(`
-      SELECT g.*, ug.role, u.full_name as admin_name, u.country, u.city,
+      SELECT g.*, ug.role, u.full_name as admin_name,
              (SELECT COUNT(*) FROM user_gardens WHERE garden_id = g.id AND is_active = true) as member_count
       FROM gardens g
       JOIN user_gardens ug ON g.id = ug.garden_id
@@ -108,7 +111,7 @@ async function getUserGardens(userId) {
 async function getGardenByInviteCode(inviteCode) {
     try {
         const result = await pool.query(`
-      SELECT g.*, u.full_name as admin_name, u.country, u.city
+      SELECT g.*, u.full_name as admin_name
       FROM gardens g
       JOIN users u ON g.admin_user_id = u.id
       WHERE g.invite_code = $1 AND g.is_active = true
@@ -244,7 +247,7 @@ async function leaveGarden(userId, gardenId) {
 // Update garden details (admin only)
 async function updateGarden(gardenId, updates) {
     try {
-        const { name, max_members } = updates;
+        const { name, max_members, country, city } = updates;
         const updateFields = [];
         const values = [];
         let paramCount = 1;
@@ -258,6 +261,18 @@ async function updateGarden(gardenId, updates) {
         if (max_members !== undefined) {
             updateFields.push(`max_members = $${paramCount}`);
             values.push(max_members);
+            paramCount++;
+        }
+
+        if (country !== undefined) {
+            updateFields.push(`country = $${paramCount}`);
+            values.push(country);
+            paramCount++;
+        }
+
+        if (city !== undefined) {
+            updateFields.push(`city = $${paramCount}`);
+            values.push(city);
             paramCount++;
         }
 
