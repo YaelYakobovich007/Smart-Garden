@@ -153,7 +153,7 @@ class SmartGardenEngine:
                     loop = asyncio.get_event_loop()
                 except RuntimeError:
                     loop = None
-                plant.schedule = IrrigationSchedule(plant, schedule_data, self.irrigation_algorithm, loop=loop)
+                plant.schedule = IrrigationSchedule(plant, schedule_data, self.irrigation_algorithm, loop=loop, engine=self)
                 print(f"Attached schedule to plant {plant_id}: {len(schedule_data)} entries")
         except Exception as e:
             print(f"WARNING: Failed to attach schedule for plant {plant_id}: {e}")
