@@ -40,11 +40,11 @@ import ArticlesList from './src/components/main/Articles/ArticlesList/ArticlesLi
 import OnboardingScreen from './src/components/onboarding/OnboardingScreen';
 import ForecastScreen from './src/components/ForecastScreen/ForecastScreen';
 import ValveTroubleshootingScreen from './src/components/main/ValveTroubleshootingScreen/ValveTroubleshootingScreen';
+import AllPlantsScreen from './src/components/main/PlantList/AllPlants/AllPlantsScreen';
 
 // Import garden screens
 import CreateOrJoinGardenScreen from './src/components/garden/CreateOrJoinGarden/CreateOrJoinGardenScreen';
 import GardenScreen from './src/components/garden/GardenScreen/GardenScreen';
-import GardenSettingsScreen from './src/components/garden/GardenSettings/GardenSettingsScreen';
 
 // Import services
 import websocketService from './src/services/websocketService';
@@ -277,11 +277,12 @@ export default function App() {
             <Stack.Screen name="ArticlesList" component={ArticlesList} />
             <Stack.Screen name="ForecastScreen" component={ForecastScreen} />
             <Stack.Screen name="ValveTroubleshooting" component={ValveTroubleshootingScreen} />
+            <Stack.Screen name="AllPlants" component={AllPlantsScreen} />
             
             {/* Garden Screens */}
             <Stack.Screen name="CreateOrJoinGarden" component={CreateOrJoinGardenScreen} />
             <Stack.Screen name="Garden" component={GardenScreen} />
-            <Stack.Screen name="GardenSettings" component={GardenSettingsScreen} />
+            
           </Stack.Navigator>
         </NavigationContainer>
       </IrrigationProvider>

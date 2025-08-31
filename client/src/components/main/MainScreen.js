@@ -35,6 +35,7 @@ import PlantList from './PlantList/PlantList';
 import BottomToolbar from './BottomToolbar/BottomToolbar';
 import WeatherCard from './WeatherCard/WeatherCard';
 import ArticlesSection from './Articles/ArticlesSection/ArticlesSection';
+import GardenArea from './GardenArea/GardenArea';
 
 // Import services
 import websocketService from '../../services/websocketService';
@@ -720,12 +721,11 @@ const MainScreen = () => {
    * Navigates to a full plants list screen
    */
   const handleSeeAllPlants = () => {
-    // For now, show an alert. In the future, this could navigate to a full plants list screen
-    Alert.alert(
-      'See All Plants',
-      'This will show all your plants in a detailed list view.',
-      [{ text: 'OK' }]
-    );
+    if (!plants || plants.length === 0) {
+      Alert.alert('No Plants', 'There are no plants to display yet.');
+      return;
+    }
+    navigation.navigate('AllPlants', { plants });
   };
 
   /**
@@ -1066,71 +1066,9 @@ const MainScreen = () => {
             </View>
           )}
 
-          {/* Garden Area Section */}
-          <View style={styles.gardenAreaSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                {garden ? 'Garden Area' : 'Garden'}
-              </Text>
-            </View>
-            <View style={styles.titleSeparator} />
+                     {/* Garden Area Section */}
+          <GardenArea garden={garden} gardenLoading={gardenLoading} onCreateOrJoinGarden={handleCreateOrJoinGarden} />
 
-            {/* Garden Status Banner */}
-            {!gardenLoading && (
-              <View style={styles.gardenStatusContainer}>
-                {garden ? (
-                  <View style={styles.gardenCard}>
-                    <View style={styles.gardenCardHeader}>
-                      <View style={styles.gardenCardIconContainer}>
-                        <Feather name="users" size={24} color="#FFFFFF" />
-                      </View>
-                      <View style={styles.gardenCardInfo}>
-                        <Text style={styles.gardenCardTitle}>{garden.name}</Text>
-                        <View style={styles.participantsContainer}>
-                          <Text style={styles.participantsText}>
-                            {garden.member_count || 1} member{garden.member_count !== 1 ? 's' : ''}
-                          </Text>
-                          <View style={styles.participantDotsRow}>
-                            {Array.from({ length: Math.min(garden.member_count || 1, 5) }, (_, index) => (
-                              <View
-                                key={index}
-                                style={[
-                                  styles.participantDot,
-                                  index < (garden.member_count || 1) ? styles.participantDotActive : styles.participantDotInactive
-                                ]}
-                              />
-                            ))}
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                    <View style={styles.gardenCardFooter}>
-                      <View style={styles.gardenCardStat}>
-                        <Text style={styles.gardenCardStatText}>Active Garden</Text>
-                      </View>
-                      <View style={styles.gardenCardStat}>
-                        <Feather name="clock" size={16} color="#16A34A" />
-                        <Text style={styles.gardenCardStatText}>24/7 Monitoring</Text>
-                      </View>
-                    </View>
-                  </View>
-                ) : (
-                  <TouchableOpacity onPress={handleCreateOrJoinGarden} style={styles.gardenCardEmpty}>
-                    <View style={styles.gardenCardEmptyIcon}>
-                      <Feather name="plus-circle" size={32} color="#16A34A" />
-                    </View>
-                    <View style={styles.gardenCardEmptyContent}>
-                      <Text style={styles.gardenCardEmptyTitle}>Join a Garden</Text>
-                      <Text style={styles.gardenCardEmptySubtitle}>
-                        Connect with others to manage plants together
-                      </Text>
-                    </View>
-                    <Feather name="chevron-right" size={20} color="#16A34A" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </View>
 
           {/* Plants List Section */}
           <View style={styles.plantsSection}>

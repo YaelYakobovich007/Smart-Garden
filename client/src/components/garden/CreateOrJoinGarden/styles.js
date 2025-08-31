@@ -3,32 +3,32 @@ import { StyleSheet } from 'react-native';
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#F0F8F0',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#ECF0F1',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: 'transparent',
+        borderBottomWidth: 0,
     },
     backButton: {
         padding: 4,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: '700',
         color: '#2C3E50',
-        fontFamily: 'Nunito_600SemiBold',
+        fontFamily: 'Nunito_700Bold',
     },
     headerSpacer: {
         width: 32,
     },
     content: {
         flex: 1,
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
     },
     tabContainer: {
         flexDirection: 'row',
@@ -67,7 +67,15 @@ const styles = StyleSheet.create({
         fontFamily: 'Nunito_600SemiBold',
     },
     formContainer: {
-        paddingVertical: 20,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        marginVertical: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
     },
     formHeader: {
         alignItems: 'center',
@@ -117,19 +125,24 @@ const styles = StyleSheet.create({
     },
     submitButton: {
         backgroundColor: '#4CAF50',
-        borderRadius: 8,
+        borderRadius: 16,
         paddingVertical: 16,
         alignItems: 'center',
         marginTop: 16,
+        shadowColor: '#4CAF50',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
     submitButtonDisabled: {
         backgroundColor: '#BDC3C7',
     },
     submitButtonText: {
         color: '#FFFFFF',
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: '600',
-        fontFamily: 'Nunito_600SemiBold',
+        fontFamily: 'Nunito_700Bold',
     },
     loadingOverlay: {
         position: 'absolute',

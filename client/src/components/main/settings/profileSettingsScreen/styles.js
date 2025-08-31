@@ -1,24 +1,27 @@
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#EAF5E4',
+    },
     // Header
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E9ECEF',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: 'transparent',
+        borderBottomWidth: 0,
     },
     backButton: {
         padding: 5,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
+        fontWeight: '700',
+        color: '#2C3E50',
         fontFamily: 'Nunito_700Bold',
     },
     headerSpacer: {
@@ -38,6 +41,8 @@ export const styles = StyleSheet.create({
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 3 },
         elevation: 4,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
     },
     // Hero
     heroCard: {

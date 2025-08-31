@@ -243,12 +243,7 @@ const GardenScreen = () => {
         );
     };
 
-    /**
-     * Navigate to garden settings
-     */
-    const handleGardenSettings = () => {
-        navigation.navigate('GardenSettings', { garden: gardenData });
-    };
+    
 
 
 
@@ -307,9 +302,7 @@ const GardenScreen = () => {
                     <Feather name="arrow-left" size={24} color="#2C3E50" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{gardenData.name}</Text>
-                <TouchableOpacity onPress={handleGardenSettings} style={styles.settingsButton}>
-                    <Feather name="settings" size={20} color="#2C3E50" />
-                </TouchableOpacity>
+                <View style={styles.headerSpacer} />
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
