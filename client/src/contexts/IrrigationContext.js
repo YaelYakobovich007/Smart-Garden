@@ -707,8 +707,20 @@ export const IrrigationProvider = ({ children }) => {
           timerEndTime: null,
           timerInterval: null,
           currentPlant: null,
-          irrigationSessionId: null
+          irrigationSessionId: null,
+          currentMode: null
         });
+
+        // Show final confirmation ONLY for the requester (who pressed Stop)
+        if (wasRecentlyStopped(targetPlantId)) {
+          const prev = wateringPlantsRef.current.get(targetPlantId);
+          const wasScheduled = prev?.currentMode === 'scheduled';
+          if (wasScheduled) {
+            Alert.alert('Scheduled Irrigation', 'Scheduled irrigation was stopped for today. It will run again on the next scheduled day.');
+          } else {
+            Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation stopped successfully!');
+          }
+        }
       } else {
         // Failsafe: clear any plants that might be stuck
         console.log('🌿 No target plant found, checking for stuck plants...');
@@ -731,7 +743,7 @@ export const IrrigationProvider = ({ children }) => {
         });
       }
 
-      Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation completed successfully!');
+      // Suppress generic completion popup; we only show final confirmation for requester above
     };
 
     const handleIrrigatePlantFail = (data) => {
@@ -943,7 +955,10 @@ export const IrrigationProvider = ({ children }) => {
         });
       }
 
-      Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation completed successfully!');
+      // Show completion popup only if this wasn't a user-initiated stop
+      if (!wasRecentlyStopped(targetPlantId)) {
+        Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation completed successfully!');
+      }
     };
 
     const handleStopIrrigationSuccess = (data) => {
@@ -968,15 +983,8 @@ export const IrrigationProvider = ({ children }) => {
         });
         // Mark this plant as recently stopped to suppress cancellation failures
         markRecentlyStopped(targetPlantId);
-
-        // Show specific message if a scheduled run was stopped
-        const wasScheduled = prevState?.currentMode === 'scheduled';
-        if (wasScheduled) {
-          Alert.alert('Scheduled Irrigation', 'Scheduled irrigation was stopped for today. It will run again on the next scheduled day.');
-        } else {
-          Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation stopped successfully!');
-        }
-        // Clear stored mode
+        // Do not show a popup here; the final confirmation will be shown on IRRIGATE_PLANT_RESPONSE
+        // Clear stored mode now to avoid stale state
         updatePlantWateringState(targetPlantId, { currentMode: null });
       }
       
