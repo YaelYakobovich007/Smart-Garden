@@ -143,17 +143,43 @@ class IrrigationAlgorithm:
                 progress.session_id = session_id
                 await self.send_progress_update(progress)
                 
-                # Check for rain
-                print("Checking weather forecast...")
-                # Call potentially blocking HTTP in a thread to avoid blocking event loop
-                will_rain = await asyncio.to_thread(self.weather_service.will_rain_today, plant.lat, plant.lon)
-                if will_rain:
-                    print("Rain is expected today - skipping irrigation")
-                    return IrrigationResult.skipped(
-                        plant_id=plant.plant_id,
-                        moisture=current_moisture,
-                        reason="rain_expected"
+                # Check for near-term precipitation threshold (sandy soil friendly)
+                print("Checking weather forecast (hourly precipitation)...")
+                lookahead_hours = 12  # configurable if needed
+                # Sandy soils drain quickly; avoid watering if a modest shower is imminent
+                min_rain_mm_hourly = 3.0     # threshold in mm over the lookahead window
+                min_rain_mm_daily_fallback = 5.0  # higher threshold for coarse daily data
+
+                total_precip_mm = await asyncio.to_thread(
+                    self.weather_service.precipitation_mm_next_hours,
+                    plant.lat,
+                    plant.lon,
+                    lookahead_hours
+                )
+                if total_precip_mm is None:
+                    # Fallback to daily aggregate if hourly missing/error
+                    total_precip_mm = await asyncio.to_thread(
+                        self.weather_service.daily_precipitation_mm_today,
+                        plant.lat,
+                        plant.lon
                     )
+                    print(f"Daily precipitation (fallback): {total_precip_mm:.2f} mm")
+                    if total_precip_mm >= min_rain_mm_daily_fallback:
+                        print("Daily precipitation threshold met - skipping irrigation (rain_expected)")
+                        return IrrigationResult.skipped(
+                            plant_id=plant.plant_id,
+                            moisture=current_moisture,
+                            reason="rain_expected"
+                        )
+                else:
+                    print(f"Forecast precipitation next {lookahead_hours}h: {total_precip_mm:.2f} mm")
+                    if total_precip_mm >= min_rain_mm_hourly:
+                        print("Hourly precipitation threshold met - skipping irrigation (rain_expected)")
+                        return IrrigationResult.skipped(
+                            plant_id=plant.plant_id,
+                            moisture=current_moisture,
+                            reason="rain_expected"
+                        )
 
                 # Check for overwatering
                 print("Checking for overwatering...")

@@ -62,3 +62,92 @@ class WeatherService:
 
         return False
         
+    def precipitation_mm_next_hours(self, lat: float, lon: float, hours: int = 12, timeout_seconds: float = 3.0) -> float | None:
+        """
+        Returns the total forecast precipitation (rain + snow) in millimeters for the next N hours.
+
+        Args:
+            lat (float): Latitude
+            lon (float): Longitude
+            hours (int): Lookahead window in hours (e.g., 6 or 12)
+            timeout_seconds (float): Request timeout
+
+        Returns:
+            float: Total precipitation in mm over the next N hours.
+        """
+        if hours <= 0:
+            return 0.0
+
+        params = {
+            "lat": lat,
+            "lon": lon,
+            "appid": self.api_key,
+            # Include hourly data for precise short-term precipitation forecast
+            "exclude": "minutely,alerts,daily,current",
+            "units": "metric",
+        }
+
+        try:
+            response = requests.get(self.api_url, params=params, timeout=timeout_seconds)
+            response.raise_for_status()
+            data = response.json()
+
+            hourly = data.get("hourly", [])
+            if not hourly:
+                # Signal missing hourly so callers can decide on fallback path
+                return None
+            window = hourly[:max(0, int(hours))]
+            total_mm = 0.0
+            for h in window:
+                rain_val = h.get("rain", 0)  # May be dict {"1h": mm} or number
+                snow_val = h.get("snow", 0)  # Same shape as rain
+
+                def _to_mm(v):
+                    if isinstance(v, dict):
+                        return float(v.get("1h", 0.0) or 0.0)
+                    try:
+                        return float(v or 0.0)
+                    except Exception:
+                        return 0.0
+
+                total_mm += _to_mm(rain_val) + _to_mm(snow_val)
+
+            return float(total_mm)
+        except Exception as e:
+            print(f"Error fetching hourly precipitation: {e}")
+            return None
+
+    def daily_precipitation_mm_today(self, lat: float, lon: float, timeout_seconds: float = 3.0) -> float:
+        """
+        Returns the total forecast precipitation (rain + snow) for today (24h aggregate).
+
+        Uses the daily portion of the One Call API.
+        """
+        params = {
+            "lat": lat,
+            "lon": lon,
+            "appid": self.api_key,
+            "exclude": "minutely,hourly,alerts",
+            "units": "metric",
+        }
+        try:
+            response = requests.get(self.api_url, params=params, timeout=timeout_seconds)
+            response.raise_for_status()
+            data = response.json()
+            today = (data or {}).get("daily", [{}])[0]
+
+            def _to_mm(v):
+                if isinstance(v, dict):
+                    return float(v.get("1d", 0.0) or v.get("24h", 0.0) or 0.0)
+                try:
+                    return float(v or 0.0)
+                except Exception:
+                    return 0.0
+
+            rain_mm = _to_mm(today.get("rain", 0.0))
+            snow_mm = _to_mm(today.get("snow", 0.0))
+            return float(rain_mm + snow_mm)
+        except Exception as e:
+            print(f"Error fetching daily precipitation: {e}")
+            return 0.0
+        
