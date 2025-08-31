@@ -210,7 +210,7 @@ const MainScreen = () => {
           }
           const normalizedTime = plant.irrigation_time || null;
           const inferredMode = (normalizedDays && normalizedDays.length > 0 && normalizedTime) ? 'scheduled' : 'smart';
-          
+
           // Debug logging for watering mode inference
           console.log(' Watering Mode Debug:', {
             plantName: plant.name,
@@ -364,6 +364,7 @@ const MainScreen = () => {
       // Now that we're authenticated, request plants and garden data
       websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
       websocketService.sendMessage({ type: 'GET_USER_GARDENS' });
+      websocketService.sendMessage({ type: 'GET_WEATHER' });
     } else {
       console.log('No fullName in response data');
     }
@@ -1067,6 +1068,7 @@ const MainScreen = () => {
 
                      {/* Garden Area Section */}
           <GardenArea garden={garden} gardenLoading={gardenLoading} onCreateOrJoinGarden={handleCreateOrJoinGarden} />
+
 
           {/* Plants List Section */}
           <View style={styles.plantsSection}>
