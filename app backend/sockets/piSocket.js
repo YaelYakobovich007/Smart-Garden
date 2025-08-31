@@ -564,7 +564,7 @@ function handlePiSocket(ws) {
               });
             }, 500);
 
-            console.log(`[NOTIFY]: Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation skipped`);
+            console.log(`[NOTIFY] Notified client: Plant ${pendingInfo.plantData.plant_name} irrigation skipped`);
           }
 
           // Send user notification about irrigation being skipped
@@ -580,6 +580,15 @@ function handlePiSocket(ws) {
 
         } catch (err) {
           console.error(`[ERROR] Failed to save skipped irrigation result for plant ${plantId}:`, err);
+        }
+
+        // Persist irrigation state: clear smart mode on final skip
+        try {
+          const { updateIrrigationState } = require('../models/plantModel');
+          await updateIrrigationState(Number(plantId), { mode: 'none', startAt: null, endAt: null, sessionId: null });
+          console.log(`[STATE] Cleared irrigation_state for plant ${plantId} on final skip (mode=none)`);
+        } catch (e) {
+          console.warn('Failed to clear irrigation state on skip:', e.message);
         }
 
       } else {
