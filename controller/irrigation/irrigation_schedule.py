@@ -117,8 +117,8 @@ class IrrigationSchedule:
                     print(f"Failed to send IRRIGATION_STARTED: {e}")
 
                 try:
-                    # Start via engine so stop_irrigation can cancel it reliably
-                    self.engine.start_irrigation(self.plant.plant_id, session_id=session_id)
+                    # Start via engine on the main event loop so the task registers correctly
+                    self.loop.call_soon_threadsafe(self.engine.start_irrigation, self.plant.plant_id, session_id)
                 except Exception as e:
                     print(f"ERROR starting scheduled irrigation via engine: {e}")
             else:
