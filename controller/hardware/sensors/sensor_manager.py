@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+import asyncio
 from controller.hardware.sensors.sensor import Sensor
 
 class SensorManager:
@@ -27,6 +28,8 @@ class SensorManager:
         # Initialize available sensors
         self.available_sensors: List[str] = self.sensor_ports.copy()
         self.plant_sensor_map: Dict[str, str] = {}  # Mapping: plant_id → sensor_port
+        # One asyncio.Lock per serial port to serialize access
+        self._port_locks: Dict[str, asyncio.Lock] = {port: asyncio.Lock() for port in self.sensor_ports}
 
     def assign_sensor(self, plant_id: str) -> str:
         """
@@ -133,7 +136,7 @@ class SensorManager:
             return None
         
         sensor_port = self.available_sensors[0]  # Peek at the first available sensor
-        return Sensor(simulation_mode=False, port=sensor_port)
+        return Sensor(simulation_mode=False, port=sensor_port, port_lock=self._port_locks.get(sensor_port))
 
     def get_available_ports(self) -> List[int]:
         """
@@ -176,6 +179,15 @@ class SensorManager:
             "port": sensor_port,
             "baudrate": 4800
         }
+
+    def get_port_lock(self, sensor_port: str) -> asyncio.Lock:
+        """
+        Returns the asyncio.Lock guarding a specific sensor port.
+        Creates one if the port was not present at init (hotplug scenario).
+        """
+        if sensor_port not in self._port_locks:
+            self._port_locks[sensor_port] = asyncio.Lock()
+        return self._port_locks[sensor_port]
 
     def get_all_sensor_configs(self) -> Dict[str, Dict]:
         """
