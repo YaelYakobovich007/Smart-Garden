@@ -30,11 +30,13 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { styles } from './styles';
+import mainStyles from '../styles';
 import MoistureCircle from '../PlantList/MoistureCircle';
 import TempCircle from '../PlantList/TempCircle';
 import websocketService from '../../../services/websocketService';
 import CircularTimePicker from './CircularTimePicker';
 import * as ImagePicker from 'expo-image-picker';
+import { useCameraPermissions } from 'expo-camera';
 
 const PlantDetail = () => {
   const navigation = useNavigation();
@@ -54,6 +56,8 @@ const PlantDetail = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showImageSourceSheet, setShowImageSourceSheet] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   // Global irrigation state
   const {
@@ -180,6 +184,13 @@ const PlantDetail = () => {
       websocketService.offMessage('IRRIGATION_PROGRESS', handleIrrigationProgress);
     };
   }, [plant?.id]);
+
+  // After settings modal closes, show the image source sheet
+  useEffect(() => {
+    if (!showSettingsModal && showImageSourceSheet) {
+      // no-op; sheet visibility already true
+    }
+  }, [showSettingsModal, showImageSourceSheet]);
 
   // Handle successful plant update
   const handlePlantUpdateSuccess = (data) => {
@@ -352,44 +363,91 @@ const PlantDetail = () => {
 
   const handleChangeImage = async () => {
     try {
+      // Ensure media library permission is granted
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Media library permission is required to change the plant image.');
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        base64: true,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
-        const base64 = await convertImageToBase64(imageUri);
+        const asset = result.assets[0];
+        const base64 = asset.base64;
+        if (!base64) {
+          Alert.alert('Error', 'Failed to read selected image. Please try again.');
+          setShowImageSourceSheet(false);
+          return;
+        }
         const filename = `plant_${plant?.id}_${Date.now()}.jpg`;
 
         updatePlantDetails({
           imageData: {
             base64,
             filename,
-            mimeType: 'image/jpeg'
+            mimeType: asset.mimeType || 'image/jpeg'
           }
         });
+        setShowImageSourceSheet(false);
+      } else {
+        // Close the sheet even if canceled for consistent UX
+        setShowImageSourceSheet(false);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to select image');
+      setShowImageSourceSheet(false);
     }
   };
 
-  // Helper function to convert image to base64
-  const convertImageToBase64 = async (uri) => {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = reader.result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+  const handleTakePhoto = async () => {
+    try {
+      if (!cameraPermission?.granted) {
+        const permission = await requestCameraPermission();
+        if (!permission.granted) {
+          Alert.alert('Permission needed', 'Camera permission is required to take photos');
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const base64 = asset.base64;
+        if (!base64) {
+          Alert.alert('Error', 'Failed to read captured image. Please try again.');
+          setShowImageSourceSheet(false);
+          return;
+        }
+        const filename = `plant_${plant?.id}_${Date.now()}.jpg`;
+
+        updatePlantDetails({
+          imageData: {
+            base64,
+            filename,
+            mimeType: asset.mimeType || 'image/jpeg'
+          }
+        });
+        setShowImageSourceSheet(false);
+      } else {
+        setShowImageSourceSheet(false);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to take photo');
+      setShowImageSourceSheet(false);
+    }
   };
 
   // Function to update plant details
@@ -1004,7 +1062,7 @@ const PlantDetail = () => {
                 style={styles.settingsItem}
                 onPress={() => {
                   setShowSettingsModal(false);
-                  handleChangeImage();
+                  setTimeout(() => setShowImageSourceSheet(true), 150);
                 }}
               >
                 <View style={styles.settingsItemIcon}>
@@ -1040,6 +1098,30 @@ const PlantDetail = () => {
       </Modal>
 
       {/* 10. Schedule Modal */}
+      {/* Image Source Bottom Sheet */}
+      <Modal
+        visible={showImageSourceSheet}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowImageSourceSheet(false)}
+      >
+        <View style={mainStyles.modalOverlay}>
+          <View style={mainStyles.modalContent}>
+            <Text style={mainStyles.modalTitle}>Change Plant Image</Text>
+            <TouchableOpacity style={mainStyles.modalButton} onPress={handleTakePhoto}>
+              <Feather name="camera" size={24} color="#16A34A" />
+              <Text style={mainStyles.modalButtonText}>Take Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={mainStyles.modalButton} onPress={handleChangeImage}>
+              <Feather name="image" size={24} color="#16A34A" />
+              <Text style={mainStyles.modalButtonText}>Choose from Gallery</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[mainStyles.modalButton, mainStyles.cancelButton]} onPress={() => setShowImageSourceSheet(false)}>
+              <Text style={mainStyles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <Modal
         visible={showScheduleModal}
         animationType="slide"
