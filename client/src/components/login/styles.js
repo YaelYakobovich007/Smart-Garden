@@ -159,11 +159,22 @@ export const styles = StyleSheet.create({
     },
     message: {
         marginTop: 16,
-        color: '#D32F2F',
         fontWeight: 'bold',
-        fontSize: 14,
+        fontSize: 15,
         textAlign: 'center',
         fontFamily: 'Nunito_700Bold',
+    },
+    messageSuccess: {
+        color: '#2E7D32',
+        backgroundColor: '#E8F5E9',
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    messageError: {
+        color: '#D32F2F',
+        backgroundColor: '#FFEBEE',
+        paddingVertical: 10,
+        borderRadius: 8,
     },
     footer: {
         flexDirection: 'row',

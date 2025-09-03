@@ -28,28 +28,23 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useAuthRequest } from 'expo-auth-session/providers/google';
 
 import { styles } from './styles';
 import { connectAndSend } from '../../services/authService';
 import websocketService from '../../services/websocketService';
 import sessionService from '../../services/sessionService';
 import Logo from '../../../assets/images/Smart_Garden_Logo.png';
-import GoogleLogo from '../../../assets/images/Google_Logo.png';
-import Constants from 'expo-constants';
-
-// Google OAuth client ID from app configuration
-const GOOGLE_CLIENT_ID = Constants.expoConfig.extra.GOOGLE_CLIENT_ID;
 
 const LoginScreen = () => {
   const navigation = useNavigation();
-  
+
   // Form input state management
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState(''); // 'success' | 'error' | ''
   const [secureTextEntry, setSecureTextEntry] = useState(true);
-  
+
   // Connection and error state management
   const [isConnected, setIsConnected] = useState(false);
   const [emailError, setEmailError] = useState(false);
@@ -57,14 +52,7 @@ const LoginScreen = () => {
   const [emailErrorMessage, setEmailErrorMessage] = useState('');
   const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
 
-  /**
-   * Google OAuth request configuration
-   * Sets up Google authentication with profile and email scopes
-   */
-  const [request, response, promptAsync] = useAuthRequest({
-    clientId: GOOGLE_CLIENT_ID,
-    scopes: ['profile', 'email'],
-  });
+
 
   /**
    * Monitor WebSocket connection status
@@ -89,20 +77,6 @@ const LoginScreen = () => {
     websocketService.onConnectionChange(handleConnectionChange);
   }, []);
 
-  /**
-   * Handle Google OAuth response
-   * Processes Google authentication response and initiates login
-   */
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { access_token } = response.params;
-      if (access_token) {
-        connectAndSend({ type: 'LOGIN_GOOGLE', googleToken: access_token }, handleAuthResponse, handleConnectionError);
-      }
-    } else if (response?.type === 'error') {
-      setMessage('Google login was cancelled or failed.');
-    }
-  }, [response]);
 
   /**
    * Handle email input changes
@@ -137,9 +111,10 @@ const LoginScreen = () => {
    */
   const handleAuthResponse = async (data) => {
     if (data.type === 'LOGIN_SUCCESS') {
+      setMessageType('success');
       setMessage('Login successful!');
 
-    
+
       // Save user session with authentication data
       const userData = {
         email: data.userId || email,
@@ -148,9 +123,12 @@ const LoginScreen = () => {
       };
       await sessionService.saveSession(userData);
 
-      // Navigate to the main app screen
-      navigation.navigate('Main');
+      // Brief delay to let the success message be visible
+      setTimeout(() => {
+        navigation.navigate('Main');
+      }, 1200);
     } else if (data.type === 'LOGIN_FAIL') {
+      setMessageType('error');
       setMessage(data.reason || 'Login failed.');
     }
   };
@@ -160,6 +138,7 @@ const LoginScreen = () => {
    * Shows user-friendly error message for connection issues
    */
   const handleConnectionError = () => {
+    setMessageType('error');
     setMessage('Connection error. Please try again.');
   }
 
@@ -169,6 +148,7 @@ const LoginScreen = () => {
    */
   const handleLogin = () => {
     setMessage('');
+    setMessageType('');
     let hasError = false;
 
     // Validate required fields
@@ -198,24 +178,6 @@ const LoginScreen = () => {
     connectAndSend({ type: 'LOGIN', email, password }, handleAuthResponse, handleConnectionError);
   };
 
-  /**
-   * Handle Google OAuth login
-   * Initiates Google authentication flow with proper error handling
-   */
-  const handleGoogleLogin = async () => {
-    setMessage('');
-    if (!isConnected) {
-      setMessage('Not connected to server. Please wait...');
-      return;
-    }
-
-    try {
-      await promptAsync({ useProxy: true });
-    } catch (error) {
-      console.error('Google login error:', error);
-      setMessage('An error occurred during Google login.');
-    }
-  };
 
   /**
    * Render the login screen with form and authentication options
@@ -228,7 +190,7 @@ const LoginScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <StatusBar style="dark" />
-        
+
         {/* App Header with Logo and Title */}
         <View style={styles.header}>
           <Image source={Logo} style={styles.logo} />
@@ -288,24 +250,18 @@ const LoginScreen = () => {
           >
             <Text style={styles.signInButtonText}>Sign In</Text>
           </TouchableOpacity>
-          <View style={styles.separatorContainer}>
-            <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>or</Text>
-            <View style={styles.separatorLine} />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.googleButton, !isConnected && styles.disabledButton]}
-            onPress={handleGoogleLogin}
-            disabled={!isConnected || !request}
-          >
-            <Image source={GoogleLogo} style={styles.googleIcon} />
-            <Text style={styles.googleButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
-
-          {message ? <Text style={styles.message}>{message}</Text> : null}
+          {message ? (
+            <Text
+              style={[
+                styles.message,
+                messageType === 'success' ? styles.messageSuccess : styles.messageError,
+              ]}
+            >
+              {message}
+            </Text>
+          ) : null}
         </View>
-        
+
         {/* Footer with Registration Link */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>

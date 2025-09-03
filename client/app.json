@@ -31,7 +31,6 @@
       "favicon": "./assets/images/Smart_Garden_Logo.png"
     },
     "extra": {
-      "GOOGLE_CLIENT_ID": "883722498169-aqp6oi2tmplgecpnus3acde813hp6emg.apps.googleusercontent.com",
       "BACKEND_URL": "https://smart-garden-backend-1088783109508.europe-west1.run.app"
     }
   }
