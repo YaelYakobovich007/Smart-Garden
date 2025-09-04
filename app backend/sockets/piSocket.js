@@ -7,6 +7,7 @@ const { broadcastToGarden } = require('../services/gardenBroadcaster');
 const { getPendingDeletion } = require('../services/pendingDeletionTracker');
 const { deletePlantById, getUserGardenId } = require('../models/plantModel');
 const { getUser } = require('../models/userModel');
+const { setControllerForGarden, updateHeartbeat, removeBySocket } = require('../services/controllerRegistry');
 
 
 let piSocket = null;
@@ -59,6 +60,9 @@ function handlePiSocket(ws) {
           return sendError(ws, 'PI_CONNECT_FAIL', 'Garden not found for this family code');
         }
 
+        // Register this controller under the garden
+        setControllerForGarden(garden.id, ws, familyCode);
+
         // Get all plants for this garden
         const plants = await getGardenPlantsWithHardware(garden.id);
 
@@ -80,6 +84,12 @@ function handlePiSocket(ws) {
         console.log(`[PI] Error: Connection failed - ${error.message}`);
         return sendError(ws, 'PI_CONNECT_FAIL', 'Failed to sync garden data');
       }
+    }
+    // Heartbeat from controller
+    if (data.type === 'PING') {
+      const gid = ws._gardenId;
+      if (gid != null) updateHeartbeat(gid, ws);
+      return sendSuccess(ws, 'PONG', { ts: Date.now() });
     }
 
     // Handle ADD_PLANT_RESPONSE from Pi
@@ -801,7 +811,7 @@ function handlePiSocket(ws) {
 
       // Get pending irrigation info (websocket + plant data)
       vLog('DEBUG - Getting pending irrigation info for plantId:', plantId);
-      const pendingInfo = completePendingIrrigation(plantId);
+      let pendingInfo = completePendingIrrigation(plantId);
       vLog('DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
 
       if (responseData.status === 'success') {
@@ -937,7 +947,7 @@ function handlePiSocket(ws) {
 
       // Get pending irrigation info (websocket + plant data)
       vLog('DEBUG - Getting pending irrigation info for plantId:', plantId);
-      const pendingInfo = completePendingIrrigation(plantId);
+      let pendingInfo = completePendingIrrigation(plantId);
       vLog('DEBUG - Pending info result:', pendingInfo ? 'Found' : 'Not found');
 
       if (status === 'success') {
@@ -985,6 +995,17 @@ function handlePiSocket(ws) {
             console.log(`Notified client: Plant ${pendingInfo.plantData.plant_name} valve closed successfully!`);
           } else {
             console.log(`No pending client found for plant ${plantId} valve operation - result saved but client not notified`);
+            // Fallback: broadcast stop to garden so UI clears
+            try {
+              const { getPlantById } = require('../models/plantModel');
+              const plant = await getPlantById(Number(plantId));
+              if (plant?.garden_id) {
+                await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STOPPED', {
+                  plantId: Number(plantId),
+                  plantName: plant.name
+                }, null);
+              }
+            } catch (e) { }
           }
 
           // Broadcast manual irrigation stop to other garden members
@@ -1358,6 +1379,7 @@ function handlePiSocket(ws) {
 
   ws.on('close', () => {
     console.log('[PI] Disconnected: raspberrypi_main_controller');
+    removeBySocket(ws);
     piSocket = null;
   });
 }
