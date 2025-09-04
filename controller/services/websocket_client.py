@@ -800,6 +800,13 @@ class SmartGardenPiClient:
             self.logger.info("=== HANDLING GARDEN_SYNC ===")
             self.logger.info(f"Received garden sync message: {message}")
             
+            # Make sync idempotent: clear engine state before re-applying
+            try:
+                await self.engine.clear_all_plants()
+                self.logger.info("[GARDEN_SYNC] Cleared existing engine state before applying sync")
+            except Exception as e:
+                self.logger.warning(f"[GARDEN_SYNC] Failed to fully clear engine state: {e}")
+
             # Extract garden and plants data from the message
             garden_data = message.get("garden", {})
             plants_data = message.get("plants", [])

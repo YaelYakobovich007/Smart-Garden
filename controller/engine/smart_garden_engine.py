@@ -424,6 +424,71 @@ class SmartGardenEngine:
 
         return True
 
+    async def clear_all_plants(self) -> None:
+        """Completely clear engine state: cancel tasks, clear schedules, release hardware, and remove plants.
+
+        This makes GARDEN_SYNC idempotent by ensuring no prior plants occupy valves/sensors.
+        """
+        try:
+            # 1) Cancel any background valve auto-close tasks
+            try:
+                for plant_id, task in list(self.valve_tasks.items()):
+                    try:
+                        if task and not task.done():
+                            task.cancel()
+                            try:
+                                await task
+                            except asyncio.CancelledError:
+                                pass
+                    finally:
+                        self.valve_tasks.pop(plant_id, None)
+            except Exception:
+                pass
+
+            # 2) Best-effort stop irrigations and close valves
+            try:
+                await self.stop_all_irrigations_and_close_valves()
+            except Exception:
+                pass
+
+            # 3) Clear schedules to remove registered jobs
+            try:
+                for plant in list(self.plants.values()):
+                    if getattr(plant, 'schedule', None):
+                        try:
+                            plant.schedule.clear_schedules()
+                        except Exception:
+                            pass
+                        try:
+                            plant.schedule = None
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+            # 4) Remove all plants (releases hardware and references)
+            try:
+                for plant_id in list(self.plants.keys()):
+                    try:
+                        self.remove_plant(plant_id)
+                    except Exception:
+                        pass
+            finally:
+                # Ensure maps are empty
+                self.plants.clear()
+
+            # 5) Clear tracking maps defensively
+            try:
+                self.irrigation_tasks.clear()
+            except Exception:
+                pass
+            try:
+                self.valve_states.clear()
+            except Exception:
+                pass
+        except Exception as e:
+            print(f"ERROR - clear_all_plants failed: {e}")
+
     async def update_all_moisture(self) -> None:
         """
         Update moisture levels for all plants.

@@ -45,18 +45,21 @@ function removeBySocket(ws) {
     }
 }
 
-// Optional stale eviction (safe default; can be tuned or removed)
-const STALE_MS = 60_000;
-setInterval(() => {
-    const cutoff = Date.now() - STALE_MS;
-    for (const [gid, entry] of registry.entries()) {
-        const notOpen = !entry.ws || entry.ws.readyState !== 1;
-        if (notOpen || entry.lastSeen < cutoff) {
-            try { if (entry.ws && entry.ws.readyState === 1) entry.ws.close(4000, 'Stale'); } catch { }
-            registry.delete(gid);
-        }
-    }
-}, 30_000);
+// Optional stale eviction disabled to avoid unintended disconnects of active controllers.
+// To re-enable, gate behind an env flag and tune timeouts conservatively.
+// const STALE_MS = 15 * 60 * 1000; // 15 minutes
+// if (process.env.CONTROLLER_EVICTION_ENABLED === 'true') {
+//   setInterval(() => {
+//     const cutoff = Date.now() - STALE_MS;
+//     for (const [gid, entry] of registry.entries()) {
+//       const notOpen = !entry.ws || entry.ws.readyState !== 1;
+//       if (notOpen || entry.lastSeen < cutoff) {
+//         try { if (entry.ws && entry.ws.readyState === 1) entry.ws.close(4000, 'Stale'); } catch { }
+//         registry.delete(gid);
+//       }
+//     }
+//   }, 30_000);
+// }
 
 module.exports = {
     setControllerForGarden,
