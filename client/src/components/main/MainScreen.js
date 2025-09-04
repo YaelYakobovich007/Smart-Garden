@@ -1058,7 +1058,7 @@ const MainScreen = () => {
             </View>
           )}
 
-                     {/* Garden Area Section */}
+          {/* Garden Area Section */}
           <GardenArea garden={garden} gardenLoading={gardenLoading} onCreateOrJoinGarden={handleCreateOrJoinGarden} />
 
 
