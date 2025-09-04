@@ -13,9 +13,10 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    marginTop: 28,
   },
   backButton: {
     padding: 8,
@@ -28,7 +29,7 @@ export const styles = StyleSheet.create({
     elevation: 2,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#1E293B',
     fontFamily: 'Nunito_700Bold',

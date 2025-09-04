@@ -106,23 +106,25 @@ const ArticlesSection = () => {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.10,
+        shadowRadius: 6,
+        elevation: 3,
         borderWidth: 1,
         borderColor: '#F3F4F6',
-        overflow: 'hidden',
+        overflow: 'visible',
         width: 280,
         marginRight: 16,
+        marginBottom: 8,
       }}
       onPress={() => handleArticlePress(item)}
     >
-      {/* Article Image */}
-      <Image source={{ uri: item.image_url }} style={{ width: '100%', height: 160 }} />
+      <View style={{ borderRadius: 16, overflow: 'hidden' }}>
+        {/* Article Image */}
+        <Image source={{ uri: item.image_url }} style={{ width: '100%', height: 160 }} />
 
-      {/* Article Content */}
-      <View style={{ padding: 16, flex: 1 }}>
+        {/* Article Content */}
+        <View style={{ padding: 16, flex: 1 }}>
         {/* Article Header with Category Badge */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <View style={{
@@ -162,6 +164,7 @@ const ArticlesSection = () => {
         }} numberOfLines={3}>
           {item.description}
         </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );

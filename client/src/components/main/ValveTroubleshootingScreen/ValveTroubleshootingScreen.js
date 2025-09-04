@@ -24,13 +24,15 @@ import {
   Activity
 } from 'lucide-react-native';
 import { styles } from './styles';
-import { websocketService } from '../../../services/websocketService';
+import websocketService from '../../../services/websocketService';
 
 const { width } = Dimensions.get('window');
 
 const ValveTroubleshootingScreen = ({ route }) => {
   const navigation = useNavigation();
-  const { plant } = route.params;
+  // Support both { plant } and { plantName } payloads
+  const plantParam = route?.params?.plant;
+  const plantName = route?.params?.plantName || plantParam?.name;
   
   const [diagnosticSteps, setDiagnosticSteps] = useState([
     {
@@ -68,6 +70,35 @@ const ValveTroubleshootingScreen = ({ route }) => {
 
   const DELAY_BEFORE_STEP_MS = 800;
   const DELAY_BETWEEN_STEPS_MS = 1800;
+  const RESPONSE_TIMEOUT_MS = 6000; // safety net per step
+
+  // Await one success/fail message type once (with timeout)
+  const waitForMessage = (successType, failType) => new Promise((resolve) => {
+    let settled = false;
+    const onSuccess = (msg) => {
+      if (settled) return;
+      settled = true;
+      websocketService.offMessage(successType, onSuccess);
+      websocketService.offMessage(failType, onFail);
+      resolve({ ok: true, msg });
+    };
+    const onFail = (msg) => {
+      if (settled) return;
+      settled = true;
+      websocketService.offMessage(successType, onSuccess);
+      websocketService.offMessage(failType, onFail);
+      resolve({ ok: false, msg });
+    };
+    websocketService.onMessage(successType, onSuccess);
+    websocketService.onMessage(failType, onFail);
+    setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      websocketService.offMessage(successType, onSuccess);
+      websocketService.offMessage(failType, onFail);
+      resolve({ ok: false, timeout: true });
+    }, RESPONSE_TIMEOUT_MS);
+  });
 
   useEffect(() => {
     if (diagnosticsRunning) {
@@ -91,61 +122,50 @@ const ValveTroubleshootingScreen = ({ route }) => {
   });
 
   const runDiagnostics = async () => {
-    const allManualChecksConfirmed = Object.values(manualChecks).every(check => check);
-    
+    // connection guard
+    if (!websocketService.isConnected()) {
+      Alert.alert('Connection Error', 'Unable to connect to the system. Please try again later.', [{ text: 'OK' }]);
+      return;
+    }
+
+    // manual checks guard
+    const allManualChecksConfirmed = Object.values(manualChecks).every(Boolean);
     if (!allManualChecksConfirmed) {
-      Alert.alert(
-        'Manual Checks Required',
-        'Please confirm all manual checks before running diagnostics.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Manual Checks Required', 'Please confirm all manual checks before running diagnostics.', [{ text: 'OK' }]);
       return;
     }
 
     setDiagnosticsRunning(true);
     setDiagnosticsComplete(false);
 
-    for (let i = 0; i < diagnosticSteps.length; i++) {
+    const stepsOrder = ['sensor', 'valve', 'power'];
+    let allPassed = true;
+    for (let i = 0; i < stepsOrder.length; i++) {
+      const id = stepsOrder[i];
       setCurrentStep(i);
-      
-      // Update step to checking
-      setDiagnosticSteps(prev => 
-        prev.map((step, index) => 
-          index === i ? { ...step, status: 'checking' } : step
-        )
-      );
+      setDiagnosticSteps(prev => prev.map(s => (s.id === id ? { ...s, status: 'checking' } : s)));
+      await new Promise(r => setTimeout(r, DELAY_BEFORE_STEP_MS));
 
-      await new Promise(resolve => setTimeout(resolve, DELAY_BEFORE_STEP_MS));
+      // send + wait for server response per step
+      if (id === 'sensor') {
+        websocketService.checkSensorConnection(plantName);
+        const res = await waitForMessage('CHECK_SENSOR_CONNECTION_SUCCESS', 'CHECK_SENSOR_CONNECTION_FAIL');
+        setDiagnosticSteps(prev => prev.map(s => (s.id === id ? { ...s, status: res.ok ? 'passed' : 'failed' } : s)));
+        if (!res.ok) allPassed = false;
+      } else if (id === 'valve') {
+        websocketService.checkValveMechanism(plantName);
+        const res = await waitForMessage('CHECK_VALVE_MECHANISM_SUCCESS', 'CHECK_VALVE_MECHANISM_FAIL');
+        setDiagnosticSteps(prev => prev.map(s => (s.id === id ? { ...s, status: res.ok ? 'passed' : 'failed' } : s)));
+        if (!res.ok) allPassed = false;
+      } else if (id === 'power') {
+        websocketService.checkPowerSupply(plantName);
+        const res = await waitForMessage('CHECK_POWER_SUPPLY_SUCCESS', 'CHECK_POWER_SUPPLY_FAIL');
+        setDiagnosticSteps(prev => prev.map(s => (s.id === id ? { ...s, status: res.ok ? 'passed' : 'failed' } : s)));
+        if (!res.ok) allPassed = false;
+      }
 
-      try {
-        let success = false;
-        
-        switch (diagnosticSteps[i].id) {
-          case 'sensor':
-            success = await websocketService.checkSensorConnection(plant.name);
-            break;
-          case 'valve':
-            success = await websocketService.checkValveMechanism(plant.name);
-            break;
-          case 'power':
-            success = await websocketService.checkPowerSupply(plant.name);
-            break;
-        }
-
-        // Update step result
-        setDiagnosticSteps(prev => 
-          prev.map((step, index) => 
-            index === i ? { ...step, status: success ? 'passed' : 'failed' } : step
-          )
-        );
-
-        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_STEPS_MS));
-      } catch (error) {
-        setDiagnosticSteps(prev => 
-          prev.map((step, index) => 
-            index === i ? { ...step, status: 'failed' } : step
-          )
-        );
+      if (i < stepsOrder.length - 1) {
+        await new Promise(r => setTimeout(r, DELAY_BETWEEN_STEPS_MS));
       }
     }
 
@@ -155,14 +175,15 @@ const ValveTroubleshootingScreen = ({ route }) => {
 
   const handleUnblockValve = async () => {
     try {
-      await websocketService.sendMessage('RESTART_VALVE', { plant_name: plant.name });
-      Alert.alert(
-        'Success',
-        'Valve has been unblocked successfully!',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      if (!websocketService.isConnected()) {
+        Alert.alert('Connection Error', 'Unable to connect to the system. Please try again later.', [{ text: 'OK' }]);
+        return;
+      }
+      // Fire-and-forget; PlantDetail/MainScreen handle the broadcast success popup and UI update
+      websocketService.sendMessage({ type: 'UNBLOCK_VALVE', plantName });
+      navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Failed to unblock valve. Please try again.');
+      Alert.alert('Error', 'Failed to mark valve unblocked. Please try again.');
     }
   };
 
@@ -243,7 +264,7 @@ const ValveTroubleshootingScreen = ({ route }) => {
             <View style={styles.problemTextContainer}>
               <Text style={styles.problemTitle}>Irrigation System Issue</Text>
               <Text style={styles.problemDescription}>
-                {plant.name} irrigation system requires diagnostic testing
+                {(plantName || 'Selected')} irrigation system requires diagnostic testing
               </Text>
             </View>
           </View>

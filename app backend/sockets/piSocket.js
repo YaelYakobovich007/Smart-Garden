@@ -674,7 +674,12 @@ function handlePiSocket(ws) {
             try {
               const plant = await getPlantById(Number(plantId));
               if (plant?.garden_id) {
-
+                // Broadcast explicit valve blocked event for immediate UI update across devices
+                try {
+                  await broadcastToGarden(plant.garden_id, 'GARDEN_VALVE_BLOCKED', { plantId: Number(plantId) }, pendingInfo?.email);
+                } catch (e) {
+                  console.warn('Broadcast GARDEN_VALVE_BLOCKED failed:', e.message);
+                }
                 await broadcastToGarden(plant.garden_id, 'GARDEN_IRRIGATION_STOPPED', {
                   plantId: Number(plantId),
                   plantName: plant.name || pendingInfo?.plantData?.plant_name

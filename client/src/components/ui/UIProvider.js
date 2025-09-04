@@ -21,6 +21,7 @@ export const UIProvider = ({ children }) => {
     onCancel: null,
     dismissible: true,
     variant: 'info',
+    iconName: null,
   });
 
   const hideAlert = useCallback(() => {
@@ -38,6 +39,7 @@ export const UIProvider = ({ children }) => {
       onCancel: typeof opts?.onCancel === 'function' ? opts.onCancel : null,
       dismissible: opts?.dismissible !== false,
       variant: opts?.variant || 'info',
+      iconName: opts?.iconName || null,
     });
   }, []);
 
@@ -92,6 +94,7 @@ export const UIProvider = ({ children }) => {
         onClose={alertState.dismissible ? hideAlert : undefined}
         cancelText={alertState.cancelText}
         onCancel={alertState.cancelText ? handleCancel : undefined}
+        iconName={alertState.iconName}
       />
     </UIContext.Provider>
   );

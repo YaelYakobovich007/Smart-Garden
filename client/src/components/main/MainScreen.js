@@ -162,9 +162,14 @@ const MainScreen = () => {
   const handleValveBlocked = (data) => {
     console.log('MainScreen: Valve blocked, refreshing plant list...');
     console.log('MainScreen: Valve blocked data:', data);
-    // Refresh plant list to show updated valve_blocked status
-    if (websocketService.isConnected()) {
-      websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+    const pid = data?.plantId != null ? Number(data.plantId) : null;
+    if (pid != null) {
+      setPlants(prev => prev.map(p => (Number(p.id) === pid ? { ...p, valve_blocked: true } : p)));
+    } else {
+      // Fallback: refresh plant list to show updated valve_blocked status
+      if (websocketService.isConnected()) {
+        websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+      }
     }
   };
 
@@ -469,6 +474,7 @@ const MainScreen = () => {
     websocketService.onMessage('JOIN_GARDEN_SUCCESS', handleGardenJoined);
     websocketService.onMessage('LEAVE_GARDEN_SUCCESS', handleGardenLeft);
     websocketService.onMessage('VALVE_BLOCKED', handleValveBlocked);
+    websocketService.onMessage('GARDEN_VALVE_BLOCKED', handleValveBlocked);
     // Garden-wide irrigation broadcasts
     const handleGardenIrrigationStarted = (message) => {
       const payload = message?.data || message;
@@ -560,6 +566,7 @@ const MainScreen = () => {
       websocketService.offMessage('JOIN_GARDEN_SUCCESS', handleGardenJoined);
       websocketService.offMessage('LEAVE_GARDEN_SUCCESS', handleGardenLeft);
       websocketService.offMessage('VALVE_BLOCKED', handleValveBlocked);
+      websocketService.offMessage('GARDEN_VALVE_BLOCKED', handleValveBlocked);
       websocketService.offMessage('GARDEN_IRRIGATION_STARTED', handleGardenIrrigationStarted);
       websocketService.offMessage('GARDEN_IRRIGATION_STOPPED', handleGardenIrrigationStopped);
       websocketService.offMessage('GARDEN_VALVE_UNBLOCKED', handleGardenValveUnblocked);
@@ -1064,17 +1071,13 @@ const MainScreen = () => {
 
           {/* Plants List Section */}
           <View style={styles.plantsSection}>
-            {/* Section Header with See All Button */}
+            {/* Section Header (See All removed) */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
                 {garden ? `${garden.name} Plants` : 'My Plants'}
               </Text>
-              <TouchableOpacity onPress={handleSeeAllPlants} style={styles.seeAllButton}>
-                <Text style={styles.seeAllButtonText}>See All</Text>
-                <Feather name="chevron-right" size={16} color="#16A34A" />
-              </TouchableOpacity>
             </View>
-            <View style={styles.titleSeparator} />
+            <View style={styles.plantsSeparator} />
             <PlantList
               plants={plants}
               onWaterPlant={handleWaterPlant}

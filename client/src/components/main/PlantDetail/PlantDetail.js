@@ -20,6 +20,7 @@ import {
   View,
   Text,
   Image,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
@@ -34,6 +35,7 @@ import mainStyles from '../styles';
 import MoistureCircle from '../PlantList/MoistureCircle';
 import TempCircle from '../PlantList/TempCircle';
 import websocketService from '../../../services/websocketService';
+import { useUI } from '../../ui/UIProvider';
 import CircularTimePicker from './CircularTimePicker';
 import * as ImagePicker from 'expo-image-picker';
 import { useCameraPermissions } from 'expo-camera';
@@ -42,6 +44,7 @@ const PlantDetail = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { plant: initialPlant } = route.params || {};
+  const { showAlert } = useUI();
   // Track if user explicitly requested to stop irrigation to avoid confusing alerts
   const stoppingRef = useRef(false);
 
@@ -58,6 +61,14 @@ const PlantDetail = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showImageSourceSheet, setShowImageSourceSheet] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [showDripperModal, setShowDripperModal] = useState(false);
+  const [pendingDripperType, setPendingDripperType] = useState(null);
+  const [showWaterLimitModal, setShowWaterLimitModal] = useState(false);
+  const [waterLimitInput, setWaterLimitInput] = useState('');
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [showHumidityModal, setShowHumidityModal] = useState(false);
+  const [humidityInput, setHumidityInput] = useState('');
 
   // Global irrigation state
   const {
@@ -283,82 +294,27 @@ const PlantDetail = () => {
 
   // Plant settings handlers
   const handleChangePlantName = () => {
-    Alert.prompt(
-      'Change Plant Name',
-      'Enter new name for the plant:',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Update',
-          onPress: (newName) => {
-            if (newName && newName.trim()) {
-              updatePlantDetails({ newPlantName: newName.trim() });
-            }
-          }
-        }
-      ],
-      'plain-text',
-      plant?.name || ''
-    );
+    setNameInput(String(plant?.name || ''));
+    setShowNameModal(true);
   };
 
   const handleChangeDesiredHumidity = () => {
-    Alert.prompt(
-      'Change Desired Humidity',
-      'Enter new desired humidity (0-100%):',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Update',
-          onPress: (humidity) => {
-            const humidityValue = parseFloat(humidity);
-            if (!isNaN(humidityValue) && humidityValue >= 0 && humidityValue <= 100) {
-              updatePlantDetails({ desiredMoisture: humidityValue });
-            } else {
-              Alert.alert('Invalid Input', 'Please enter a number between 0 and 100');
-            }
-          }
-        }
-      ],
-      'plain-text',
-      plant?.desiredMoisture?.toString() || '50'
-    );
+    const current = (plant?.ideal_moisture ?? plant?.desiredMoisture ?? 50);
+    setHumidityInput(String(current));
+    setShowHumidityModal(true);
   };
 
   const handleChangeDripper = () => {
-    Alert.alert(
-      'Change Dripper Type',
-      'Select new dripper type:',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: '2L/h', onPress: () => updatePlantDetails({ dripperType: '2L/h' }) },
-        { text: '4L/h', onPress: () => updatePlantDetails({ dripperType: '4L/h' }) },
-        { text: '8L/h', onPress: () => updatePlantDetails({ dripperType: '8L/h' }) }
-      ]
-    );
+    // Open a dedicated modal to support all platforms (Android alerts are limited to 3 buttons)
+    setPendingDripperType(String(plant?.dripper_type || '2L/h'));
+    setShowDripperModal(true);
   };
 
   const handleChangeWaterLimit = () => {
-    Alert.prompt(
-      'Change Water Limit',
-      'Enter new water limit (in liters):',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Update',
-          onPress: (limit) => {
-            const limitValue = parseFloat(limit);
-            if (!isNaN(limitValue) && limitValue > 0) {
-              updatePlantDetails({ waterLimit: limitValue });
-            } else {
-              Alert.alert('Invalid Input', 'Please enter a positive number');
-            }
-          }
-        }
-      ],
-      'plain-text',
-      plant?.waterLimit?.toString() || '1.0'
-    );
+    // Use a dedicated modal for consistent UI across platforms
+    const current = (plant?.water_limit ?? plant?.waterLimit ?? 1.0);
+    setWaterLimitInput(String(current));
+    setShowWaterLimitModal(true);
   };
 
   const handleChangeImage = async () => {
@@ -499,23 +455,17 @@ const PlantDetail = () => {
       return;
     }
 
-    Alert.alert(
-      'Delete Plant',
-      `Are you sure you want to delete "${plant.name}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            websocketService.sendMessage({
-              type: 'DELETE_PLANT',
-              plantName: plant.name
-            });
-          }
-        }
-      ]
-    );
+    showAlert({
+      title: 'Delete Plant',
+      message: `Are you sure you want to delete "${plant.name}"? This action cannot be undone.`,
+      okText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'error',
+      iconName: 'leaf',
+      onOk: () => {
+        websocketService.sendMessage({ type: 'DELETE_PLANT', plantName: plant.name });
+      },
+    });
   };
 
   const getPlantImage = (plantType) => {
@@ -549,13 +499,12 @@ const PlantDetail = () => {
     };
 
     const handleFail = (data) => {
-      // Suppress generic failure popup if user just pressed Stop
+      // Suppress here; the styled popup is handled globally in IrrigationContext
       if (stoppingRef.current) {
         stoppingRef.current = false;
         console.log('IRRIGATE_FAIL received after stop request, suppressing alert:', data);
         return;
       }
-      Alert.alert('Irrigation', data?.message || 'Failed to irrigate the plant.');
     };
 
     const handleSkipped = (data) => {
@@ -661,14 +610,20 @@ const PlantDetail = () => {
     const handleRestartValveSuccessDetail = (message) => {
       const payload = message?.data || message;
       const pid = payload?.plantId != null ? Number(payload.plantId) : null;
-      if (pid != null && plant?.id != null && Number(pid) === Number(plant.id)) {
+      const pname = payload?.plantName || payload?.plant_name;
+      const idMatches = pid != null && plant?.id != null && Number(pid) === Number(plant.id);
+      const nameMatches = pname && plant?.name && String(pname) === String(plant.name);
+      if (idMatches || nameMatches) {
         setPlant(prev => ({ ...prev, valve_blocked: false }));
       }
     };
     const handleGardenValveUnblocked = (message) => {
       const payload = message?.data || message;
       const pid = payload?.plantId != null ? Number(payload.plantId) : null;
-      if (pid != null && plant?.id != null && Number(pid) === Number(plant.id)) {
+      const pname = payload?.plantName || payload?.plant_name;
+      const idMatches = pid != null && plant?.id != null && Number(pid) === Number(plant.id);
+      const nameMatches = pname && plant?.name && String(pname) === String(plant.name);
+      if (idMatches || nameMatches) {
         setPlant(prev => ({ ...prev, valve_blocked: false }));
       }
     };
@@ -844,7 +799,7 @@ const PlantDetail = () => {
             <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end' }}>
               <TouchableOpacity
                 style={styles.troubleshootButton}
-                onPress={() => navigation.navigate('ValveTroubleshooting', { plantName: plant.name })}
+                onPress={() => navigation.navigate('ValveTroubleshooting', { plant })}
               >
                 <Feather name="tool" size={20} color="#FFFFFF" />
                 <Text style={styles.troubleshootButtonText}>Diagnose</Text>
@@ -1032,7 +987,7 @@ const PlantDetail = () => {
                 }}
               >
                 <View style={styles.settingsItemIcon}>
-                  <Feather name="settings" size={20} color="#4CAF50" />
+                  <Feather name="sliders" size={20} color="#4CAF50" />
                 </View>
                 <View style={styles.settingsItemContent}>
                   <Text style={styles.settingsItemTitle}>Change Dripper</Text>
@@ -1095,6 +1050,207 @@ const PlantDetail = () => {
             </View>
           </ScrollView>
         </SafeAreaView>
+      </Modal>
+      {/* Dripper Type Selection Modal */}
+      <Modal
+        visible={showDripperModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowDripperModal(false)}
+      >
+        <View style={mainStyles.modalOverlay}>
+          <View style={mainStyles.modalContent}>
+            <Text style={mainStyles.modalTitle}>Select Dripper Type</Text>
+            {['2L/h', '4L/h', '8L/h'].map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={mainStyles.modalButton}
+                onPress={() => setPendingDripperType(opt)}
+              >
+                <Feather name={pendingDripperType === opt ? 'check-circle' : 'circle'} size={24} color="#16A34A" />
+                <Text style={mainStyles.modalButtonText}>{opt}</Text>
+              </TouchableOpacity>
+            ))}
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
+              <TouchableOpacity
+                style={[mainStyles.modalButton, { flex: 1, marginBottom: 0 }]}
+                onPress={() => {
+                  if (pendingDripperType) {
+                    updatePlantDetails({ dripperType: pendingDripperType });
+                  }
+                  setShowDripperModal(false);
+                }}
+              >
+                <Feather name="save" size={24} color="#16A34A" />
+                <Text style={mainStyles.modalButtonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[mainStyles.modalButton, mainStyles.cancelButton, { flex: 1, marginBottom: 0 }]}
+                onPress={() => setShowDripperModal(false)}
+              >
+                <Text style={mainStyles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Water Limit Modal */}
+      <Modal
+        visible={showWaterLimitModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowWaterLimitModal(false)}
+      >
+        <View style={mainStyles.modalOverlay}>
+          <View style={mainStyles.modalContent}>
+            <Text style={mainStyles.modalTitle}>Change Water Limit</Text>
+            <View style={{ width: '100%', marginVertical: 8 }}>
+              <TextInput
+                value={waterLimitInput}
+                onChangeText={setWaterLimitInput}
+                keyboardType="numeric"
+                placeholder="Enter liters (e.g., 1.5)"
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#D1D5DB',
+                  borderRadius: 10,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  fontSize: 16,
+                  color: '#111827'
+                }}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
+              <TouchableOpacity
+                style={[mainStyles.modalButton, { flex: 1, marginBottom: 0 }]}
+                onPress={() => {
+                  const limitValue = parseFloat(String(waterLimitInput).replace(',', '.'));
+                  if (!isNaN(limitValue) && limitValue > 0) {
+                    updatePlantDetails({ waterLimit: limitValue });
+                    setShowWaterLimitModal(false);
+                  } else {
+                    Alert.alert('Invalid Input', 'Please enter a positive number');
+                  }
+                }}
+              >
+                <Feather name="save" size={24} color="#16A34A" />
+                <Text style={mainStyles.modalButtonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[mainStyles.modalButton, mainStyles.cancelButton, { flex: 1, marginBottom: 0 }]}
+                onPress={() => setShowWaterLimitModal(false)}
+              >
+                <Text style={mainStyles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Change Name Modal */}
+      <Modal
+        visible={showNameModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowNameModal(false)}
+      >
+        <View style={mainStyles.modalOverlay}>
+          <View style={mainStyles.modalContent}>
+            <Text style={mainStyles.modalTitle}>Change Plant Name</Text>
+            <View style={{ width: '100%', marginVertical: 8 }}>
+              <TextInput
+                value={nameInput}
+                onChangeText={setNameInput}
+                placeholder="Enter plant name"
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#D1D5DB',
+                  borderRadius: 10,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  fontSize: 16,
+                  color: '#111827'
+                }}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
+              <TouchableOpacity
+                style={[mainStyles.modalButton, { flex: 1, marginBottom: 0 }]}
+                onPress={() => {
+                  const newName = String(nameInput || '').trim();
+                  if (newName.length >= 1 && newName.length <= 50) {
+                    updatePlantDetails({ newPlantName: newName });
+                    setShowNameModal(false);
+                  } else {
+                    Alert.alert('Invalid Name', 'Name must be 1–50 characters.');
+                  }
+                }}
+              >
+                <Feather name="save" size={24} color="#16A34A" />
+                <Text style={mainStyles.modalButtonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[mainStyles.modalButton, mainStyles.cancelButton, { flex: 1, marginBottom: 0 }]}
+                onPress={() => setShowNameModal(false)}
+              >
+                <Text style={mainStyles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Desired Humidity Modal */}
+      <Modal
+        visible={showHumidityModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowHumidityModal(false)}
+      >
+        <View style={mainStyles.modalOverlay}>
+          <View style={mainStyles.modalContent}>
+            <Text style={mainStyles.modalTitle}>Change Desired Humidity</Text>
+            <View style={{ width: '100%', marginVertical: 8 }}>
+              <TextInput
+                value={humidityInput}
+                onChangeText={setHumidityInput}
+                keyboardType="numeric"
+                placeholder="Enter 0-100"
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#D1D5DB',
+                  borderRadius: 10,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  fontSize: 16,
+                  color: '#111827'
+                }}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
+              <TouchableOpacity
+                style={[mainStyles.modalButton, { flex: 1, marginBottom: 0 }]}
+                onPress={() => {
+                  const value = parseFloat(String(humidityInput).replace(',', '.'));
+                  if (!isNaN(value) && value >= 0 && value <= 100) {
+                    updatePlantDetails({ desiredMoisture: value });
+                    setShowHumidityModal(false);
+                  } else {
+                    Alert.alert('Invalid Input', 'Please enter a number between 0 and 100');
+                  }
+                }}
+              >
+                <Feather name="save" size={24} color="#16A34A" />
+                <Text style={mainStyles.modalButtonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[mainStyles.modalButton, mainStyles.cancelButton, { flex: 1, marginBottom: 0 }]}
+                onPress={() => setShowHumidityModal(false)}
+              >
+                <Text style={mainStyles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {/* 10. Schedule Modal */}
