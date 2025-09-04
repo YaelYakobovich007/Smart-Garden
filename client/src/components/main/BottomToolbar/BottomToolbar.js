@@ -7,7 +7,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { styles } from './styles';
 
-const BottomToolbar = ({ onGarden, onAddPlant, onSettings, onHelp, onIdentifyPlant }) => {
+const BottomToolbar = ({ onGarden, onAddPlant, onSettings, onHelp, onIdentifyPlant, onNotifications }) => {
   const toolbarItems = [
     {
       id: 'garden',
@@ -34,10 +34,10 @@ const BottomToolbar = ({ onGarden, onAddPlant, onSettings, onHelp, onIdentifyPla
       onPress: onSettings,
     },
     {
-      id: 'help',
-      icon: 'help-circle',
-      label: 'Help',
-      onPress: onHelp,
+      id: 'notifications',
+      icon: 'bell',
+      label: 'Alerts',
+      onPress: onNotifications,
     },
   ];
 

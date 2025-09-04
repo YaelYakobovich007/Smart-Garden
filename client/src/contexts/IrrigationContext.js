@@ -597,7 +597,12 @@ export const IrrigationProvider = ({ children }) => {
             isWateringActive: true
           });
 
-          Alert.alert('Valve Control', data?.message || 'Valve opened successfully! Timer started.');
+          showAlert({
+            title: 'Valve Control',
+            message: data?.message || 'Valve opened successfully! Timer started.',
+            okText: 'OK',
+            variant: 'success',
+          });
         }
       }
     };
@@ -623,7 +628,12 @@ export const IrrigationProvider = ({ children }) => {
         });
       }
 
-      Alert.alert('Valve Control', data?.message || 'Failed to open valve. Timer not started.');
+      showAlert({
+        title: 'Valve Control',
+        message: data?.message || 'Failed to open valve. Timer not started.',
+        okText: 'OK',
+        variant: 'error',
+      });
     };
 
     const handleCloseValveSuccess = (data) => {
@@ -649,12 +659,22 @@ export const IrrigationProvider = ({ children }) => {
         });
       }
 
-      Alert.alert('Valve Control', data?.message || 'Valve closed successfully!');
+      showAlert({
+        title: 'Valve Control',
+        message: data?.message || 'Valve closed successfully!',
+        okText: 'OK',
+        variant: 'success',
+      });
     };
 
     const handleCloseValveFail = (data) => {
       // Failed to close valve
-      Alert.alert('Valve Control', data?.message || 'Failed to close valve.');
+      showAlert({
+        title: 'Valve Control',
+        message: data?.message || 'Failed to close valve.',
+        okText: 'OK',
+        variant: 'error',
+      });
     };
 
     const handleIrrigationStarted = (data) => {
@@ -865,7 +885,12 @@ export const IrrigationProvider = ({ children }) => {
           clearedAny = true;
         }
       });
-      Alert.alert('Valve Blocked', message);
+      showAlert({
+        title: 'Valve Blocked',
+        message,
+        okText: 'OK',
+        variant: 'error',
+      });
     };
 
     const handleIrrigatePlantSkipped = (data) => {

@@ -954,29 +954,11 @@ const MainScreen = () => {
    * Includes header, weather, plants, articles, and bottom toolbar
    */
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       {/* Thin Top Bar with Logo, App Name, and Notification Icon */}
-      <View style={styles.topBar}>
-        <View style={styles.topBarLeft}>
-          <Image
-            source={require('../../../assets/images/Smart_Garden_Logo.png')}
-            style={styles.topBarLogo}
-          />
-          <Text style={styles.topBarTitle}>Smart Garden</Text>
-        </View>
-        <TouchableOpacity onPress={handleNotifications} style={styles.topBarNotification}>
-          <Feather name="bell" size={20} color="#7F8C8D" />
-          {notifications.filter(n => !n.isRead).length > 0 && (
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>
-                {notifications.filter(n => !n.isRead).length}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
+      <View style={styles.topBar} />
 
       {/* Top Illustration with Greeting */}
       <View style={styles.topImageContainer}>
@@ -985,11 +967,31 @@ const MainScreen = () => {
           style={styles.topImage}
           resizeMode="cover"
         />
-        <View style={styles.greetingOverlay}>
+        <View style={styles.appBrandingContainer}>
+          <Image
+            source={require('../../../assets/images/Smart_Garden_Logo.png')}
+            style={styles.appBrandingLogo}
+          />
+          <Text style={styles.appBrandingTitle}>Smart Garden</Text>
+        </View>
+        <View style={styles.helloOverlay}>
           <Text style={styles.greetingWhite}>
             {userName ? `Hello ${userName}!` : 'Hello!'}
           </Text>
         </View>
+
+        
+        <TouchableOpacity onPress={handleNotifications} style={styles.floatingNotification} activeOpacity={0.85}>
+          <Feather name="bell" size={20} color="#FFFFFF" />
+          {notifications.filter(n => !n.isRead).length > 0 && (
+            <View style={styles.notificationBadgeFloating}>
+              <Text style={styles.notificationBadgeText}>
+                {notifications.filter(n => !n.isRead).length}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <View style={styles.greetingOverlay} />
       </View>
 
       {/* Main Content Card with ScrollView */}
@@ -1094,7 +1096,7 @@ const MainScreen = () => {
         onAddPlant={handleAddPlant}
         onIdentifyPlant={handleIdentifyPlant}
         onSettings={handleSettings}
-        onHelp={handleHelp}
+        onNotifications={handleNotifications}
       />
 
       {/* Image Picker Modal */}

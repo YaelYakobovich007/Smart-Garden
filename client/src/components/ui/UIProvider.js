@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity } from 'react-native';
 import { registerAlertBridge } from '../../utils/alertBridge';
+import StatusPopup from './StatusPopup';
 
 const UIContext = createContext(null);
 
@@ -60,40 +60,39 @@ export const UIProvider = ({ children }) => {
     if (cb) setTimeout(cb, 0);
   };
 
+  // Determine popup type based on variant or content
+  const getPopupType = () => {
+    if (alertState.variant === 'error' || alertState.variant === 'warning') {
+      return 'error';
+    }
+    if (alertState.variant === 'success') {
+      return 'success';
+    }
+    // Default to neutral (purple person icon) for info messages
+    const message = alertState.message.toLowerCase();
+    if (message.includes('failed') || message.includes('error') || message.includes('wrong')) {
+      return 'error';
+    }
+    if (message.includes('success') || message.includes('completed') || message.includes('saved')) {
+      return 'success';
+    }
+    return 'info'; // This will show the purple person icon like in the image
+  };
+
   return (
     <UIContext.Provider value={value}>
       {children}
-      <Modal
-        transparent
-        animationType="fade"
+      <StatusPopup
         visible={alertState.visible}
-        onRequestClose={() => (alertState.dismissible ? hideAlert() : null)}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <View style={{ width: '100%', backgroundColor: '#FFFFFF', borderRadius: 0, padding: 20, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}>
-            {/* Top accent bar */}
-            <View style={{ height: 4, backgroundColor: '#16A34A', marginHorizontal: -20, marginTop: -20, marginBottom: 12 }} />
-            {!!alertState.title && (
-              <Text style={{ fontSize: 18, fontWeight: '700', color: '#2C3E50', marginBottom: 8, textAlign: 'center', fontFamily: 'Nunito_700Bold' }}>
-                {alertState.title}
-              </Text>
-            )}
-            <Text style={{ fontSize: 16, color: '#2C3E50', marginBottom: 16, lineHeight: 22, textAlign: 'left', fontFamily: 'Nunito_400Regular' }}>
-              {alertState.message}
-            </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-              {alertState.cancelText ? (
-                <TouchableOpacity onPress={handleCancel} style={{ paddingVertical: 10, paddingHorizontal: 14, marginRight: 8 }}>
-                  <Text style={{ color: '#6B7280', fontWeight: '600', fontFamily: 'Nunito_600SemiBold' }}>{alertState.cancelText}</Text>
-                </TouchableOpacity>
-              ) : null}
-              <TouchableOpacity onPress={handleOk} style={{ backgroundColor: '#16A34A', borderRadius: 0, paddingVertical: 10, paddingHorizontal: 16 }}>
-                <Text style={{ color: '#FFFFFF', fontWeight: '600', fontFamily: 'Nunito_600SemiBold' }}>{alertState.okText || 'OK'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        type={getPopupType()}
+        title={alertState.title}
+        description={alertState.message}
+        buttonText={alertState.okText}
+        onButtonPress={handleOk}
+        onClose={alertState.dismissible ? hideAlert : undefined}
+        cancelText={alertState.cancelText}
+        onCancel={alertState.cancelText ? handleCancel : undefined}
+      />
     </UIContext.Provider>
   );
 };
