@@ -28,7 +28,7 @@ class SmartGardenPiClient:
 #str = "wss://smart-garden-backend-1088783109508.europe-west1.run.app"
 
     # For production, use Cloud Run URL
-    def __init__(self, server_url: str = "ws://192.168.68.73:8080", 
+    def __init__(self, server_url: str = "wss://smart-garden-backend-1088783109508.europe-west1.run.app", 
                  family_code: str = None, engine: SmartGardenEngine = None):
         self.server_url = server_url
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
