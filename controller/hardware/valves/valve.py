@@ -54,18 +54,18 @@ class Valve:
         Opens the valve for irrigation. If the valve is blocked, raises an error.
         In simulation mode, only prints a message. Otherwise, activates the hardware relay.
         """
-        print(f"DEBUG - Valve.request_open() valve={self.valve_id} is_blocked={self.is_blocked} simulation_mode={self.simulation_mode} current_state={'OPEN' if self.is_open else 'CLOSED'}")
+        print(f"[VALVE][OPEN][REQ] id={self.valve_id} blocked={self.is_blocked} sim={self.simulation_mode} state={'OPEN' if self.is_open else 'CLOSED'}")
         
         if self.is_blocked:
             print(f"❌ ERROR - Valve {self.valve_id} is blocked")
             raise RuntimeError(f"Error: Valve {self.valve_id} is blocked")
 
         if self.simulation_mode:
-            print(f"[SIMULATION] Valve {self.valve_id} ON")
+            print(f"[VALVE][OPEN][SIM] id={self.valve_id}")
         elif self.relay_controller:
-            print(f"DEBUG - Calling relay_controller.turn_on({self.valve_id})")
+            print(f"[VALVE][OPEN][HARDWARE] call=turn_on id={self.valve_id}")
             self.relay_controller.turn_on(self.valve_id)
-            print(f"DEBUG - relay_controller.turn_on() completed")
+            print(f"[VALVE][OPEN][HARDWARE] done=true")
         else:
             print(f"ERROR - No RelayController connected to Valve {self.valve_id}")
             raise RuntimeError(f"Error: No RelayController connected to Valve {self.valve_id}!")
@@ -74,24 +74,24 @@ class Valve:
         self.is_open = True
         self.open_time = datetime.now()
         self.last_irrigation_time = datetime.now()
-        print(f"DEBUG - Valve {self.valve_id} opened at {self.open_time}")
+        print(f"[VALVE][STATE] id={self.valve_id} opened_at={self.open_time}")
 
     def request_close(self) -> None:
         """
         Closes the valve. If blocked, raises an error.
         In simulation mode, only prints a message. Otherwise, deactivates the hardware relay.
         """
-        print(f"DEBUG - Valve.request_close() valve={self.valve_id} is_blocked={self.is_blocked} simulation_mode={self.simulation_mode} current_state={'OPEN' if self.is_open else 'CLOSED'}")
+        print(f"[VALVE][CLOSE][REQ] id={self.valve_id} blocked={self.is_blocked} sim={self.simulation_mode} state={'OPEN' if self.is_open else 'CLOSED'}")
         
         if self.is_blocked:
             print(f"ERROR - Valve {self.valve_id} is blocked")
             raise RuntimeError(f"Error: Valve {self.valve_id} is blocked")
         if self.simulation_mode:
-            print(f"[SIMULATION] Valve {self.valve_id} OFF")
+            print(f"[VALVE][CLOSE][SIM] id={self.valve_id}")
         elif self.relay_controller:
-            print(f"DEBUG - Calling relay_controller.turn_off({self.valve_id})")
+            print(f"[VALVE][CLOSE][HARDWARE] call=turn_off id={self.valve_id}")
             self.relay_controller.turn_off(self.valve_id)
-            print(f"DEBUG - relay_controller.turn_off() completed")
+            print(f"[VALVE][CLOSE][HARDWARE] done=true")
         else:
             print(f"ERROR - No RelayController connected to Valve {self.valve_id}")
             raise RuntimeError(f"Error: No RelayController connected to Valve {self.valve_id}")
@@ -99,12 +99,12 @@ class Valve:
         # Update state tracking
         self.is_open = False
         self.close_time = datetime.now()
-        print(f"DEBUG - Valve {self.valve_id} closed at {self.close_time}")
+        print(f"[VALVE][STATE] id={self.valve_id} closed_at={self.close_time}")
         
         # Log duration if valve was open
         if self.open_time:
             duration = self.close_time - self.open_time
-            print(f"DEBUG - Valve {self.valve_id} open duration: {duration.total_seconds():.2f}s")
+            print(f"[VALVE][DURATION] id={self.valve_id} seconds={duration.total_seconds():.2f}")
 
     def block(self) -> None:
         """

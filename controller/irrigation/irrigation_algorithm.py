@@ -121,19 +121,17 @@ class IrrigationAlgorithm:
         cycle_count = 0
         update_task = None  # For cleanup in case of early cancellation
         
-        print(f"\n=== Starting irrigation process for plant {plant.plant_id} ===")
-        print(f"Target moisture: {plant.desired_moisture}%")
-        print(f"Water limit: {plant.valve.water_limit}L")
+        print(f"[ALG][START] plant_id={plant.plant_id} target={plant.desired_moisture}% water_limit={plant.valve.water_limit}L")
         
         try:
             # PHASE 1: Initial Checks
-            print("\n=== PHASE 1: Initial Checks ===")
+            print("[ALG][PHASE] initial_checks")
             
             try:
-                print("Getting current moisture...")
+                print("[ALG][READ] action=get_current_moisture")
                 current_moisture = await plant.get_moisture()
                 initial_moisture = current_moisture
-                print(f"Current moisture: {current_moisture:.1f}%")
+                print(f"[ALG][READ][OK] moisture={current_moisture:.1f}%")
                 
                 # Send initial check progress using calibrated target
                 calibrated_target = self._get_calibrated_target(plant)
@@ -144,7 +142,7 @@ class IrrigationAlgorithm:
                 await self.send_progress_update(progress)
                 
                 # Check for near-term precipitation threshold (sandy soil friendly)
-                print("Checking weather forecast (hourly precipitation)...")
+                print("[ALG][WEATHER] check=hourly_precipitation")
                 lookahead_hours = 12  # configurable if needed
                 # Sandy soils drain quickly; avoid watering if a modest shower is imminent
                 min_rain_mm_hourly = 3.0     # threshold in mm over the lookahead window
@@ -163,18 +161,18 @@ class IrrigationAlgorithm:
                         plant.lat,
                         plant.lon
                     )
-                    print(f"Daily precipitation (fallback): {total_precip_mm:.2f} mm")
+                    print(f"[ALG][WEATHER] daily_precip_mm={total_precip_mm:.2f}")
                     if total_precip_mm >= min_rain_mm_daily_fallback:
-                        print("Daily precipitation threshold met - skipping irrigation (rain_expected)")
+                        print("[ALG][SKIP] reason=rain_expected source=daily")
                         return IrrigationResult.skipped(
                             plant_id=plant.plant_id,
                             moisture=current_moisture,
                             reason="rain_expected"
                         )
                 else:
-                    print(f"Forecast precipitation next {lookahead_hours}h: {total_precip_mm:.2f} mm")
+                    print(f"[ALG][WEATHER] hourly_precip_mm_next_{lookahead_hours}h={total_precip_mm:.2f}")
                     if total_precip_mm >= min_rain_mm_hourly:
-                        print("Hourly precipitation threshold met - skipping irrigation (rain_expected)")
+                        print("[ALG][SKIP] reason=rain_expected source=hourly")
                         return IrrigationResult.skipped(
                             plant_id=plant.plant_id,
                             moisture=current_moisture,
@@ -182,10 +180,10 @@ class IrrigationAlgorithm:
                         )
 
                 # Check for overwatering
-                print("Checking for overwatering...")
+                print("[ALG][CHECK] overwatered")
                 is_overwatered = await self.is_overwatered(plant, current_moisture)
                 if is_overwatered:
-                    print("Plant is overwatered - blocking valve")
+                    print("[ALG][BLOCK] reason=overwatered")
                     plant.valve.block()
                     return IrrigationResult.error(
                         plant_id=plant.plant_id,
@@ -194,9 +192,9 @@ class IrrigationAlgorithm:
                     )
 
                 # Check if already moist enough
-                print("Checking if irrigation is needed...")
+                print("[ALG][CHECK] need_irrigation")
                 if not await self.should_irrigate(plant, current_moisture):
-                    print("Soil moisture is adequate - skipping irrigation")
+                    print("[ALG][SKIP] reason=already_moist")
                     return IrrigationResult.skipped(
                         plant_id=plant.plant_id,
                         moisture=current_moisture,
@@ -204,7 +202,7 @@ class IrrigationAlgorithm:
                     )
 
                 # Check if valve is blocked
-                print("Checking valve status...")
+                print("[ALG][CHECK] valve_blocked")
                 if plant.valve.is_blocked:
                     print("Valve is blocked - cannot irrigate")
                     return IrrigationResult.error(
@@ -214,7 +212,7 @@ class IrrigationAlgorithm:
                     )
                 
                 # All checks passed - notify that irrigation will start
-                print("\nAll checks passed - proceeding with irrigation")
+                print("[ALG][PROCEED] checks_passed=true")
                 
                 # Send decision that irrigation will start (using calibrated target)
                 from controller.dto.irrigation_decision import IrrigationDecision
@@ -243,10 +241,10 @@ class IrrigationAlgorithm:
                 )
                 
             # PHASE 2: Irrigation Cycle
-            print("\n=== PHASE 2: Irrigation Cycle ===")
+            print("[ALG][PHASE] irrigation_cycle")
             
             # Create single session-level updater task
-            print("Starting session updater...")
+            print("[ALG][UPDATER] start")
             update_task = asyncio.create_task(
                 self._session_updater(plant, session_id=session_id),
                 name=f"updater_plant_{plant.plant_id}"
@@ -256,12 +254,12 @@ class IrrigationAlgorithm:
             try:
                     while True:
                         # Check moisture and target
-                        print("\nChecking current moisture...")
+                        print("[ALG][CYCLE] read_moisture")
                         current_moisture = await self._get_averaged_moisture(plant, 5)
-                        print(f"Current moisture: {current_moisture:.1f}%")
+                        print(f"[ALG][CYCLE][READ] moisture={current_moisture:.1f}%")
                         
                         if current_moisture >= self._get_effective_target(plant, 1.5):
-                            print(f"Target moisture reached: {current_moisture:.1f}% (target: {self._get_effective_target(plant, 1.5):.1f}%)")
+                            print(f"[ALG][CYCLE][TARGET] reached current={current_moisture:.1f}% target={self._get_effective_target(plant, 1.5):.1f}%")
                             break
                         
                         # Pre-check water limit before starting cycle
@@ -269,24 +267,23 @@ class IrrigationAlgorithm:
                             self.watering_duration_seconds
                         )
                         if total_water + expected_water > plant.valve.water_limit:
-                            print(f"Water limit would be exceeded - stopping")
-                            print(f"Current: {total_water:.2f}L, Next cycle: {expected_water:.2f}L, Limit: {plant.valve.water_limit:.2f}L")
+                            print(f"[ALG][LIMIT] stop current={total_water:.2f}L next={expected_water:.2f}L limit={plant.valve.water_limit:.2f}L")
                             water_limit_stop = True
                             break
                             
                         # Simple watering cycle
                         cycle_count += 1
-                        print(f"\n=== Starting cycle {cycle_count} ===")
+                        print(f"[ALG][CYCLE][START] number={cycle_count}")
                         
                         # Open valve and wait
-                        print("Opening valve...")
+                        print("[ALG][VALVE] action=open")
                         plant.valve.request_open()
                         try:
-                            print(f"Watering for {self.watering_duration_seconds}s...")
+                            print(f"[ALG][WATER] duration_s={self.watering_duration_seconds}")
                             await asyncio.sleep(self.watering_duration_seconds)
                             # Add water only if full cycle completes
                             total_water += expected_water
-                            print(f"Cycle complete. Total water used: {total_water:.2f}L")
+                            print(f"[ALG][CYCLE][END] total_water={total_water:.2f}L")
                             # Simulation: gently increase moisture to reflect delivered water
                             try:
                                 if getattr(plant.valve, 'simulation_mode', False) and getattr(plant.sensor, 'simulation_mode', False):
@@ -300,13 +297,13 @@ class IrrigationAlgorithm:
                             raise
                         finally:
                             # Always close valve
-                            print("Closing valve...")
+                            print("[ALG][VALVE] action=close")
                             plant.valve.request_close()
-                            print("Valve closed.")
+                            print("[ALG][VALVE] state=closed")
                         
                         # Break between cycles
                         try:
-                            print(f"\nWaiting {self.break_duration_seconds}s before next cycle...")
+                            print(f"[ALG][BREAK] duration_s={self.break_duration_seconds}")
                             await asyncio.sleep(self.break_duration_seconds)
                         except asyncio.CancelledError:
                             print("Break cycle cancelled!")
@@ -315,7 +312,7 @@ class IrrigationAlgorithm:
             finally:
                 # Clean up updater task
                 if update_task:
-                    print("\nCleaning up session updater...")
+                    print("[ALG][UPDATER] cleanup")
                     update_task.cancel()
                     try:
                         await update_task
@@ -324,10 +321,10 @@ class IrrigationAlgorithm:
                     print("Session updater cleaned up.")
                     
             # Get final moisture reading after loop ends
-            print("\nGetting final moisture reading...")
+            print("[ALG][FINAL] read_moisture")
             try:
                 final_moisture = await self._get_averaged_moisture(plant, 5)
-                print(f"Final moisture: {final_moisture:.1f}%")
+                print(f"[ALG][FINAL][READ] moisture={final_moisture:.1f}%")
             except asyncio.CancelledError:
                 # If cancelled during final reading, use last known moisture
                 print("Cancelled during final reading - using last known moisture")
@@ -338,7 +335,7 @@ class IrrigationAlgorithm:
             target_value = self._get_calibrated_target(plant)
             if water_limit_stop and final_moisture < target_value:
                 # Fault: limit reached (pre-check) but target not met → block valve and error
-                print("\n=== Water limit stop without reaching target → blocking valve and reporting error ===")
+                print("[ALG][FAULT] water_limit_reached_target_not_met block_valve=true")
                 plant.valve.block()
                 return IrrigationResult.error(
                     plant_id=plant.plant_id,
@@ -350,10 +347,7 @@ class IrrigationAlgorithm:
                 )
             else:
                 # Success (either target reached, or limit stop with target met, or normal exit)
-                print("\n=== Irrigation completed successfully ===")
-                print(f"Total cycles: {cycle_count}")
-                print(f"Total water used: {total_water:.2f}L")
-                print(f"Moisture change: {initial_moisture:.1f}% → {final_moisture:.1f}%")
+                print(f"[ALG][SUCCESS] cycles={cycle_count} total_water={total_water:.2f}L moisture_delta={initial_moisture:.1f}%->{final_moisture:.1f}%")
                 reason = None
                 if water_limit_stop and final_moisture >= target_value:
                     reason = "limit_reached_target_met"

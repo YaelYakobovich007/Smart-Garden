@@ -62,9 +62,9 @@ class SmartGardenPiClient:
     async def connect(self):
         """Establish WebSocket connection to the server."""
         try:
-            self.logger.info(f"Connecting to WebSocket server: {self.server_url}")
+            self.logger.info(f"[WS][CONNECT] url={self.server_url}")
             self.websocket = await websockets.connect(self.server_url)
-            self.logger.info("Successfully connected to server!")
+            self.logger.info("[WS][CONNECTED]")
             self.is_running = True
             
             return True
@@ -77,7 +77,7 @@ class SmartGardenPiClient:
         self.is_running = False
         if self.websocket:
             await self.websocket.close()
-            self.logger.info("Disconnected from server")
+            self.logger.info("[WS][DISCONNECTED]")
     
     async def send_message(self, message_type: str, data: Dict[Any, Any] = None):
         """Send a message to the server."""
@@ -93,20 +93,15 @@ class SmartGardenPiClient:
             if data:
                 message["data"] = data
             
-            # Log the message being sent
-            self.logger.info(f"=== SENDING MESSAGE DEBUG ===")
-            self.logger.info(f"Message type: {message_type}")
-            self.logger.info(f"Full message: {message}")
-            self.logger.info(f"Message keys: {list(message.keys())}")
-            self.logger.info(f"Message data keys: {list(data.keys()) if data else 'No data'}")
-            self.logger.info(f"Message data values: {data}")
-            self.logger.info("=============================")
+            # Single-line structured send log
+            data_keys = list(data.keys()) if isinstance(data, dict) else 'none'
+            self.logger.info(f"[WS][SEND] type={message_type} data_keys={data_keys}")
             
             await self.websocket.send(json.dumps(message))
-            self.logger.info(f"Sent {message_type} message")
+            self.logger.info(f"[WS][SENT] type={message_type}")
             return True
         except Exception as e:
-            self.logger.error(f"Failed to send message: {e}")
+            self.logger.error(f"[WS][SEND][ERROR] type={message_type} err={e}")
             return False
     
     async def send_hello(self):
@@ -186,7 +181,7 @@ class SmartGardenPiClient:
         """Handle single plant moisture request from server."""
         from controller.handlers.get_plant_moisture_handler import GetPlantMoistureHandler
         
-        self.logger.info(f"Received GET_PLANT_MOISTURE command from server")
+        self.logger.info(f"[CMD][RECV] type=GET_PLANT_MOISTURE data_keys={list((data or {}).keys())}")
         
         # Create handler instance and call it
         handler = GetPlantMoistureHandler(self.engine)
@@ -197,15 +192,15 @@ class SmartGardenPiClient:
         await self.send_message("PLANT_MOISTURE_RESPONSE", response_data)
         
         if success:
-            self.logger.info(f"Successfully sent plant moisture: Plant {data.get('plant_id')} = {moisture_data.moisture:.1f}%")
+            self.logger.info(f"[CMD][RESP] type=PLANT_MOISTURE_RESPONSE plant_id={data.get('plant_id')} moisture={moisture_data.moisture}")
         else:
-            self.logger.error(f"Failed to get moisture for plant {data.get('plant_id')}: {moisture_data.error_message}")
+            self.logger.error(f"[CMD][ERROR] type=GET_PLANT_MOISTURE plant_id={data.get('plant_id')} err={moisture_data.error_message}")
 
     async def handle_all_plants_moisture_request(self, data: Dict[Any, Any]):
         """Handle all plants moisture request from server."""
         from controller.handlers.get_all_plants_moisture_handler import GetAllPlantsMoistureHandler
         
-        self.logger.info(f"Received GET_ALL_MOISTURE command from server")
+        self.logger.info(f"[CMD][RECV] type=GET_ALL_MOISTURE")
         
         # Create handler instance and call it
         handler = GetAllPlantsMoistureHandler(self.engine)
@@ -216,9 +211,9 @@ class SmartGardenPiClient:
         await self.send_message("ALL_MOISTURE_RESPONSE", response_data)
         
         if success:
-            self.logger.info(f"Successfully sent moisture for {response_dto.total_plants} plants")
+            self.logger.info(f"[CMD][RESP] type=ALL_MOISTURE_RESPONSE total_plants={response_dto.total_plants}")
         else:
-            self.logger.error(f"Failed to get moisture for all plants: {response_dto.error_message}")
+            self.logger.error(f"[CMD][ERROR] type=GET_ALL_MOISTURE err={response_dto.error_message}")
 
     async def handle_remove_plant(self, data: Dict[Any, Any]):
         """Handle remove plant request from server."""

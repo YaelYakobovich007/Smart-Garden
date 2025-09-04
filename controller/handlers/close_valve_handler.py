@@ -49,7 +49,7 @@ class CloseValveHandler:
                 )
             
         except Exception as e:
-            print(f"Error in close valve handler: {e}")
+            print(f"[HANDLER][CLOSE_VALVE][ERROR] err={e}")
             return CloseValveResponse.error(
                 plant_id=plant_id,
                 error_message=f"Internal error: {str(e)}"
@@ -77,7 +77,7 @@ class CloseValveHandler:
             return await self.handle(plant_id)
             
         except Exception as e:
-            print(f"Error in close valve handler: {e}")
+            print(f"[HANDLER][CLOSE_VALVE][ERROR] err={e}")
             return CloseValveResponse.error(
                 plant_id=plant_id if 'plant_id' in locals() else 0,
                 error_message=f"Internal error: {str(e)}"

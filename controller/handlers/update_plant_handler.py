@@ -27,7 +27,7 @@ class UpdatePlantHandler:
             # Parse the update plant data
             update_plant = UpdatePlant.from_websocket_data(data)
             
-            logger.info(f"Updating plant {update_plant.plant_id} with new settings")
+            logger.info(f"[HANDLER][UPDATE_PLANT][RECV] plant_id={update_plant.plant_id}")
             
             # Update the plant in the engine
             success = await self.smart_engine.update_plant(
@@ -38,12 +38,12 @@ class UpdatePlantHandler:
             )
             
             if success:
-                logger.info(f"Successfully updated plant {update_plant.plant_id}")
+                logger.info(f"[HANDLER][UPDATE_PLANT][SUCCESS] plant_id={update_plant.plant_id}")
                 return True, f"Plant {update_plant.plant_id} updated successfully"
             else:
-                logger.warning(f"Failed to update plant {update_plant.plant_id}")
+                logger.warning(f"[HANDLER][UPDATE_PLANT][ERROR] update_failed id={update_plant.plant_id}")
                 return False, f"Failed to update plant {update_plant.plant_id}"
                 
         except Exception as e:
-            logger.error(f"Error updating plant: {e}")
+            logger.error(f"[HANDLER][UPDATE_PLANT][ERROR] err={e}")
             return False, f"Error updating plant: {str(e)}"
