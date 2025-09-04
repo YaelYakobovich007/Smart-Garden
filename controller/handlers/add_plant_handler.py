@@ -29,16 +29,14 @@ class AddPlantHandler:
         """
         
         # Debug: Log the entire message to see what we're receiving
-        logger.info(f"Received add plant message from server: {data}")
-        logger.info(f"Message type: {type(data)}")
-        logger.info(f"Available keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+        logger.info(f"[HANDLER][ADD_PLANT][RECV] type={type(data)} keys={list(data.keys()) if isinstance(data, dict) else 'none'}")
         
         # Extract data from server message
         plant_id = data.get("plant_id")
         
         # Validate plant_id
         if plant_id is None:
-            logger.error("plant_id is missing from server message")
+            logger.error("[HANDLER][ADD_PLANT][ERROR] missing=plant_id")
             response = AddPlantRequest.error(
                 plant_id=0,  # Use 0 as fallback
                 error_message="plant_id is required but was not provided by server"
@@ -52,7 +50,7 @@ class AddPlantHandler:
         
         try:
             # Use the plant_id directly from the server (no conversion needed)
-            logger.info(f"Using plant_id {plant_id} directly from server")
+            logger.info(f"[HANDLER][ADD_PLANT] plant_id={plant_id}")
             
             # Convert schedule_data to the format expected by the engine
             # Engine expects: List[Dict[str, str]] = [{"day": "monday", "time": "06:00"}, ...]
@@ -112,7 +110,7 @@ class AddPlantHandler:
             return True, response
             
         except ValueError as e:
-            logger.error(f"ValueError in add plant handler: {e}")
+            logger.error(f"[HANDLER][ADD_PLANT][ERROR] type=ValueError err={e}")
             response = AddPlantRequest.error(
                 plant_id=plant_id,
                 error_message=f"Invalid data provided: {str(e)}"
@@ -120,7 +118,7 @@ class AddPlantHandler:
             return False, response
             
         except Exception as e:
-            logger.error(f"Unexpected error in add plant handler: {e}")
+            logger.error(f"[HANDLER][ADD_PLANT][ERROR] type=Exception err={e}")
             response = AddPlantRequest.error(
                 plant_id=plant_id,
                 error_message=f"Unexpected error: {str(e)}"

@@ -58,11 +58,7 @@ class Sensor:
         Returns:
             tuple[float, float] | None: (moisture, temperature) in real units, or None on failure.
         """
-        print(f"🔌 Connecting to sensor on {self.port}...")
-        print(f"   Modbus ID: 1")
-        print(f"   Baudrate: {self.baudrate}")
-        print(f"   Parity: N")
-        print(f"   Timeout: 1s")
+        print(f"[SENSOR][CONNECT] port={self.port} id=1 baud={self.baudrate} parity=N timeout_s=1")
         
         # Serialize access to the serial port
         lock = self._port_lock
@@ -83,16 +79,14 @@ class Sensor:
 
             # Connect to the Modbus client
             async with client as modbus_client:
-                print(f"🔗 Connection status: {'✅ CONNECTED' if modbus_client.connected else '❌ FAILED'}")
+                print(f"[SENSOR][STATUS] connected={bool(modbus_client.connected)}")
                 
                 if not modbus_client.connected:
                     print(f"❌ Could not connect to Modbus sensor on {self.port}")
                     return None
                 
                 try:
-                    print(f"📖 Reading registers from sensor 1...")
-                    print(f"   Register address: 1")
-                    print(f"   Register count: 2")
+                    print(f"[SENSOR][READ] unit=1 addr=0 count=2")
                     
                     # Read two registers starting from address 1 (matching mbpoll command)
                     # Try without unit parameter first
@@ -105,29 +99,25 @@ class Sensor:
                         print(f"❌ Modbus error: {result}")
                         return None
                     
-                    print(f"✅ Register read successful!")
+                    print(f"[SENSOR][READ][OK]")
                     
                     # Process raw register values (matching mbpoll output)
                     register_1 = result.registers[0]
                     register_2 = result.registers[1]
                     
-                    print(f"📊 Raw register values:")
-                    print(f"   Register 1: {register_1}")
-                    print(f"   Register 2: {register_2}")
+                    print(f"[SENSOR][REG] r1={register_1} r2={register_2}")
                     
                     # Convert to moisture and temperature (adjust these calculations based on your sensor)
                     # For now, using simple conversion - you may need to adjust based on your sensor specs
                     moisture = register_1 / 10.0 if register_1 > 0 else 0.0
                     temperature = register_2 / 10.0 if register_2 > 0 else 0.0
                     
-                    print(f"🌱 Processed values:")
-                    print(f"   Moisture: {moisture:.1f}%")
-                    print(f"   Temperature: {temperature:.1f}°C")
+                    print(f"[SENSOR][DATA] moisture={moisture:.1f}% temperature={temperature:.1f}C")
                     
                     return moisture, temperature
                 
                 except ModbusException as e:
-                    print(f"❌ Modbus exception: {e}")
+                    print(f"[SENSOR][ERROR] modbus_exception err={e}")
                     return None
             
 

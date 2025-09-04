@@ -52,8 +52,8 @@ class OpenValveHandler:
                 return OpenValveResponse.error(plant_id, f"Failed to open valve for plant {plant_id}")
                 
         except ValueError as e:
-            print(f"ValueError in OPEN_VALVE handler: {e}")
+            print(f"[HANDLER][OPEN_VALVE][ERROR] type=ValueError err={e}")
             return OpenValveResponse.error(plant_id, str(e))
         except Exception as e:
-            print(f"Unexpected error in OPEN_VALVE handler: {e}")
+            print(f"[HANDLER][OPEN_VALVE][ERROR] type=Exception err={e}")
             return OpenValveResponse.error(plant_id, f"Unexpected error: {str(e)}") 

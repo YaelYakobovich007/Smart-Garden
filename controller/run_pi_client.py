@@ -49,15 +49,15 @@ class PiClientRunner:
         self.running = False
         
         # Create the Smart Garden Engine ONCE at startup (not per connection)
-        logger.info(f"Initializing Smart Garden Engine with {total_valves} valves and {total_sensors} sensors")
+        logger.info(f"[PI][ENGINE][INIT] valves={total_valves} sensors={total_sensors}")
         from controller.engine.smart_garden_engine import SmartGardenEngine
         self.engine = SmartGardenEngine(total_valves=total_valves, total_sensors=total_sensors, simulation_mode=self.simulation_mode)
         logger.info(f"Smart Garden Engine initialized and ready")
         
         if family_code:
-            logger.info(f"Family code configured: {family_code}")
+            logger.info(f"[PI][FAMILY] code={family_code}")
         else:
-            logger.warning("No family code configured - Pi will not sync with any garden")
+            logger.warning("[PI][FAMILY] not_configured=true (no sync)")
         
     async def start(self):
         """Start the Pi client and handle reconnections"""
@@ -65,8 +65,8 @@ class PiClientRunner:
         
         while self.running:
             try:
-                logger.info("=== Starting Smart Garden WebSocket Client ===")
-                logger.info(f"Connecting to server using existing engine instance")
+                logger.info("[PI][START] Smart Garden WebSocket Client")
+                logger.info(f"[PI][CONNECT] reuse_engine=true")
                 
                 # Create WebSocket client with the SAME engine instance (no recreation)
                 self.client = SmartGardenPiClient(self.server_url, family_code=self.family_code, engine=self.engine)
@@ -81,13 +81,13 @@ class PiClientRunner:
                 await self.client.run()
                 
                 if self.running:  # Only try to reconnect if we weren't manually stopped
-                    logger.warning("Connection lost. Retrying in 5 seconds...")
+                    logger.warning("[PI][RETRY] after_disconnect delay_s=5")
                     await asyncio.sleep(5)
                     
             except Exception as e:
-                logger.error(f"Pi client error: {e}")
+                logger.error(f"[PI][ERROR] err={e}")
                 if self.running:
-                    logger.info("Retrying in 10 seconds...")
+                    logger.info("[PI][RETRY] delay_s=10")
                     await asyncio.sleep(10)
     
     async def _send_initial_assignments(self):
@@ -163,11 +163,7 @@ async def main():
     total_sensors = int(os.getenv('SMART_GARDEN_TOTAL_SENSORS', '2'))
     simulation_mode = os.getenv('SMART_GARDEN_SIMULATION_MODE', 'false').lower() in ['1','true','yes','on']
     
-    logger.info(f"Smart Garden Pi Client starting...")
-    logger.info(f"Server URL: {server_url}")
-    logger.info(f"Family Code: {family_code or 'Not configured'}")
-    logger.info(f"Total Valves: {total_valves}")
-    logger.info(f"Total Sensors: {total_sensors}")
+    logger.info(f"[PI][CONFIG] url={server_url} family={family_code or 'none'} valves={total_valves} sensors={total_sensors}")
     logger.info(f"Simulation Mode: {simulation_mode}")
     
     client_runner = PiClientRunner(server_url, family_code=family_code, total_valves=total_valves, total_sensors=total_sensors, simulation_mode=simulation_mode)

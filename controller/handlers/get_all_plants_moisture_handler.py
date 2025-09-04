@@ -30,7 +30,7 @@ class GetAllPlantsMoistureHandler:
             Tuple of (success: bool, AllPlantsMoistureResponse object)
         """
         
-        logger.info(f"Getting moisture data for all plants")
+        logger.info(f"[HANDLER][ALL_MOISTURE][RECV]")
         
         try:
             # Use engine function to get all plants sensor data
@@ -51,9 +51,9 @@ class GetAllPlantsMoistureHandler:
                     )
                     
                     moisture_data.append(moisture_update)
-                    logger.info(f"Plant (internal {internal_id}): moisture={moisture:.1f}%, temperature={temperature}")
+                    logger.info(f"[HANDLER][ALL_MOISTURE][PLANT] id={internal_id} moisture={moisture:.1f}% temperature={temperature}")
                 else:
-                    logger.warning(f"Failed to read sensor data for plant (internal {internal_id})")
+                    logger.warning(f"[HANDLER][ALL_MOISTURE][ERROR] read_failed id={internal_id}")
                     # Create error DTO for failed readings
                     error_update = MoistureUpdate.error(
                         event="all_plants_moisture_update",
@@ -63,19 +63,19 @@ class GetAllPlantsMoistureHandler:
                     moisture_data.append(error_update)
             
             if moisture_data:
-                logger.info(f"Successfully retrieved sensor data for {len(moisture_data)} plants")
+                logger.info(f"[HANDLER][ALL_MOISTURE][SUCCESS] total={len(moisture_data)}")
                 return True, AllPlantsMoistureResponse.success(
                     total_plants=len(moisture_data),
                     plants=moisture_data
                 )
             else:
-                logger.warning("No plants found or all sensor readings failed")
+                logger.warning("[HANDLER][ALL_MOISTURE][ERROR] none_or_failed=true")
                 return False, AllPlantsMoistureResponse.error(
                     error_message="No plants found or all sensor readings failed"
                 )
                 
         except Exception as e:
-            logger.error(f"Error getting all plants moisture: {e}")
+            logger.error(f"[HANDLER][ALL_MOISTURE][ERROR] err={e}")
             return False, AllPlantsMoistureResponse.error(
                 error_message=f"Internal error: {str(e)}"
             )

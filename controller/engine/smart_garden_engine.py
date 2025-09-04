@@ -152,7 +152,7 @@ class SmartGardenEngine:
         )
         
         self.plants[plant_id] = plant
-        print(f"Plant {plant_id} added with valve {valve.valve_id} and sensor {sensor.port}")
+        print(f"[ENGINE][ADD_PLANT] plant_id={plant_id} valve_id={valve.valve_id} sensor_port={sensor.port}")
 
         # Attach schedule if provided
         try:
@@ -173,7 +173,7 @@ class SmartGardenEngine:
         Returns:
             Optional[asyncio.Task]: The created task, or None if plant doesn't exist or is already irrigating
         """
-        print(f"Starting irrigation for plant {plant_id}")
+        print(f"[ENGINE][IRRIGATE][START] plant_id={plant_id}")
         
         plant = self.plants.get(plant_id)
         if not plant:
@@ -196,7 +196,7 @@ class SmartGardenEngine:
         self.irrigation_tasks[plant_id] = task
         task.add_done_callback(lambda t: self.irrigation_tasks.pop(plant_id, None))
         
-        print(f"Created irrigation task: {task.get_name()}")
+        print(f"[ENGINE][IRRIGATE][TASK] name={task.get_name()}")
         return task
 
     async def water_plant(self, plant_id: int) -> IrrigationResult:
@@ -289,17 +289,14 @@ class SmartGardenEngine:
         Returns:
             bool: True if irrigation was stopped or valve was closed, False if plant not found
         """
-        print("\n=== STOP IRRIGATION REQUESTED ===")
-        print(f"Plant ID: {plant_id}")
+        print(f"[ENGINE][STOP][REQ] plant_id={plant_id}")
         
         if plant_id not in self.plants:
             print(f"ERROR: No plant found with ID {plant_id}")
             return False
             
         plant = self.plants[plant_id]
-        print(f"\nFound plant: {plant_id}")
-        print(f"Valve ID: {plant.valve.valve_id}")
-        print(f"Valve state: {'OPEN' if plant.valve.is_open else 'CLOSED'}")
+        print(f"[ENGINE][STOP][STATE] plant_id={plant_id} valve_id={plant.valve.valve_id} valve_state={'OPEN' if plant.valve.is_open else 'CLOSED'}")
         
         # Get task reference under short lock
         async with self._lock:
@@ -309,12 +306,12 @@ class SmartGardenEngine:
         
         # Cancel task if it exists (outside lock)
         if task and not task.done():
-            print(f"\nCancelling irrigation task...")
+            print(f"[ENGINE][STOP][CANCEL] task=true")
             task.cancel()
             try:
-                print("Waiting for task to cancel (3s timeout)...")
+                print("[ENGINE][STOP][WAIT] timeout_s=3")
                 await asyncio.wait_for(task, timeout=3.0)
-                print("Task cancelled successfully")
+                print("[ENGINE][STOP][CANCELLED]")
             except (asyncio.TimeoutError, asyncio.CancelledError):
                 print("Task cancellation completed (timeout or cancelled)")
             except Exception as e:
@@ -322,16 +319,13 @@ class SmartGardenEngine:
         
         # Always try to close the valve
         try:
-            print("\n=== CLOSING VALVE ===")
-            print(f"Plant: {plant_id}")
-            print(f"Valve: {plant.valve.valve_id}")
-            print(f"Current state: {'OPEN' if plant.valve.is_open else 'CLOSED'}")
+            print(f"[ENGINE][VALVE][CLOSE] plant_id={plant_id} valve_id={plant.valve.valve_id} state_before={'OPEN' if plant.valve.is_open else 'CLOSED'}")
             
             plant.valve.request_close()
-            print("Valve close command sent")
+            print("[ENGINE][VALVE][CLOSE][SENT]")
             
             # Double check valve state
-            print(f"Final valve state: {'OPEN' if plant.valve.is_open else 'CLOSED'}")
+            print(f"[ENGINE][VALVE][STATE] final={'OPEN' if plant.valve.is_open else 'CLOSED'}")
             return True
             
         except Exception as e:
