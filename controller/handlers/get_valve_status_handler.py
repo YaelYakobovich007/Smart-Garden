@@ -25,7 +25,7 @@ class GetValveStatusHandler:
             ValveStatusResponse: Current valve status information
         """
         try:
-            print(f"Processing GET_VALVE_STATUS command for plant {plant_id}")
+            print(f"[GET_VALVE_STATUS] Processing command for plant {plant_id}")
             
             # Validate parameters
             if not isinstance(plant_id, int) or plant_id <= 0:
@@ -40,15 +40,15 @@ class GetValveStatusHandler:
             status = self.smart_engine.get_detailed_valve_status(plant_id)
             
             if status:
-                print(f"Valve status retrieved successfully for plant {plant_id}")
+                print(f"[GET_VALVE_STATUS] Retrieved status for plant {plant_id}")
                 return ValveStatusResponse.success(plant_id, status)
             else:
-                print(f"Failed to get valve status for plant {plant_id}")
+                print(f"[GET_VALVE_STATUS] ERROR - Failed to get valve status for plant {plant_id}")
                 return ValveStatusResponse.error(plant_id, f"Failed to get valve status for plant {plant_id}")
                 
         except ValueError as e:
-            print(f"ValueError in GET_VALVE_STATUS handler: {e}")
+            print(f"[GET_VALVE_STATUS] ERROR - ValueError: {e}")
             return ValveStatusResponse.error(plant_id, str(e))
         except Exception as e:
-            print(f"Unexpected error in GET_VALVE_STATUS handler: {e}")
+            print(f"[GET_VALVE_STATUS] ERROR - Unexpected: {e}")
             return ValveStatusResponse.error(plant_id, f"Unexpected error: {str(e)}")

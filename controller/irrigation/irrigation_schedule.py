@@ -14,7 +14,7 @@ DAY_NAME_MAP = {
 try:
     import schedule
 except ImportError:
-    print("The 'schedule' module is not installed. Install it using 'pip install schedule'.")
+    print("[SCHEDULE] The 'schedule' module is not installed. Install it using 'pip install schedule'.")
     raise
 def _normalize_day_name(day: str) -> str:
     if not isinstance(day, str):
@@ -104,8 +104,7 @@ class IrrigationSchedule:
                 session_id = str(uuid4())
                 try:
                     if getattr(self.irrigation_algorithm, 'websocket_client', None):
-                        self.irrigation_algorithm.websocket_client.logger.info(
-                            f"Sending IRRIGATION_STARTED for scheduled run: plant={self.plant.plant_id} session={session_id}")
+                        print(f"[WS-CLIENT] IRRIGATION_STARTED scheduled plant={self.plant.plant_id} session={session_id}")
                         asyncio.run_coroutine_threadsafe(
                             self.irrigation_algorithm.websocket_client.send_message(
                                 "IRRIGATION_STARTED",
@@ -114,13 +113,13 @@ class IrrigationSchedule:
                             self.loop
                         )
                 except Exception as e:
-                    print(f"Failed to send IRRIGATION_STARTED: {e}")
+                    print(f"[WS-CLIENT] ERROR - Failed to send IRRIGATION_STARTED: {e}")
 
                 try:
                     # Start via engine on the main event loop so the task registers correctly
                     self.loop.call_soon_threadsafe(self.engine.start_irrigation, self.plant.plant_id, session_id)
                 except Exception as e:
-                    print(f"ERROR starting scheduled irrigation via engine: {e}")
+                    print(f"[SCHEDULE] ERROR - starting scheduled irrigation via engine: {e}")
             else:
                 # Fallback: run in a dedicated event loop (may limit WS logging)
                 def _runner():
@@ -146,7 +145,7 @@ class IrrigationSchedule:
                         pass
                 threading.Thread(target=_runner, daemon=True).start()
         except Exception as e:
-            print(f"ERROR starting scheduled irrigation: {e}")
+            print(f"[SCHEDULE] ERROR - starting scheduled irrigation: {e}")
 
     def clear_schedules(self) -> None:
         """Cancel all registered jobs for this schedule instance."""

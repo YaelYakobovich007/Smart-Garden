@@ -1,9 +1,9 @@
-import logging
+ 
 from typing import Dict, Any, Tuple, Optional
 from controller.engine.smart_garden_engine import SmartGardenEngine
 from controller.dto.update_plant import UpdatePlant
 
-logger = logging.getLogger(__name__)
+ 
 
 class UpdatePlantHandler:
     """
@@ -27,7 +27,7 @@ class UpdatePlantHandler:
             # Parse the update plant data
             update_plant = UpdatePlant.from_websocket_data(data)
             
-            logger.info(f"Updating plant {update_plant.plant_id} with new settings")
+            print(f"[UPDATE_PLANT] Updating plant {update_plant.plant_id} with new settings")
             
             # Update the plant in the engine
             success = await self.smart_engine.update_plant(
@@ -38,12 +38,12 @@ class UpdatePlantHandler:
             )
             
             if success:
-                logger.info(f"Successfully updated plant {update_plant.plant_id}")
+                print(f"[UPDATE_PLANT] Successfully updated plant {update_plant.plant_id}")
                 return True, f"Plant {update_plant.plant_id} updated successfully"
             else:
-                logger.warning(f"Failed to update plant {update_plant.plant_id}")
+                print(f"[UPDATE_PLANT] WARN - Failed to update plant {update_plant.plant_id}")
                 return False, f"Failed to update plant {update_plant.plant_id}"
                 
         except Exception as e:
-            logger.error(f"Error updating plant: {e}")
+            print(f"[UPDATE_PLANT] ERROR - Error updating plant: {e}")
             return False, f"Error updating plant: {str(e)}"

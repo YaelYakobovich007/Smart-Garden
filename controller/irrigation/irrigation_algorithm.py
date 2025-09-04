@@ -51,7 +51,7 @@ class IrrigationAlgorithm:
         Send log message to server via WebSocket if available.
         Also prints locally for immediate feedback.
         """
-        print(message)  # Local print for immediate feedback
+        print(f"[IRRIGATION] {message}")  # Local print for immediate feedback
         if self.websocket_client and hasattr(self.websocket_client, 'send_message'):
             try:
                 await self.websocket_client.send_message("PI_LOG", {
@@ -65,7 +65,7 @@ class IrrigationAlgorithm:
         """
         Send structured irrigation progress update to server via WebSocket.
         """
-        print(f"IRRIGATION PROGRESS: {progress.message}")
+        print(f"[IRRIGATION] PROGRESS - {progress.message}")
         if self.websocket_client and hasattr(self.websocket_client, 'send_message'):
             try:
                 await self.websocket_client.send_message("IRRIGATION_PROGRESS", progress.to_websocket_data())
@@ -74,15 +74,15 @@ class IrrigationAlgorithm:
 
     async def _session_updater(self, plant: "Plant", session_id: str = None):
         """Single task to handle progress updates for entire session"""
-        print(f"\n=== Starting session updater for plant {plant.plant_id} ===")
+        print(f"[IRRIGATION] Starting session updater plant={plant.plant_id}")
         try:
             while True:
                 # Use single reading for updates to reduce sensor load
                 try:
                     current_moisture = await plant.get_moisture()  # Single read
-                    print(f"Updater: Got moisture reading: {current_moisture:.1f}%")
+                    print(f"[IRRIGATION] Updater moisture={current_moisture:.1f}%")
                 except Exception as e:
-                    print(f"Updater: Error getting moisture: {e}")
+                    print(f"[IRRIGATION] ERROR - Updater moisture: {e}")
                     current_moisture = None
                     
                 if current_moisture is not None:
@@ -94,13 +94,13 @@ class IrrigationAlgorithm:
                         target_moisture=self._get_calibrated_target(plant),
                         session_id=session_id
                     )
-                    print(f"Updater: Sending progress update - moisture: {current_moisture:.1f}%")
+                    print(f"[IRRIGATION] Updater send progress moisture={current_moisture:.1f}%")
                     await self.send_progress_update(progress)
                     
                 await asyncio.sleep(10)  # Update every 10 seconds
                 
         except asyncio.CancelledError:
-            print(f"\n=== Session updater cancelled for plant {plant.plant_id} ===")
+            print(f"[IRRIGATION] Session updater cancelled plant={plant.plant_id}")
             raise
 
     async def irrigate(self, plant: "Plant", session_id: str = None) -> IrrigationResult:
@@ -121,19 +121,17 @@ class IrrigationAlgorithm:
         cycle_count = 0
         update_task = None  # For cleanup in case of early cancellation
         
-        print(f"\n=== Starting irrigation process for plant {plant.plant_id} ===")
-        print(f"Target moisture: {plant.desired_moisture}%")
-        print(f"Water limit: {plant.valve.water_limit}L")
+        print(f"[IRRIGATION] Start plant={plant.plant_id} target={plant.desired_moisture}% limit={plant.valve.water_limit}L")
         
         try:
             # PHASE 1: Initial Checks
-            print("\n=== PHASE 1: Initial Checks ===")
+            print("[IRRIGATION] Phase 1 - Initial Checks")
             
             try:
-                print("Getting current moisture...")
+                print("[IRRIGATION] Reading current moisture")
                 current_moisture = await plant.get_moisture()
                 initial_moisture = current_moisture
-                print(f"Current moisture: {current_moisture:.1f}%")
+                print(f"[IRRIGATION] Current moisture={current_moisture:.1f}%")
                 
                 # Send initial check progress using calibrated target
                 calibrated_target = self._get_calibrated_target(plant)
@@ -144,7 +142,7 @@ class IrrigationAlgorithm:
                 await self.send_progress_update(progress)
                 
                 # Check for near-term precipitation threshold (sandy soil friendly)
-                print("Checking weather forecast (hourly precipitation)...")
+                print("[IRRIGATION] Checking weather forecast (hourly)")
                 lookahead_hours = 12  # configurable if needed
                 # Sandy soils drain quickly; avoid watering if a modest shower is imminent
                 min_rain_mm_hourly = 3.0     # threshold in mm over the lookahead window
@@ -163,18 +161,18 @@ class IrrigationAlgorithm:
                         plant.lat,
                         plant.lon
                     )
-                    print(f"Daily precipitation (fallback): {total_precip_mm:.2f} mm")
+                    print(f"[IRRIGATION] Daily precipitation fallback mm={total_precip_mm:.2f}")
                     if total_precip_mm >= min_rain_mm_daily_fallback:
-                        print("Daily precipitation threshold met - skipping irrigation (rain_expected)")
+                        print("[IRRIGATION] Skip - daily rain expected")
                         return IrrigationResult.skipped(
                             plant_id=plant.plant_id,
                             moisture=current_moisture,
                             reason="rain_expected"
                         )
                 else:
-                    print(f"Forecast precipitation next {lookahead_hours}h: {total_precip_mm:.2f} mm")
+                    print(f"[IRRIGATION] Forecast {lookahead_hours}h precip mm={total_precip_mm:.2f}")
                     if total_precip_mm >= min_rain_mm_hourly:
-                        print("Hourly precipitation threshold met - skipping irrigation (rain_expected)")
+                        print("[IRRIGATION] Skip - hourly rain expected")
                         return IrrigationResult.skipped(
                             plant_id=plant.plant_id,
                             moisture=current_moisture,
@@ -182,10 +180,10 @@ class IrrigationAlgorithm:
                         )
 
                 # Check for overwatering
-                print("Checking for overwatering...")
+                print("[IRRIGATION] Checking overwatering")
                 is_overwatered = await self.is_overwatered(plant, current_moisture)
                 if is_overwatered:
-                    print("Plant is overwatered - blocking valve")
+                    print("[IRRIGATION] Overwatered - blocking valve")
                     plant.valve.block()
                     return IrrigationResult.error(
                         plant_id=plant.plant_id,
@@ -194,9 +192,9 @@ class IrrigationAlgorithm:
                     )
 
                 # Check if already moist enough
-                print("Checking if irrigation is needed...")
+                print("[IRRIGATION] Checking if irrigation needed")
                 if not await self.should_irrigate(plant, current_moisture):
-                    print("Soil moisture is adequate - skipping irrigation")
+                    print("[IRRIGATION] Skip - soil moisture adequate")
                     return IrrigationResult.skipped(
                         plant_id=plant.plant_id,
                         moisture=current_moisture,
@@ -204,9 +202,9 @@ class IrrigationAlgorithm:
                     )
 
                 # Check if valve is blocked
-                print("Checking valve status...")
+                print("[IRRIGATION] Checking valve status")
                 if plant.valve.is_blocked:
-                    print("Valve is blocked - cannot irrigate")
+                    print("[IRRIGATION] ERROR - Valve is blocked")
                     return IrrigationResult.error(
                         plant_id=plant.plant_id,
                         error_message="Valve is blocked. Please check and unblock manually.",
@@ -214,7 +212,7 @@ class IrrigationAlgorithm:
                     )
                 
                 # All checks passed - notify that irrigation will start
-                print("\nAll checks passed - proceeding with irrigation")
+                print("[IRRIGATION] All checks passed - proceeding")
                 
                 # Send decision that irrigation will start (using calibrated target)
                 from controller.dto.irrigation_decision import IrrigationDecision
@@ -236,17 +234,17 @@ class IrrigationAlgorithm:
                     })
                 
             except Exception as e:
-                print(f"Error during initial moisture check: {e}")
+                print(f"[IRRIGATION] ERROR - initial moisture check: {e}")
                 return IrrigationResult.error(
                     plant_id=plant.plant_id,
                     error_message=f"Failed to get initial moisture: {str(e)}"
                 )
                 
             # PHASE 2: Irrigation Cycle
-            print("\n=== PHASE 2: Irrigation Cycle ===")
+            print("[IRRIGATION] Phase 2 - Irrigation Cycle")
             
             # Create single session-level updater task
-            print("Starting session updater...")
+            print("[IRRIGATION] Starting session updater task")
             update_task = asyncio.create_task(
                 self._session_updater(plant, session_id=session_id),
                 name=f"updater_plant_{plant.plant_id}"
@@ -256,12 +254,12 @@ class IrrigationAlgorithm:
             try:
                     while True:
                         # Check moisture and target
-                        print("\nChecking current moisture...")
+                        print("[IRRIGATION] Checking current moisture")
                         current_moisture = await self._get_averaged_moisture(plant, 5)
-                        print(f"Current moisture: {current_moisture:.1f}%")
+                        print(f"[IRRIGATION] Current moisture={current_moisture:.1f}%")
                         
                         if current_moisture >= self._get_effective_target(plant, 1.5):
-                            print(f"Target moisture reached: {current_moisture:.1f}% (target: {self._get_effective_target(plant, 1.5):.1f}%)")
+                            print(f"[IRRIGATION] Target reached moisture={current_moisture:.1f}% target={self._get_effective_target(plant, 1.5):.1f}%")
                             break
                         
                         # Pre-check water limit before starting cycle
@@ -269,24 +267,23 @@ class IrrigationAlgorithm:
                             self.watering_duration_seconds
                         )
                         if total_water + expected_water > plant.valve.water_limit:
-                            print(f"Water limit would be exceeded - stopping")
-                            print(f"Current: {total_water:.2f}L, Next cycle: {expected_water:.2f}L, Limit: {plant.valve.water_limit:.2f}L")
+                            print(f"[IRRIGATION] Stop - water limit would be exceeded (current={total_water:.2f}L next={expected_water:.2f}L limit={plant.valve.water_limit:.2f}L)")
                             water_limit_stop = True
                             break
                             
                         # Simple watering cycle
                         cycle_count += 1
-                        print(f"\n=== Starting cycle {cycle_count} ===")
+                        print(f"[IRRIGATION] Starting cycle {cycle_count}")
                         
                         # Open valve and wait
-                        print("Opening valve...")
+                        print("[IRRIGATION] Opening valve")
                         plant.valve.request_open()
                         try:
-                            print(f"Watering for {self.watering_duration_seconds}s...")
+                            print(f"[IRRIGATION] Watering {self.watering_duration_seconds}s")
                             await asyncio.sleep(self.watering_duration_seconds)
                             # Add water only if full cycle completes
                             total_water += expected_water
-                            print(f"Cycle complete. Total water used: {total_water:.2f}L")
+                            print(f"[IRRIGATION] Cycle complete total_water={total_water:.2f}L")
                             # Simulation: gently increase moisture to reflect delivered water
                             try:
                                 if getattr(plant.valve, 'simulation_mode', False) and getattr(plant.sensor, 'simulation_mode', False):
@@ -296,41 +293,41 @@ class IrrigationAlgorithm:
                             except Exception:
                                 pass
                         except asyncio.CancelledError:
-                            print("Watering cycle cancelled!")
+                            print("[IRRIGATION] Watering cycle cancelled")
                             raise
                         finally:
                             # Always close valve
-                            print("Closing valve...")
+                            print("[IRRIGATION] Closing valve")
                             plant.valve.request_close()
-                            print("Valve closed.")
+                            print("[IRRIGATION] Valve closed")
                         
                         # Break between cycles
                         try:
-                            print(f"\nWaiting {self.break_duration_seconds}s before next cycle...")
+                            print(f"[IRRIGATION] Waiting {self.break_duration_seconds}s before next cycle")
                             await asyncio.sleep(self.break_duration_seconds)
                         except asyncio.CancelledError:
-                            print("Break cycle cancelled!")
+                            print("[IRRIGATION] Break cycle cancelled")
                             raise
                             
             finally:
                 # Clean up updater task
                 if update_task:
-                    print("\nCleaning up session updater...")
+                    print("[IRRIGATION] Cleaning up session updater")
                     update_task.cancel()
                     try:
                         await update_task
                     except asyncio.CancelledError:
                         pass
-                    print("Session updater cleaned up.")
+                    print("[IRRIGATION] Session updater cleaned up")
                     
             # Get final moisture reading after loop ends
-            print("\nGetting final moisture reading...")
+            print("[IRRIGATION] Getting final moisture reading")
             try:
                 final_moisture = await self._get_averaged_moisture(plant, 5)
-                print(f"Final moisture: {final_moisture:.1f}%")
+                print(f"[IRRIGATION] Final moisture={final_moisture:.1f}%")
             except asyncio.CancelledError:
                 # If cancelled during final reading, use last known moisture
-                print("Cancelled during final reading - using last known moisture")
+                print("[IRRIGATION] Cancelled during final reading - using last known moisture")
                 final_moisture = current_moisture
                 raise
             
@@ -338,7 +335,7 @@ class IrrigationAlgorithm:
             target_value = self._get_calibrated_target(plant)
             if water_limit_stop and final_moisture < target_value:
                 # Fault: limit reached (pre-check) but target not met → block valve and error
-                print("\n=== Water limit stop without reaching target → blocking valve and reporting error ===")
+                print("[IRRIGATION] Water limit stop without reaching target - blocking valve and reporting error")
                 plant.valve.block()
                 return IrrigationResult.error(
                     plant_id=plant.plant_id,
@@ -350,10 +347,10 @@ class IrrigationAlgorithm:
                 )
             else:
                 # Success (either target reached, or limit stop with target met, or normal exit)
-                print("\n=== Irrigation completed successfully ===")
-                print(f"Total cycles: {cycle_count}")
-                print(f"Total water used: {total_water:.2f}L")
-                print(f"Moisture change: {initial_moisture:.1f}% → {final_moisture:.1f}%")
+                print("[IRRIGATION] Irrigation completed successfully")
+                print(f"[IRRIGATION] Total cycles={cycle_count}")
+                print(f"[IRRIGATION] Total water used={total_water:.2f}L")
+                print(f"[IRRIGATION] Moisture change {initial_moisture:.1f}% -> {final_moisture:.1f}%")
                 reason = None
                 if water_limit_stop and final_moisture >= target_value:
                     reason = "limit_reached_target_met"
@@ -367,36 +364,36 @@ class IrrigationAlgorithm:
                 )
             
         except asyncio.CancelledError:
-            print(f"\n=== Irrigation cancelled for plant {plant.plant_id} ===")
+            print(f"[IRRIGATION] Irrigation cancelled plant={plant.plant_id}")
             
             # Belt-and-suspenders: ensure valve is closed on any cancellation
-            print("Double-checking valve is closed...")
+            print("[IRRIGATION] Double-checking valve is closed")
             plant.valve.request_close()
             
             # Clean up updater task if it exists
             if update_task:
-                print("Cleaning up session updater...")
+                print("[IRRIGATION] Cleaning up session updater")
                 update_task.cancel()
                 try:
                     await update_task
                 except asyncio.CancelledError:
                     pass
-                print("Session updater cleaned up.")
+                print("[IRRIGATION] Session updater cleaned up")
             
             # Use last known moisture if we can't get a new reading
-            print("Getting final moisture after cancellation...")
+            print("[IRRIGATION] Getting final moisture after cancellation")
             try:
                 final_moisture = await self._get_averaged_moisture(plant, 3)
-                print(f"Final moisture after cancel: {final_moisture:.1f}%")
+                print(f"[IRRIGATION] Final moisture after cancel={final_moisture:.1f}%")
             except asyncio.CancelledError:
-                print("Cancelled during final reading - using last known moisture")
+                print("[IRRIGATION] Cancelled during final reading - using last known moisture")
                 final_moisture = current_moisture
                 
-            print(f"\n=== Final state after cancellation ===")
-            print(f"Cycles completed: {cycle_count}")
-            print(f"Water used before cancel: {total_water:.2f}L")
-            print(f"Initial moisture: {initial_moisture or 0:.1f}%")
-            print(f"Final moisture: {final_moisture or 0:.1f}%")
+            print(f"[IRRIGATION] Final state after cancellation")
+            print(f"[IRRIGATION] Cycles completed={cycle_count}")
+            print(f"[IRRIGATION] Water used before cancel={total_water:.2f}L")
+            print(f"[IRRIGATION] Initial moisture={initial_moisture or 0:.1f}%")
+            print(f"[IRRIGATION] Final moisture={final_moisture or 0:.1f}%")
                 
             # Treat user cancellation as a successful stop without adding an unsupported 'reason' argument
             return IrrigationResult.success(
@@ -536,7 +533,7 @@ class IrrigationAlgorithm:
     async def _generate_irrigation_result(self, plant: "Plant", initial_moisture: float, 
                                          total_water: float, cycle_count: int, session_id: str) -> IrrigationResult:
         """Generate final irrigation result"""
-        print(f"Taking final moisture measurements...")
+        print(f"[IRRIGATION] Taking final moisture measurements")
         final_moisture = await self._get_averaged_moisture(plant, 5)
         
         # Send final summary progress update
@@ -549,13 +546,13 @@ class IrrigationAlgorithm:
         await self.send_progress_update(progress)
         
         # Log results
-        print(f"\nCycles Completed: {cycle_count}")
-        print(f"Total Water Used: {total_water:.6f}L")
-        print(f"Initial Moisture: {initial_moisture:.1f}%")
-        print(f"Final Moisture: {final_moisture:.1f}%")
-        print(f"Moisture Increase: {final_moisture - initial_moisture:.1f}%")
-        print(f"Target Moisture (calibrated): {self._get_calibrated_target(plant):.1f}%")
-        print(f"Target Reached: {'YES' if final_moisture >= self._get_calibrated_target(plant) else 'NO'}")
+        print(f"[IRRIGATION] Cycles Completed={cycle_count}")
+        print(f"[IRRIGATION] Total Water Used={total_water:.6f}L")
+        print(f"[IRRIGATION] Initial Moisture={initial_moisture:.1f}%")
+        print(f"[IRRIGATION] Final Moisture={final_moisture:.1f}%")
+        print(f"[IRRIGATION] Moisture Increase={final_moisture - initial_moisture:.1f}%")
+        print(f"[IRRIGATION] Target Moisture (calibrated)={self._get_calibrated_target(plant):.1f}%")
+        print(f"[IRRIGATION] Target Reached={'YES' if final_moisture >= self._get_calibrated_target(plant) else 'NO'}")
         
         efficiency = (final_moisture - initial_moisture) / (total_water * 1000) if total_water > 0 else 0
         print(f"Water Efficiency: {efficiency:.2f} %/mL" if total_water > 0 else "Water Efficiency: N/A")
@@ -580,11 +577,11 @@ class IrrigationAlgorithm:
 
         # Success
         plant.last_irrigation_time = datetime.now()
-        print(f"\nDRIPPER IRRIGATION COMPLETED SUCCESSFULLY!")
-        print(f"Irrigation Time: {plant.last_irrigation_time}")
-        print(f"Target Reached: {'YES' if final_moisture >= plant.desired_moisture else 'PARTIAL'}")
-        print(f"Dripper Type: {plant.dripper_type.display_name}")
-        print(f"Total Cycles: {cycle_count}")
+        print(f"[IRRIGATION] DRIPPER IRRIGATION COMPLETED SUCCESSFULLY")
+        print(f"[IRRIGATION] Irrigation Time={plant.last_irrigation_time}")
+        print(f"[IRRIGATION] Target Reached={'YES' if final_moisture >= plant.desired_moisture else 'PARTIAL'}")
+        print(f"[IRRIGATION] Dripper Type={plant.dripper_type.display_name}")
+        print(f"[IRRIGATION] Total Cycles={cycle_count}")
 
         return IrrigationResult.success(
             plant_id=plant.plant_id,

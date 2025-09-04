@@ -6,10 +6,9 @@ from controller.dto.moisture_update import MoistureUpdate
 from controller.dto.all_plants_moisture_response import AllPlantsMoistureResponse
 from controller.engine.smart_garden_engine import SmartGardenEngine
 from typing import Dict, Any, Tuple, Optional, List
-import logging
+ 
 import time
 
-logger = logging.getLogger(__name__)
 
 class GetAllPlantsMoistureHandler:
     """
@@ -30,7 +29,7 @@ class GetAllPlantsMoistureHandler:
             Tuple of (success: bool, AllPlantsMoistureResponse object)
         """
         
-        logger.info(f"Getting moisture data for all plants")
+        print(f"[GET_ALL_MOISTURE] Getting moisture data for all plants")
         
         try:
             # Use engine function to get all plants sensor data
@@ -51,9 +50,9 @@ class GetAllPlantsMoistureHandler:
                     )
                     
                     moisture_data.append(moisture_update)
-                    logger.info(f"Plant (internal {internal_id}): moisture={moisture:.1f}%, temperature={temperature}")
+                    print(f"[GET_ALL_MOISTURE] Plant (internal {internal_id}): moisture={moisture:.1f}%, temperature={temperature}")
                 else:
-                    logger.warning(f"Failed to read sensor data for plant (internal {internal_id})")
+                    print(f"[GET_ALL_MOISTURE] WARN - Failed to read sensor data for plant (internal {internal_id})")
                     # Create error DTO for failed readings
                     error_update = MoistureUpdate.error(
                         event="all_plants_moisture_update",
@@ -63,19 +62,19 @@ class GetAllPlantsMoistureHandler:
                     moisture_data.append(error_update)
             
             if moisture_data:
-                logger.info(f"Successfully retrieved sensor data for {len(moisture_data)} plants")
+                print(f"[GET_ALL_MOISTURE] Successfully retrieved sensor data for {len(moisture_data)} plants")
                 return True, AllPlantsMoistureResponse.success(
                     total_plants=len(moisture_data),
                     plants=moisture_data
                 )
             else:
-                logger.warning("No plants found or all sensor readings failed")
+                print("[GET_ALL_MOISTURE] WARN - No plants found or all sensor readings failed")
                 return False, AllPlantsMoistureResponse.error(
                     error_message="No plants found or all sensor readings failed"
                 )
                 
         except Exception as e:
-            logger.error(f"Error getting all plants moisture: {e}")
+            print(f"[GET_ALL_MOISTURE] ERROR - Error getting all plants moisture: {e}")
             return False, AllPlantsMoistureResponse.error(
                 error_message=f"Internal error: {str(e)}"
             )

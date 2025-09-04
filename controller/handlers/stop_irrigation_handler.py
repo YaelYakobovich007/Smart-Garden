@@ -26,7 +26,7 @@ class StopIrrigationHandler:
         try:
             # Validate plant exists
             if plant_id not in self.engine.plants:
-                print(f"ERROR: Plant {plant_id} not found")
+                print(f"[STOP_IRRIGATION] ERROR - Plant {plant_id} not found")
                 return StopIrrigationResponse.error(
                     plant_id=plant_id,
                     error_message=f"Plant {plant_id} not found"
@@ -64,7 +64,7 @@ class StopIrrigationHandler:
                 
         except Exception as e:
             # Handle unexpected errors
-            print(f"ERROR during stop irrigation: {str(e)}")
+            print(f"[STOP_IRRIGATION] ERROR - {str(e)}")
             return StopIrrigationResponse.error(
                 plant_id=plant_id,
                 error_message=f"Unexpected error during stop irrigation: {str(e)}"

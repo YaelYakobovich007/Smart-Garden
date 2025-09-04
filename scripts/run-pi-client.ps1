@@ -1,5 +1,5 @@
 Param(
-  [string]$ServerUrl = 'ws://192.168.68.67:8080',
+  [string]$ServerUrl = 'wss://smart-garden-backend-1088783109508.europe-west1.run.app',
   [string]$FamilyCode = '',
   [int]$TotalValves = 2,
   [int]$TotalSensors = 2,

@@ -17,25 +17,13 @@ import sys
 import os
 import asyncio
 import signal
-import logging
+ 
 
 # Add the project root directory to Python path so we can import the controller package
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 from controller.services.websocket_client import SmartGardenPiClient
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('smart_garden_pi.log'),
-        logging.StreamHandler()
-    ]
-)
-
-logger = logging.getLogger(__name__)
 
 class PiClientRunner:
     def __init__(self, server_url: str = "wss://smart-garden-backend-1088783109508.europe-west1.run.app", 
@@ -49,15 +37,15 @@ class PiClientRunner:
         self.running = False
         
         # Create the Smart Garden Engine ONCE at startup (not per connection)
-        logger.info(f"Initializing Smart Garden Engine with {total_valves} valves and {total_sensors} sensors")
+        print(f"[PI-RUNNER] Initializing Smart Garden Engine with {total_valves} valves and {total_sensors} sensors")
         from controller.engine.smart_garden_engine import SmartGardenEngine
         self.engine = SmartGardenEngine(total_valves=total_valves, total_sensors=total_sensors, simulation_mode=self.simulation_mode)
-        logger.info(f"Smart Garden Engine initialized and ready")
+        print(f"[PI-RUNNER] Smart Garden Engine initialized and ready")
         
         if family_code:
-            logger.info(f"Family code configured: {family_code}")
+            print(f"[PI-RUNNER] Family code configured: {family_code}")
         else:
-            logger.warning("No family code configured - Pi will not sync with any garden")
+            print("[PI-RUNNER] WARN - No family code configured - Pi will not sync with any garden")
         
     async def start(self):
         """Start the Pi client and handle reconnections"""
@@ -65,8 +53,8 @@ class PiClientRunner:
         
         while self.running:
             try:
-                logger.info("=== Starting Smart Garden WebSocket Client ===")
-                logger.info(f"Connecting to server using existing engine instance")
+                print("[PI-RUNNER] === Starting Smart Garden WebSocket Client ===")
+                print(f"[PI-RUNNER] Connecting to server using existing engine instance")
                 
                 # Create WebSocket client with the SAME engine instance (no recreation)
                 self.client = SmartGardenPiClient(self.server_url, family_code=self.family_code, engine=self.engine)
@@ -81,13 +69,13 @@ class PiClientRunner:
                 await self.client.run()
                 
                 if self.running:  # Only try to reconnect if we weren't manually stopped
-                    logger.warning("Connection lost. Retrying in 5 seconds...")
+                    print("[PI-RUNNER] WARN - Connection lost. Retrying in 5 seconds...")
                     await asyncio.sleep(5)
                     
             except Exception as e:
-                logger.error(f"Pi client error: {e}")
+                print(f"[PI-RUNNER] ERROR - Pi client error: {e}")
                 if self.running:
-                    logger.info("Retrying in 10 seconds...")
+                    print("[PI-RUNNER] Retrying in 10 seconds...")
                     await asyncio.sleep(10)
     
     async def _send_initial_assignments(self):
@@ -117,17 +105,17 @@ class PiClientRunner:
                 await asyncio.sleep(0.5)
                 
         except Exception as e:
-            logger.error(f"Failed to send initial assignments: {e}")
+            print(f"[PI-RUNNER] ERROR - Failed to send initial assignments: {e}")
     
     async def stop(self):
         """Stop the Pi client gracefully"""
-        logger.info("Stopping Smart Garden Pi Client...")
+        print("[PI-RUNNER] Stopping Smart Garden Pi Client...")
         self.running = False
         
         if self.client:
             await self.client.disconnect()
         
-        logger.info("Pi Client stopped successfully")
+        print("[PI-RUNNER] Pi Client stopped successfully")
 
 
 # Global client runner instance
@@ -135,7 +123,7 @@ client_runner = None
 
 def signal_handler(signum, frame):
     """Handle shutdown signals gracefully"""
-    logger.info(f"Received signal {signum}. Shutting down...")
+    print(f"[PI-RUNNER] Received signal {signum}. Shutting down...")
     if client_runner:
         try:
             # Best-effort: close valves and stop irrigations first
@@ -143,7 +131,7 @@ def signal_handler(signum, frame):
                 loop = asyncio.get_event_loop()
                 loop.create_task(client_runner.engine.stop_all_irrigations_and_close_valves())
         except Exception as e:
-            logger.warning(f"Shutdown cleanup failed: {e}")
+            print(f"[PI-RUNNER] WARN - Shutdown cleanup failed: {e}")
         asyncio.create_task(client_runner.stop())
 
 async def main():
@@ -163,21 +151,21 @@ async def main():
     total_sensors = int(os.getenv('SMART_GARDEN_TOTAL_SENSORS', '2'))
     simulation_mode = os.getenv('SMART_GARDEN_SIMULATION_MODE', 'false').lower() in ['1','true','yes','on']
     
-    logger.info(f"Smart Garden Pi Client starting...")
-    logger.info(f"Server URL: {server_url}")
-    logger.info(f"Family Code: {family_code or 'Not configured'}")
-    logger.info(f"Total Valves: {total_valves}")
-    logger.info(f"Total Sensors: {total_sensors}")
-    logger.info(f"Simulation Mode: {simulation_mode}")
+    print(f"[PI-RUNNER] Smart Garden Pi Client starting...")
+    print(f"[PI-RUNNER] Server URL: {server_url}")
+    print(f"[PI-RUNNER] Family Code: {family_code or 'Not configured'}")
+    print(f"[PI-RUNNER] Total Valves: {total_valves}")
+    print(f"[PI-RUNNER] Total Sensors: {total_sensors}")
+    print(f"[PI-RUNNER] Simulation Mode: {simulation_mode}")
     
     client_runner = PiClientRunner(server_url, family_code=family_code, total_valves=total_valves, total_sensors=total_sensors, simulation_mode=simulation_mode)
     
     try:
         await client_runner.start()
     except KeyboardInterrupt:
-        logger.info("Shutdown requested by user")
+        print("[PI-RUNNER] Shutdown requested by user")
     except Exception as e:
-        logger.error(f"Fatal error: {e}")
+        print(f"[PI-RUNNER] ERROR - Fatal error: {e}")
     finally:
         if client_runner:
             await client_runner.stop()
@@ -186,7 +174,7 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\nSmart Garden Pi Client stopped")
+        print("[PI-RUNNER] Smart Garden Pi Client stopped")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"[PI-RUNNER] ERROR - {e}")
         sys.exit(1)
