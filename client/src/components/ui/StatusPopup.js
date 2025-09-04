@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { Leaf } from 'lucide-react-native';
 
 const StatusPopup = ({ 
   visible, 
@@ -11,23 +12,27 @@ const StatusPopup = ({
   onButtonPress, 
   onClose,
   cancelText,
-  onCancel
+  onCancel,
+  iconName,
 }) => {
   const hasCancelButton = cancelText && onCancel;
   
   const getIconName = () => {
+    if (iconName) return iconName;
     if (type === 'error') return 'x-circle';
     if (type === 'success') return 'check';
     return 'user'; // Default person icon like in the User Profile dialog
   };
   
   const getIconColor = () => {
+    if (iconName === 'droplet') return '#2563EB';
     if (type === 'error') return '#EF4444';
     if (type === 'success') return '#2E7D32';
     return '#8B5CF6'; // Purple like in the User Profile dialog
   };
 
   const getIconBackgroundColor = () => {
+    if (iconName === 'droplet') return '#EFF6FF';
     if (type === 'error') return '#FEF2F2';
     if (type === 'success') return '#F0FDF4';
     return '#F8FAFC'; // Light blue-gray like in the User Profile dialog
@@ -60,7 +65,11 @@ const StatusPopup = ({
               backgroundColor: getIconBackgroundColor(),
               borderColor: getIconColor() 
             }]}>
-              <Feather name={getIconName()} size={20} color={getIconColor()} />
+              {iconName === 'leaf' ? (
+                <Leaf size={20} color={getIconColor()} />
+              ) : (
+                <Feather name={getIconName()} size={20} color={getIconColor()} />
+              )}
             </View>
             <Text style={styles.title}>{title}</Text>
           </View>

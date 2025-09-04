@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   plantsSection: {
     flex: 0.6,
     marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 0,
   },
   notificationsSection: {
     flex: 1,
@@ -163,6 +163,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     marginHorizontal: 16,
     marginBottom: 12,
+  },
+  plantsSeparator: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 16,
+    marginBottom: 28,
   },
   topImageContainer: {
     width: '100%',

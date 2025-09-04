@@ -251,14 +251,8 @@ export const IrrigationProvider = ({ children }) => {
               const remainingTime = Math.max(0, Math.ceil((state.timerEndTime - now) / 1000));
 
               if (remainingTime <= 0) {
-                console.log(`⏰ Timer completed for plant ${plantId} - valve should be closed`);
-                updatePlantWateringState(plantId, {
-                  isWateringActive: false,
-                  wateringTimeLeft: 0,
-                  timerStartTime: null,
-                  timerEndTime: null,
-                  timerInterval: null
-                });
+                console.log(`⏰ Timer completed for plant ${plantId} - closing valve via handleStopWatering first`);
+                // Important: send stop before clearing local state so we retain plantName
                 handleStopWatering(plantId);
                 // Clear this interval
                 if (intervals.has(plantId)) {
@@ -422,15 +416,15 @@ export const IrrigationProvider = ({ children }) => {
         console.log('🛑 Stopping smart irrigation for plant:', plantName);
         const payload = { type: 'STOP_IRRIGATION' };
         if (plantName) payload.plantName = plantName;
-        if (plantId) payload.plantId = plantId;
+        if (plantId != null) payload.plantId = plantId;
         websocketService.sendMessage(payload);
       } else {
         // For manual irrigation, send CLOSE_VALVE message
         console.log('🛑 Stopping manual irrigation (closing valve) for plant:', plantName);
-        websocketService.sendMessage({
-          type: 'CLOSE_VALVE',
-          plantName: plantName
-        });
+        const payload = { type: 'CLOSE_VALVE' };
+        if (plantName) payload.plantName = plantName;
+        if (plantId != null) payload.plantId = plantId;
+        websocketService.sendMessage(payload);
       }
     } else {
       console.log('🛑 No plant name available, only updating local state');
@@ -457,8 +451,7 @@ export const IrrigationProvider = ({ children }) => {
       if (remainingTime > 0) {
         updatePlantWateringState(plantId, { wateringTimeLeft: remainingTime, isWateringActive: true });
       } else {
-        // Timer has expired
-        updatePlantWateringState(plantId, { isWateringActive: false, wateringTimeLeft: 0, timerStartTime: null, timerEndTime: null });
+        // Timer has expired - stop first, then allow handler to clear state
         handleStopWatering(plantId);
       }
     }
@@ -470,7 +463,7 @@ export const IrrigationProvider = ({ children }) => {
       clearInterval(state.timerInterval);
       updatePlantWateringState(plantId, { timerInterval: null });
     }
-    updatePlantWateringState(plantId, { isWateringActive: false, wateringTimeLeft: 0, timerStartTime: null, timerEndTime: null });
+    // Stop first to ensure server receives proper identifiers, then handler clears state
     handleStopWatering(plantId);
   };
 
@@ -556,7 +549,13 @@ export const IrrigationProvider = ({ children }) => {
           const decisionMsg = reason === 'rain_expected'
             ? 'Watering skipped due to rain expected today.'
             : 'Irrigation is not required at this time.';
-          Alert.alert('Smart Irrigation', decisionMsg);
+          showAlert({
+            title: 'Smart Irrigation',
+            message: decisionMsg,
+            okText: 'OK',
+            variant: 'info',
+            iconName: 'droplet',
+          });
         } else {
           // Will irrigate → stop showing the checking loader; wait for IRRIGATION_STARTED
           updatePlantWateringState(targetPlantId, {
@@ -861,7 +860,13 @@ export const IrrigationProvider = ({ children }) => {
         });
       }
 
-      Alert.alert('Smart Irrigation', failureMessage);
+      showAlert({
+        title: 'Smart Irrigation',
+        message: failureMessage,
+        okText: 'OK',
+        variant: 'error',
+        iconName: 'alert-triangle',
+      });
     };
 
     const handleValveBlocked = (data) => {
@@ -890,6 +895,7 @@ export const IrrigationProvider = ({ children }) => {
         message,
         okText: 'OK',
         variant: 'error',
+        iconName: 'alert-triangle',
       });
     };
 
@@ -944,7 +950,13 @@ export const IrrigationProvider = ({ children }) => {
             const skipMsg = reason === 'rain_expected'
               ? 'Watering skipped due to rain expected today.'
               : (data?.message || 'Irrigation was skipped - not necessary at this time.');
-            Alert.alert('Smart Irrigation', skipMsg);
+            showAlert({
+              title: 'Smart Irrigation',
+              message: skipMsg,
+              okText: 'OK',
+              variant: 'info',
+              iconName: 'droplet',
+            });
           }, 100);
         }
       } else {
@@ -1108,12 +1120,15 @@ export const IrrigationProvider = ({ children }) => {
       const plantName = payload?.plantName || null;
       const sessionId = payload?.sessionId || payload?.session_id || null;
       if (pid != null) {
-        // Store mode so Stop can show specific messaging for scheduled case
-        updatePlantWateringState(pid, {
+        // Preserve existing currentPlant if plantName is not provided in the broadcast
+        const updates = {
           currentMode: String(mode).toLowerCase(),
-          currentPlant: plantName || null,
           irrigationSessionId: sessionId || null,
-        });
+        };
+        if (plantName) {
+          updates.currentPlant = plantName;
+        }
+        updatePlantWateringState(pid, updates);
         rehydrateIrrigationStarted(pid, mode, duration);
       }
     };
