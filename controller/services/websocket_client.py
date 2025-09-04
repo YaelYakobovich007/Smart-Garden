@@ -783,7 +783,18 @@ class SmartGardenPiClient:
             
             # Store the sync data
             self.garden_sync_data = message
-            
+
+            # Defensive: ensure all valves are closed before applying sync
+            try:
+                for plant in list(self.engine.plants.values()):
+                    try:
+                        if getattr(plant, 'valve', None):
+                            plant.valve.request_close()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
             # Add each plant to the engine
             for plant_data in plants_data:
                 try:

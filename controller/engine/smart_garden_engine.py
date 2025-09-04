@@ -62,6 +62,17 @@ class SmartGardenEngine:
             # If schedule module missing or any failure, skip run loop
             pass
 
+        # Safety: ensure all valves are closed on engine startup
+        try:
+            for plant in list(self.plants.values()):
+                try:
+                    if getattr(plant, 'valve', None):
+                        plant.valve.request_close()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
     async def add_plant(
             self,
             plant_id: int,

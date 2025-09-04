@@ -20,6 +20,16 @@ class ValvesManager:
         self.plant_valve_map: Dict[int, int] = {}  # plant_id -> valve_id
         self.relay_controller = RelayController(simulation_mode=bool(simulation_mode))
 
+        # Safety: force all physical valves OFF at startup
+        try:
+            for channel in range(1, self.total_valves + 1):
+                try:
+                    self.relay_controller.turn_off(channel)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
     def get_valve_id(self, plant_id):
         """
         Retrieves the valve ID assigned to a specific plant.
