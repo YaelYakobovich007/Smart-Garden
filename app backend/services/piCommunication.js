@@ -1,4 +1,5 @@
 const { getPiSocket } = require('../sockets/piSocket');
+const { getControllerSocketByGardenId } = require('./controllerRegistry');
 
 /**
  * Service for communicating with Raspberry Pi
@@ -7,8 +8,10 @@ class PiCommunication {
     /**
      * Send ADD_PLANT request to Pi (no waiting)
      */
-    addPlant(plantData) {
-        const piSocket = getPiSocket();
+    async addPlant(plantId, gardenId, plantData) {
+        // Prefer family-scoped controller
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : (plantData?.garden_id ? getControllerSocketByGardenId(plantData.garden_id) : null);
+        const piSocket = familySocket || getPiSocket();
         if (!piSocket) {
             console.log('[PI] Not connected - plant saved without hardware');
             return { success: false, error: 'Pi not connected' };
@@ -16,12 +19,12 @@ class PiCommunication {
 
         try {
             // Debug: Log the plantData structure
-            console.log(`[PI] Add plant data: id=${plantData.plant_id} moisture=${plantData.ideal_moisture} limit=${plantData.water_limit}`);
+            console.log(`[PI] Add plant data: id=${plantId} moisture=${plantData.ideal_moisture} limit=${plantData.water_limit}`);
 
             const request = {
                 type: 'ADD_PLANT',
                 data: {
-                    plant_id: plantData.plant_id,
+                    plant_id: plantId,
                     desiredMoisture: parseFloat(plantData.ideal_moisture),
                     waterLimit: parseFloat(plantData.water_limit),
                     dripperType: plantData.dripper_type || '2L/h',
@@ -49,8 +52,9 @@ class PiCommunication {
     /**
      * Request moisture data for a single plant from Pi
      */
-    getMoisture(plantId) {
-        const piSocket = getPiSocket();
+    getMoisture(plantId, gardenId) {
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
         if (!piSocket) {
             console.log('[PI] Not connected - cannot get moisture data');
             return { success: false, error: 'Pi not connected' };
@@ -78,8 +82,10 @@ class PiCommunication {
     /**
      * Request moisture data for all plants from Pi
      */
-    getAllMoisture() {
-        const piSocket = getPiSocket();
+    getAllMoisture(gardenId) {
+        // Prefer family-scoped controller when gardenId provided
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
         if (!piSocket) {
             console.log('[PI] Not connected - cannot get moisture data');
             return { success: false, error: 'Pi not connected' };
@@ -105,8 +111,9 @@ class PiCommunication {
     /**
      * Send IRRIGATE_PLANT request to Pi (no waiting)
      */
-    irrigatePlant(plantId, sessionId) {
-        const piSocket = getPiSocket();
+    irrigatePlant(plantId, sessionId, gardenId) {
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
         if (!piSocket) {
             console.log('[PI] Not connected - cannot irrigate plant');
             return { success: false, error: 'Pi not connected' };
@@ -132,13 +139,12 @@ class PiCommunication {
         }
     }
 
-
-
     /**
      * Send STOP_IRRIGATION request to Pi (no waiting)
      */
-    stopIrrigation(plantId) {
-        const piSocket = getPiSocket();
+    stopIrrigation(plantId, gardenId) {
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
         if (!piSocket) {
             console.log('[PI] Not connected - cannot stop irrigation');
             return { success: false, error: 'Pi not connected' };
@@ -166,20 +172,21 @@ class PiCommunication {
     /**
      * Send CLOSE_VALVE request to Pi (no waiting)
      */
-    closeValve(plantId) {
-        console.log('🔍 DEBUG - piCommunication.closeValve called:');
+    closeValve(plantId, gardenId) {
+        console.log('DEBUG - piCommunication.closeValve called:');
         console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
 
-        console.log('🔍 DEBUG - Getting Pi socket...');
-        const piSocket = getPiSocket();
-        console.log('🔍 DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
+        console.log('DEBUG - Getting Pi socket...');
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
+        console.log('DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
 
         if (!piSocket) {
-            console.log('❌ Pi not connected - cannot close valve');
+            console.log('Pi not connected - cannot close valve');
             return { success: false, error: 'Pi not connected' };
         }
 
-        console.log('✅ DEBUG - Pi socket found, creating request...');
+        console.log('DEBUG - Pi socket found, creating request...');
 
         try {
             const request = {
@@ -189,24 +196,24 @@ class PiCommunication {
                 }
             };
 
-            console.log('📤 DEBUG - Created request object:');
+            console.log('DEBUG - Created request object:');
             console.log('   - type:', request.type);
             console.log('   - data.plant_id:', request.data.plant_id, '(type:', typeof request.data.plant_id, ')');
             console.log('   - Full JSON:', JSON.stringify(request));
 
-            console.log('🔍 DEBUG - Converting to JSON string...');
+            console.log('DEBUG - Converting to JSON string...');
             const jsonString = JSON.stringify(request);
-            console.log('✅ DEBUG - JSON string created, length:', jsonString.length);
+            console.log('DEBUG - JSON string created, length:', jsonString.length);
 
-            console.log('🔍 DEBUG - Sending to Pi socket...');
+            console.log('DEBUG - Sending to Pi socket...');
             piSocket.send(jsonString);
-            console.log('✅ DEBUG - CLOSE_VALVE message sent to Pi successfully');
+            console.log('DEBUG - CLOSE_VALVE message sent to Pi successfully');
 
-            console.log('🔍 DEBUG - Returning success result');
+            console.log('DEBUG - Returning success result');
             return { success: true };
 
         } catch (error) {
-            console.error('❌ ERROR - Error sending CLOSE_VALVE to Pi:');
+            console.error('ERROR - Error sending CLOSE_VALVE to Pi:');
             console.error('   - Error message:', error.message);
             console.error('   - Error stack:', error.stack);
             return { success: false, error: error.message };
@@ -216,13 +223,14 @@ class PiCommunication {
     /**
      * Send OPEN_VALVE request to Pi (no waiting)
      */
-    openValve(plantId, timeMinutes) {
+    openValve(plantId, timeMinutes, gardenId) {
         console.log('🔍 DEBUG - piCommunication.openValve called:');
         console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
         console.log('   - timeMinutes:', timeMinutes, '(type:', typeof timeMinutes, ')');
 
         console.log('🔍 DEBUG - Getting Pi socket...');
-        const piSocket = getPiSocket();
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
         console.log('🔍 DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
 
         if (!piSocket) {
@@ -269,12 +277,13 @@ class PiCommunication {
     /**
      * Send GET_VALVE_STATUS request to Pi (no waiting)
      */
-    getValveStatus(plantId) {
+    getValveStatus(plantId, gardenId) {
         console.log('🔍 DEBUG - piCommunication.getValveStatus called:');
         console.log('   - plantId:', plantId, '(type:', typeof plantId, ')');
 
         console.log('🔍 DEBUG - Getting Pi socket...');
-        const piSocket = getPiSocket();
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
         console.log('🔍 DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
 
         if (!piSocket) {
@@ -319,8 +328,9 @@ class PiCommunication {
     /**
      * Send CHECK_POWER_SUPPLY request to Pi (no waiting)
      */
-    checkPowerSupply(plantId) {
-        const piSocket = getPiSocket();
+    checkPowerSupply(plantId, gardenId) {
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
         if (!piSocket) {
             console.log('[PI] Not connected - cannot check power supply');
             return { success: false, error: 'Pi not connected' };
@@ -344,8 +354,9 @@ class PiCommunication {
     /**
      * Send CHECK_SENSOR_CONNECTION request to Pi (no waiting)
      */
-    checkSensorConnection(plantId, timeoutSeconds = 5) {
-        const piSocket = getPiSocket();
+    checkSensorConnection(plantId, timeoutSeconds = 5, gardenId) {
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
         if (!piSocket) {
             console.log('[PI] Not connected - cannot check sensor connection');
             return { success: false, error: 'Pi not connected' };
@@ -370,8 +381,9 @@ class PiCommunication {
     /**
      * Send CHECK_VALVE_MECHANISM request to Pi (no waiting)
      */
-    checkValveMechanism(plantId, pulseSeconds = 0.6) {
-        const piSocket = getPiSocket();
+    checkValveMechanism(plantId, pulseSeconds = 0.6, gardenId) {
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
         if (!piSocket) {
             console.log('[PI] Not connected - cannot check valve mechanism');
             return { success: false, error: 'Pi not connected' };
@@ -396,8 +408,9 @@ class PiCommunication {
     /**
      * Send RESTART_VALVE request to Pi (no waiting)
      */
-    restartValve(plantId) {
-        const piSocket = getPiSocket();
+    restartValve(plantId, gardenId) {
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
         if (!piSocket) {
             console.log('Pi not connected - cannot restart valve');
             return { success: false, error: 'Pi not connected' };
@@ -423,8 +436,8 @@ class PiCommunication {
     /**
      * Send UPDATE_PLANT request to Pi (no waiting)
      */
-    updatePlant(plant) {
-        console.log('🔍 DEBUG - piCommunication.updatePlant called:');
+    updatePlant(plantId, gardenId, plant) {
+        console.log('DEBUG - piCommunication.updatePlant called:');
         console.log('   - plant:', plant);
         console.log('   - plant.plant_id:', plant.plant_id, '(type:', typeof plant.plant_id, ')');
         console.log('   - plant.name:', plant.name);
@@ -432,22 +445,23 @@ class PiCommunication {
         console.log('   - plant.water_limit:', plant.water_limit);
         console.log('   - plant.dripper_type:', plant.dripper_type);
 
-        console.log('🔍 DEBUG - Getting Pi socket...');
-        const piSocket = getPiSocket();
-        console.log('🔍 DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
+        console.log('DEBUG - Getting Pi socket...');
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : (plant?.garden_id ? getControllerSocketByGardenId(plant.garden_id) : null);
+        const piSocket = familySocket || getPiSocket();
+        console.log('DEBUG - Pi socket result:', piSocket ? 'Connected' : 'Not connected');
 
         if (!piSocket) {
-            console.log('❌ Pi not connected - cannot update plant');
+            console.log('Pi not connected - cannot update plant');
             return { success: false, error: 'Pi not connected' };
         }
 
         // Validate plant_id
         if (!plant.plant_id) {
-            console.error('❌ ERROR - plant.plant_id is missing or falsy:', plant.plant_id);
+            console.error('ERROR - plant.plant_id is missing or falsy:', plant.plant_id);
             return { success: false, error: 'plant_id is required' };
         }
 
-        console.log('✅ DEBUG - Pi socket found, creating request...');
+        console.log('DEBUG - Pi socket found, creating request...');
 
         try {
             const request = {
@@ -492,8 +506,9 @@ class PiCommunication {
     /**
      * Send REMOVE_PLANT request to Pi (no waiting)
      */
-    removePlant(plantId) {
-        const piSocket = getPiSocket();
+    removePlant(plantId, gardenId) {
+        const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+        const piSocket = familySocket || getPiSocket();
         if (!piSocket) {
             console.log('Pi not connected - cannot remove plant');
             return { success: false, error: 'Pi not connected' };

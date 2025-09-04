@@ -19,7 +19,7 @@ class SmartGardenEngine:
     Manages plants, sensors, valves, and irrigation operations.
     """
 
-    def __init__(self, total_valves: int = 2, total_sensors: int = 2, websocket_client=None):
+    def __init__(self, total_valves: int = 2, total_sensors: int = 2, websocket_client=None, simulation_mode: bool = False):
         """
         Initialize the Smart Garden Engine.
         
@@ -29,7 +29,8 @@ class SmartGardenEngine:
             websocket_client: WebSocket client for sending logs to server
         """
         self.plants: Dict[int, Plant] = {}
-        self.valves_manager = ValvesManager(total_valves)
+        self.simulation_mode: bool = bool(simulation_mode)
+        self.valves_manager = ValvesManager(total_valves, simulation_mode=self.simulation_mode)
         self.sensor_manager = SensorManager(total_sensors)
         self.irrigation_algorithm = IrrigationAlgorithm(websocket_client)
         self.websocket_client = websocket_client
@@ -113,7 +114,7 @@ class SmartGardenEngine:
             water_limit=water_limit,
             flow_rate=flow_rate,
             relay_controller=self.valves_manager.relay_controller,
-            simulation_mode=False
+            simulation_mode=self.simulation_mode
         )
         
 
@@ -124,7 +125,7 @@ class SmartGardenEngine:
             port_lock = None
 
         sensor = Sensor(
-            simulation_mode=False,
+            simulation_mode=self.simulation_mode,
             port=sensor_port,
             port_lock=port_lock
         )

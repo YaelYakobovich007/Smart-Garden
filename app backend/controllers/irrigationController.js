@@ -1,10 +1,13 @@
 const { getUser } = require('../models/userModel');
-const { getPlantByName, updatePlantSchedule, getCurrentMoisture } = require('../models/plantModel');
+const { getPlantByName, updatePlantSchedule, getCurrentMoisture, getUserGardenId, updateIrrigationState, getPlantById, updateValveStatus } = require('../models/plantModel');
 const irrigationModel = require('../models/irrigationModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getEmailBySocket } = require('../models/userSessions');
 const piCommunication = require('../services/piCommunication');
 const { addPendingIrrigation } = require('../services/pendingIrrigationTracker');
+const { getControllerSocketByGardenId } = require('../services/controllerRegistry');
+const { getPiSocket } = require('../sockets/piSocket');
+const { broadcastToGarden } = require('../services/gardenBroadcaster');
 
 const SIMULATION_MODE = process.env.SIMULATION_MODE === 'true';
 const VERBOSE_LOGS = process.env.VERBOSE_LOGS === 'true';
@@ -57,7 +60,8 @@ async function handleCheckPowerSupply(data, ws, email) {
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'CHECK_POWER_SUPPLY_FAIL', 'Plant not found in your garden');
 
-  const result = require('../services/piCommunication').checkPowerSupply(plant.plant_id);
+  const gardenId = plant.garden_id || await getUserGardenId(user.id);
+  const result = piCommunication.checkPowerSupply(plant.plant_id, gardenId);
   if (result.success) {
     const { addPendingIrrigation } = require('../services/pendingIrrigationTracker');
     addPendingIrrigation(plant.plant_id, ws, email, { plant_id: plant.plant_id, plant_name: plant.name, request_type: 'CHECK_POWER_SUPPLY' });
@@ -81,15 +85,21 @@ async function handleUpdatePlantSchedule(data, ws, email) {
 
   // Push updated schedule to Pi immediately if connected
   try {
-    const result = require('../services/piCommunication').updatePlant({
-      plant_id: plant.plant_id,
-      name: plant.name,
-      ideal_moisture: plant.ideal_moisture,
-      water_limit: plant.water_limit,
-      dripper_type: plant.dripper_type
-    });
-    // Also send a dedicated schedule update message
-    const piSocket = require('../sockets/piSocket').getPiSocket();
+    const gardenId = plant.garden_id || await getUserGardenId(user.id);
+    const result = piCommunication.updatePlant(
+      plant.plant_id,
+      gardenId,
+      {
+        plant_id: plant.plant_id,
+        name: plant.name,
+        ideal_moisture: plant.ideal_moisture,
+        water_limit: plant.water_limit,
+        dripper_type: plant.dripper_type
+      }
+    );
+    // Also send a dedicated schedule update message via family controller
+    const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
+    const piSocket = familySocket || getPiSocket();
     if (piSocket) {
       const schedulePayload = {
         type: 'UPDATE_SCHEDULE',
@@ -101,7 +111,7 @@ async function handleUpdatePlantSchedule(data, ws, email) {
           }
         }
       };
-      try { piSocket.send(JSON.stringify(schedulePayload)); } catch {}
+      try { piSocket.send(JSON.stringify(schedulePayload)); } catch { }
     }
   } catch (e) {
     // Non-fatal: schedule still saved in DB; Pi will pick up on next sync
@@ -123,18 +133,18 @@ async function handleIrrigatePlant(data, ws, email) {
 
   // Optimistically persist sessionId and mode start
   try {
-    const { updateIrrigationState } = require('../models/plantModel');
     await updateIrrigationState(plant.plant_id, { mode: 'smart', startAt: new Date(), endAt: null, sessionId });
   } catch (e) {
     console.warn('Failed to persist irrigation session start:', e.message);
   }
 
   // Send irrigation request to Pi controller with session id
-  const piResult = piCommunication.irrigatePlant(plant.plant_id, sessionId);
+  const gardenId = plant.garden_id || await getUserGardenId(user.id);
+  const piResult = piCommunication.irrigatePlant(plant.plant_id, sessionId, gardenId);
 
   if (piResult.success) {
     // Pi is connected - add to pending list by both plant and session
-    const { addPendingIrrigation, addPendingSession } = require('../services/pendingIrrigationTracker');
+    const { addPendingSession } = require('../services/pendingIrrigationTracker');
     addPendingIrrigation(plant.plant_id, ws, email, {
       plant_id: plant.plant_id,
       plant_name: plant.name,
@@ -185,7 +195,7 @@ async function handleStopIrrigation(data, ws, email) {
   let plant;
   if (plantId != null) {
     console.log(`[IRRIGATION] Looking up plant by id=${plantId} user=${user.id}`);
-    plant = await require('../models/plantModel').getPlantById(Number(plantId));
+    plant = await getPlantById(Number(plantId));
   } else {
     console.log(`[IRRIGATION] Looking up plant: name=${plantName} user=${user.id}`);
     plant = await getPlantByName(user.id, plantName);
@@ -200,14 +210,14 @@ async function handleStopIrrigation(data, ws, email) {
 
   // Best-effort: immediately clear persisted irrigation state
   try {
-    const { updateIrrigationState } = require('../models/plantModel');
     await updateIrrigationState(plant.plant_id, { mode: 'none', startAt: null, endAt: null, sessionId: null });
   } catch (e) {
     console.log(`[IRRIGATION] Warning: Failed to clear state - ${e?.message}`);
   }
 
   // Send stop irrigation request to Pi controller
-  const piResult = piCommunication.stopIrrigation(plant.plant_id);
+  const gardenId = plant.garden_id || await getUserGardenId(user.id);
+  const piResult = piCommunication.stopIrrigation(plant.plant_id, gardenId);
 
   console.log(`[IRRIGATION] Stop request result: ${JSON.stringify(piResult)}`);
 
@@ -270,7 +280,16 @@ async function handleOpenValve(data, ws, email) {
   console.log(`[VALVE] Opening: plant=${plant.plant_id} time=${timeMinutes}min`);
 
   // Send open valve request to Pi controller
-  const piResult = piCommunication.openValve(plant.plant_id, timeMinutes);
+  const gardenId = plant.garden_id || await getUserGardenId(user.id);
+  // Pre-add pending so fast Pi responses don't race the tracker
+  try {
+    addPendingIrrigation(plant.plant_id, ws, email, {
+      plant_id: plant.plant_id,
+      plant_name: plant.name,
+      ideal_moisture: parseFloat(plant.ideal_moisture)
+    });
+  } catch { }
+  const piResult = piCommunication.openValve(plant.plant_id, timeMinutes, gardenId);
 
   console.log(`[VALVE] Open result: ${JSON.stringify(piResult)}`);
 
@@ -335,7 +354,16 @@ async function handleCloseValve(data, ws, email) {
   }
 
   // Send close valve request to Pi controller
-  const piResult = piCommunication.closeValve(plant.plant_id);
+  const gardenId = plant.garden_id || await getUserGardenId(user.id);
+  // Pre-add pending so fast Pi responses don't race the tracker
+  try {
+    addPendingIrrigation(plant.plant_id, ws, email, {
+      plant_id: plant.plant_id,
+      plant_name: plant.name,
+      ideal_moisture: parseFloat(plant.ideal_moisture || 0)
+    });
+  } catch { }
+  const piResult = piCommunication.closeValve(plant.plant_id, gardenId);
 
   console.log(`[VALVE] Close result: ${JSON.stringify(piResult)}`);
 
@@ -369,13 +397,13 @@ async function handleRestartValve(data, ws, email) {
 
   // Disallow during active irrigation (best-effort check is on Pi too)
   // Forward to Pi
-  const result = require('../services/piCommunication').restartValve(plant.plant_id);
+  const gardenId = plant.garden_id || await getUserGardenId(user.id);
+  const result = piCommunication.restartValve(plant.plant_id, gardenId);
   if (!result.success) {
     return sendError(ws, 'RESTART_VALVE_FAIL', result.error || 'Pi not connected');
   }
 
   // Track pending using irrigation tracker to route response
-  const { addPendingIrrigation } = require('../services/pendingIrrigationTracker');
   addPendingIrrigation(plant.plant_id, ws, email, { plant_id: plant.plant_id, plant_name: plant.name });
 }
 
@@ -433,7 +461,8 @@ async function handleGetValveStatus(data, ws, email) {
   }
 
   // Get valve status from Pi controller
-  const piResult = piCommunication.getValveStatus(plant.plant_id);
+  const gardenId = plant.garden_id || await getUserGardenId(user.id);
+  const piResult = piCommunication.getValveStatus(plant.plant_id, gardenId);
 
   if (piResult.success) {
     console.log('[VALVE] Status request sent successfully');
@@ -465,7 +494,8 @@ async function handleCheckSensorConnection(data, ws, email) {
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'CHECK_SENSOR_CONNECTION_FAIL', 'Plant not found in your garden');
 
-  const result = piCommunication.checkSensorConnection(plant.plant_id, Number(timeoutSeconds) || 5);
+  const gardenId = plant.garden_id || await getUserGardenId(user.id);
+  const result = piCommunication.checkSensorConnection(plant.plant_id, Number(timeoutSeconds) || 5, gardenId);
   if (result.success) {
     const { addPendingIrrigation } = require('../services/pendingIrrigationTracker');
     addPendingIrrigation(plant.plant_id, ws, email, { plant_id: plant.plant_id, plant_name: plant.name, request_type: 'CHECK_SENSOR_CONNECTION' });
@@ -485,7 +515,8 @@ async function handleCheckValveMechanism(data, ws, email) {
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'CHECK_VALVE_MECHANISM_FAIL', 'Plant not found in your garden');
 
-  const result = piCommunication.checkValveMechanism(plant.plant_id, typeof pulseSeconds === 'number' ? pulseSeconds : 0.6);
+  const gardenId = plant.garden_id || await getUserGardenId(user.id);
+  const result = piCommunication.checkValveMechanism(plant.plant_id, typeof pulseSeconds === 'number' ? pulseSeconds : 0.6, gardenId);
   if (result.success) {
     const { addPendingIrrigation } = require('../services/pendingIrrigationTracker');
     addPendingIrrigation(plant.plant_id, ws, email, { plant_id: plant.plant_id, plant_name: plant.name, request_type: 'CHECK_VALVE_MECHANISM' });
@@ -507,7 +538,6 @@ async function handleUnblockValve(data, ws, email) {
 
   try {
     // Update valve status in database
-    const { updateValveStatus } = require('../models/plantModel');
     await updateValveStatus(plant.plant_id, false);
 
     console.log(`[VALVE] Unblocked: plant=${plant.plant_id} name=${plant.name}`);
@@ -519,7 +549,6 @@ async function handleUnblockValve(data, ws, email) {
 
     // Broadcast unblocked to other garden members
     try {
-      const { broadcastToGarden } = require('../services/gardenBroadcaster');
       if (plant.garden_id) {
         await broadcastToGarden(plant.garden_id, 'GARDEN_VALVE_UNBLOCKED', { plantId: plant.plant_id }, email);
       }
@@ -546,7 +575,6 @@ async function handleTestValveBlock(data, ws, email) {
 
   try {
     // Update valve status in database to blocked (for testing)
-    const { updateValveStatus } = require('../models/plantModel');
     await updateValveStatus(plant.plant_id, true);
 
     console.log(`[VALVE] Test block: plant=${plant.plant_id} name=${plant.name}`);

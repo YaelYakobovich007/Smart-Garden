@@ -13,12 +13,12 @@ class ValvesManager:
         plant_valve_map (Dict[int, int]): Mapping from plant_id to assigned valve_id.
         relay_controller (RelayController): Controller for hardware relays.
     """
-    def __init__(self, total_valves):
+    def __init__(self, total_valves, simulation_mode: bool = False):
         self.total_valves: int = total_valves
         # Relay channels are 1-4, so valves should be 1-4, not 0-3
         self.available_valves: deque[int] = deque(range(1, total_valves + 1))
         self.plant_valve_map: Dict[int, int] = {}  # plant_id -> valve_id
-        self.relay_controller = RelayController(simulation_mode=False)
+        self.relay_controller = RelayController(simulation_mode=bool(simulation_mode))
 
     def get_valve_id(self, plant_id):
         """
@@ -113,7 +113,7 @@ class ValvesManager:
             water_limit=1.0,
             flow_rate=0.05,
             relay_controller=self.relay_controller,
-            simulation_mode=False
+            simulation_mode=self.relay_controller.simulation_mode
         )
 
     def get_available_valve_ids(self) -> List[int]:

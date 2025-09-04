@@ -45,7 +45,8 @@ class Sensor:
             Otherwise, returns (moisture, temperature) tuple or None on error.
         """
         if self.simulation_mode:
-            return self.simulated_value
+            # Return both moisture and temperature in simulation mode
+            return float(self.simulated_value), float(self.simulated_temperature)
         
         return await self._read_modbus_data()
         

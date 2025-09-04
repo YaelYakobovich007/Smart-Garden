@@ -287,6 +287,14 @@ class IrrigationAlgorithm:
                             # Add water only if full cycle completes
                             total_water += expected_water
                             print(f"Cycle complete. Total water used: {total_water:.2f}L")
+                            # Simulation: gently increase moisture to reflect delivered water
+                            try:
+                                if getattr(plant.valve, 'simulation_mode', False) and getattr(plant.sensor, 'simulation_mode', False):
+                                    # Proportional bump: cap per-cycle effect to a reasonable range
+                                    delta = max(0.3, min(4.0, expected_water * 10.0))
+                                    plant.sensor.update_simulated_value(delta)
+                            except Exception:
+                                pass
                         except asyncio.CancelledError:
                             print("Watering cycle cancelled!")
                             raise

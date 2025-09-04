@@ -5,7 +5,7 @@ __pycache__/
 *.pyo
 node_modules/
 .env
-
+.venv
 .vscode/
 
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files

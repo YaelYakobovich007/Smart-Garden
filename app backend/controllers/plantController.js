@@ -10,6 +10,8 @@ const { getEmailBySocket } = require('../models/userSessions');
 // Services
 const googleCloudStorage = require('../services/googleCloudStorage');
 const piCommunication = require('../services/piCommunication');
+const { getGardenById } = require('../models/gardenModel');
+const { getLatLonForCountryCity } = require('../services/locationService');
 const { addPendingPlant } = require('../services/pendingPlantsTracker');
 const { addPendingMoistureRequest } = require('../services/pendingMoistureTracker');
 const { storePendingUpdate, getPendingUpdate } = require('../services/pendingUpdateTracker');
@@ -147,8 +149,6 @@ async function handleAddPlant(data, ws, email) {
     // Production mode: Require Pi connection
     // Enrich with lat/lon from garden location if possible
     try {
-      const { getGardenById } = require('../models/gardenModel');
-      const { getLatLonForCountryCity } = require('../services/locationService');
       const garden = await getGardenById(result.plant.garden_id);
       if (garden?.country && garden?.city) {
         const coords = await getLatLonForCountryCity(garden.country, garden.city);
@@ -161,7 +161,9 @@ async function handleAddPlant(data, ws, email) {
       // Non-fatal: proceed without coords if lookup fails
     }
 
-    const piResult = piCommunication.addPlant(result.plant);
+    // Use the garden we just fetched for clarity (id equals result.plant.garden_id)
+    const gardenId = await getUserGardenId(user.id);
+    const piResult = await piCommunication.addPlant(result.plant.plant_id, gardenId, result.plant);
 
     if (piResult.success) {
       // Pi is connected - add to pending list and wait for hardware assignment
@@ -240,7 +242,8 @@ async function handleDeletePlant(data, ws, email) {
 
 
   // First check if Pi is connected and send removal request
-  const piResult = piCommunication.removePlant(plant.plant_id);
+  const gardenId = await getUserGardenId(user.id);
+  const piResult = piCommunication.removePlant(plant.plant_id, gardenId);
 
   if (!piResult.success) {
     // Pi not connected - return error immediately
@@ -372,7 +375,12 @@ async function handleUpdatePlantDetails(data, ws, email) {
           imageData
         });
 
-        const piResult = piCommunication.updatePlant(updatedPlant);
+        const gardenIdForUpdate = await getUserGardenId(user.id);
+        const piResult = piCommunication.updatePlant(
+          updatedPlant.plant_id,
+          gardenIdForUpdate,
+          updatedPlant
+        );
         if (!piResult.success) {
           console.log(`[PLANT] Warning: Failed to update on Pi - ${piResult.error}`);
           // Remove pending update since Pi update failed
@@ -445,7 +453,8 @@ async function handleGetPlantMoisture(data, ws, email) {
     addPendingMoistureRequest(plant.plant_id, ws, data);
 
     // Request moisture from Pi
-    const piResult = piCommunication.getMoisture(plant.plant_id);
+    const gardenId = plant.garden_id || await getUserGardenId(user.id);
+    const piResult = piCommunication.getMoisture(plant.plant_id, gardenId);
 
     if (piResult.success) {
       sendSuccess(ws, 'GET_MOISTURE_SUCCESS', {
@@ -471,7 +480,8 @@ async function handleGetAllPlantsMoisture(data, ws, email) {
     }
 
     // Request all moisture from Pi
-    const piResult = piCommunication.getAllMoisture();
+    const gardenId = await getUserGardenId(user.id);
+    const piResult = piCommunication.getAllMoisture(gardenId);
 
     if (piResult.success) {
       sendSuccess(ws, 'GET_ALL_MOISTURE_SUCCESS', {
