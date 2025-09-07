@@ -91,6 +91,9 @@ export const styles = StyleSheet.create({
     opacity: 0.6,
     zIndex: -1,
   },
+  smartWateringGlow: {
+    backgroundColor: '#8B5CF6',
+  },
   rippleCircle: {
     position: 'absolute',
     top: 0,

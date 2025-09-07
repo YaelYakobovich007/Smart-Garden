@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -6,17 +6,19 @@ import {
     TouchableOpacity,
     ScrollView,
     Alert,
+    TextInput,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { styles } from './styles';
 import sessionService from '../../../../services/sessionService';
 import onboardingService from '../../../../services/onboardingService';
 
 const SettingsScreen = () => {
     const navigation = useNavigation();
+
+    // No inline profile form; use dedicated screens
 
     const handleLogout = async () => {
         Alert.alert(
@@ -58,25 +60,12 @@ const SettingsScreen = () => {
         );
     };
 
-    const handleProfile = () => {
-        navigation.navigate('ProfileSettings', { initialSection: 'name' });
-    };
+    // Navigation handlers for dedicated profile screens
+    const openChangeName = () => navigation.navigate('ProfileSettings', { initialSection: 'name' });
+    const openChangeLocation = () => navigation.navigate('ProfileSettings', { initialSection: 'location' });
+    const openChangePassword = () => navigation.navigate('ProfileSettings', { initialSection: 'password' });
 
-    const handleNotifications = () => {
-        Alert.alert('Notifications', 'Notification settings will be implemented here');
-    };
-
-    const handlePrivacy = () => {
-        Alert.alert('Privacy', 'Privacy settings will be implemented here');
-    };
-
-    const handleAbout = () => {
-        Alert.alert('About', 'About Smart Garden - Version 1.0.0');
-    };
-
-    const handleHelp = () => {
-        Alert.alert('Help', 'Help and support will be implemented here');
-    };
+    // Preferences-related items removed
 
     const handleResetOnboarding = async () => {
         Alert.alert(
@@ -98,12 +87,12 @@ const SettingsScreen = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" />
 
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Feather name="arrow-left" size={24} color="#2C3E50" />
+                    <Feather name="arrow-left" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Settings</Text>
                 <View style={styles.headerSpacer} />
@@ -112,55 +101,35 @@ const SettingsScreen = () => {
             {/* Settings Container */}
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.settingsContainer}>
-                    {/* Account Section */}
+                    {/* Profile navigation items */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Account</Text>
-                        <TouchableOpacity style={styles.settingItem} onPress={handleProfile}>
+                        <Text style={styles.sectionTitle}>Profile</Text>
+                        <TouchableOpacity style={styles.settingItem} onPress={openChangeName}>
                             <View style={styles.settingLeft}>
                                 <Feather name="user" size={20} color="#4CAF50" />
-                                <Text style={styles.settingText}>Profile</Text>
+                                <Text style={styles.settingText}>Change Name</Text>
+                            </View>
+                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.settingItem} onPress={openChangeLocation}>
+                            <View style={styles.settingLeft}>
+                                <Feather name="map-pin" size={20} color="#4CAF50" />
+                                <Text style={styles.settingText}>Change Location</Text>
+                            </View>
+                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.settingItem} onPress={openChangePassword}>
+                            <View style={styles.settingLeft}>
+                                <Feather name="lock" size={20} color="#4CAF50" />
+                                <Text style={styles.settingText}>Change Password</Text>
                             </View>
                             <Feather name="chevron-right" size={20} color="#BDC3C7" />
                         </TouchableOpacity>
                     </View>
 
-                    {/* Preferences Section */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Preferences</Text>
-                        <TouchableOpacity style={styles.settingItem} onPress={handleNotifications}>
-                            <View style={styles.settingLeft}>
-                                <Feather name="bell" size={20} color="#4CAF50" />
-                                <Text style={styles.settingText}>Notifications</Text>
-                            </View>
-                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.settingItem} onPress={handlePrivacy}>
-                            <View style={styles.settingLeft}>
-                                <Feather name="shield" size={20} color="#4CAF50" />
-                                <Text style={styles.settingText}>Privacy & Security</Text>
-                            </View>
-                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                        </TouchableOpacity>
-                    </View>
+                    {/* Preferences Section removed */}
 
-                    {/* Support Section */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Support</Text>
-                        <TouchableOpacity style={styles.settingItem} onPress={handleHelp}>
-                            <View style={styles.settingLeft}>
-                                <Feather name="help-circle" size={20} color="#4CAF50" />
-                                <Text style={styles.settingText}>Help & Support</Text>
-                            </View>
-                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.settingItem} onPress={handleAbout}>
-                            <View style={styles.settingLeft}>
-                                <Feather name="info" size={20} color="#4CAF50" />
-                                <Text style={styles.settingText}>About</Text>
-                            </View>
-                            <Feather name="chevron-right" size={20} color="#BDC3C7" />
-                        </TouchableOpacity>
-                    </View>
+                    {/* Support Section (removed Help & About) */}
 
                     {/* Debug Section */}
                     <View style={styles.section}>

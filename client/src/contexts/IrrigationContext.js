@@ -668,6 +668,35 @@ export const IrrigationProvider = ({ children }) => {
 
     const handleCloseValveFail = (data) => {
       // Failed to close valve
+      const reason = data?.reason || data?.message || '';
+      // Treat idempotent cases as success (e.g., already closed / no active irrigation)
+      const looksIdempotent = /already|not active|no active|closed/i.test(String(reason));
+      const anyActive = (() => {
+        let active = false;
+        wateringPlantsRef.current.forEach((state) => {
+          if (state.isWateringActive || state.isManualMode) active = true;
+        });
+        return active;
+      })();
+      const recentlyStoppedAny = (() => {
+        const now = Date.now();
+        let recent = false;
+        recentlyStoppedRef.current.forEach((ts) => {
+          if (!recent && now - ts < STOP_SUPPRESSION_MS) recent = true;
+        });
+        return recent;
+      })();
+
+      if (looksIdempotent || (!anyActive && recentlyStoppedAny)) {
+        showAlert({
+          title: 'Valve Control',
+          message: 'Watering completed successfully.',
+          okText: 'OK',
+          variant: 'success',
+        });
+        return;
+      }
+
       showAlert({
         title: 'Valve Control',
         message: data?.message || 'Failed to close valve.',
@@ -821,9 +850,30 @@ export const IrrigationProvider = ({ children }) => {
         });
       }
 
+      // If we just stopped (manual timer completion can race with async fail), suppress
       if (wasRecentlyStopped(targetPlantId)) {
         console.log('🛑 Suppressing IRRIGATE_FAIL after recent STOP_IRRIGATION_SUCCESS:', data);
         return;
+      }
+
+      // If no target mapped, but nothing is active and a recent stop happened, suppress generic fail
+      if (targetPlantId == null) {
+        const anyActive = (() => {
+          let active = false;
+          wateringPlantsRef.current.forEach((state) => {
+            if (state.isWateringActive || state.isManualMode || state.pendingIrrigationRequest) active = true;
+          });
+          return active;
+        })();
+        const now = Date.now();
+        let recentlyStoppedAny = false;
+        recentlyStoppedRef.current.forEach((ts) => {
+          if (!recentlyStoppedAny && now - ts < STOP_SUPPRESSION_MS) recentlyStoppedAny = true;
+        });
+        if (!anyActive && recentlyStoppedAny) {
+          console.log('🛑 Suppressing IRRIGATE_FAIL (no active plants, recent stop detected).');
+          return;
+        }
       }
 
       if (targetPlantId != null) {
@@ -895,7 +945,7 @@ export const IrrigationProvider = ({ children }) => {
         message,
         okText: 'OK',
         variant: 'error',
-        iconName: 'alert-triangle',
+        iconName: 'droplet',
       });
     };
 
