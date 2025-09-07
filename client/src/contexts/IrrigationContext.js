@@ -958,7 +958,7 @@ export const IrrigationProvider = ({ children }) => {
         message,
         okText: 'OK',
         variant: 'error',
-        iconName: 'droplet',
+        iconName: 'alert-triangle',
       });
     };
 
