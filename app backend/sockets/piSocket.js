@@ -183,14 +183,6 @@ function handlePiSocket(ws) {
               plant: updatedPlant,
               message: `Plant updated successfully on hardware: ${responseData.message}`
             });
-
-            // Broadcast plant update to garden members
-            if (updatedPlant && updatedPlant.garden_id) {
-              await broadcastToGarden(updatedPlant.garden_id, 'PLANT_UPDATED_IN_GARDEN', {
-                plant: updatedPlant,
-                message: `Plant "${updatedPlant.name}" was updated in your garden`
-              }, pendingInfo.email);
-            }
           } catch (error) {
             console.error('Error getting updated plant data:', error);
             sendSuccess(pendingInfo.ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {
