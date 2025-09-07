@@ -21,6 +21,7 @@ import {
   FlatList,
   Dimensions,
   Animated,
+  Easing,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -61,24 +62,28 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
             Animated.timing(animation, {
               toValue: 1,
               duration: 750,
+              easing: Easing.inOut(Easing.quad),
               useNativeDriver: true,
             }),
             // Hold
             Animated.timing(animation, {
               toValue: 1,
               duration: 100,
+              easing: Easing.inOut(Easing.quad),
               useNativeDriver: true,
             }),
             // Fade out
             Animated.timing(animation, {
               toValue: 0,
               duration: 750,
+              easing: Easing.inOut(Easing.quad),
               useNativeDriver: true,
             }),
             // Hold
             Animated.timing(animation, {
               toValue: 0,
               duration: 100,
+              easing: Easing.inOut(Easing.quad),
               useNativeDriver: true,
             }),
           ])
@@ -318,16 +323,46 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
               {/* Watering Indicator */}
               {isPlantBeingWatered(plant) && (
                 <View style={styles.wateringIndicator}>
-                  {/* Solid blue circle that stays visible */}
-                  <View style={[
+                  {/* Solid circle that stays visible (purple for smart, blue for manual) */}
+                  {/* Soft glow behind the dot to match smart pulse look */}
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      styles.wateringGlow,
+                      getPlantWateringState(plant.id).isSmartMode ? styles.smartWateringGlow : null,
+                      {
+                        opacity: wateringAnimations[plant.id]?.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.4, 0.7],
+                        }) || 0.5,
+                        transform: [{
+                          scale: wateringAnimations[plant.id]?.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [1, 1.2],
+                          }) || 1,
+                        }],
+                      },
+                    ]}
+                  />
+                  
+                  <Animated.View style={[
                     styles.wateringDot,
-                    getPlantWateringState(plant.id).isSmartMode && styles.smartWateringDot
+                    getPlantWateringState(plant.id).isSmartMode ? styles.smartWateringDot : null
+                  ,
+                    {
+                      transform: [{
+                        scale: wateringAnimations[plant.id]?.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [1, 1.08],
+                        }) || 1,
+                      }],
+                    }
                   ]}>
                     <Animated.View
                       style={{
                         opacity: wateringAnimations[plant.id]?.interpolate({
                           inputRange: [0, 1],
-                          outputRange: [0.4, 1],
+                          outputRange: [0.6, 1],
                         }) || 1,
                       }}
                     >
@@ -337,7 +372,7 @@ const PlantList = ({ plants, onWaterPlant, onAddPlant, getPlantWateringState }) 
                         color="#FFFFFF"
                       />
                     </Animated.View>
-                  </View>
+                  </Animated.View>
 
                   {/* Multiple expanding ripple circles - animate; blue for manual, purple for smart */}
                   <Animated.View

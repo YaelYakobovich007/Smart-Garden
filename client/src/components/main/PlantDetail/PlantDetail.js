@@ -247,10 +247,16 @@ const PlantDetail = () => {
     if (!isScheduledMode) {
       return (
         <View>
-          <Text style={styles.scheduleSubtitle}>
-            Smart irrigation is enabled. Watering times are decided automatically based on soil
-            moisture and conditions. No fixed schedule is configured.
-          </Text>
+          <View style={[styles.emptyStateCard, { marginTop: 12 }]}> 
+            <View style={styles.emptyStateIconCircle}>
+              <Feather name="cpu" size={22} color="#4CAF50" />
+            </View>
+            <Text style={styles.emptyStateTitle}>Smart irrigation is managing watering</Text>
+            <Text style={styles.emptyStateDescription}>
+              Watering times are decided automatically based on soil moisture and conditions. No
+              fixed schedule is configured for this plant.
+            </Text>
+          </View>
         </View>
       );
     }
@@ -265,7 +271,7 @@ const PlantDetail = () => {
 
     return (
       <View>
-        <Text style={styles.scheduleSubtitle}>Scheduled irrigation:</Text>
+        <Text style={styles.scheduleSubtitle}>Scheduled irrigation</Text>
         <View style={styles.scheduleChipsRow}>
           {dayLabels.split(',').map((d, idx) => (
             <View key={`${d}-${idx}`} style={styles.scheduleChip}>
@@ -274,7 +280,7 @@ const PlantDetail = () => {
           ))}
         </View>
         <View style={styles.scheduleTimeRow}>
-          <Feather name="clock" size={16} color="#059669" />
+          <Feather name="clock" size={16} color="#4CAF50" />
           <Text style={styles.scheduleTimeText}>{time}</Text>
         </View>
         <Text style={styles.scheduleNote}>Times shown are in your device's timezone.</Text>
@@ -1102,8 +1108,43 @@ const PlantDetail = () => {
         onRequestClose={() => setShowWaterLimitModal(false)}
       >
         <View style={mainStyles.modalOverlay}>
-          <View style={mainStyles.modalContent}>
-            <Text style={mainStyles.modalTitle}>Change Water Limit</Text>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
+          <View
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              borderRadius: 24,
+              padding: 24,
+              width: '100%',
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 12 },
+              shadowOpacity: 0.2,
+              shadowRadius: 20,
+              elevation: 16,
+            }}
+          >
+            {/* Header styled like StatusPopup with settings icon */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                  borderWidth: 2,
+                  borderColor: '#16A34A',
+                  backgroundColor: '#F0FDF4',
+                }}
+              >
+                <Feather name="settings" size={20} color="#16A34A" />
+              </View>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: '#1F2937', fontFamily: 'Nunito_600SemiBold', flex: 1 }}>
+                Change Water Limit
+              </Text>
+            </View>
             <View style={{ width: '100%', marginVertical: 8 }}>
               <TextInput
                 value={waterLimitInput}
@@ -1117,13 +1158,22 @@ const PlantDetail = () => {
                   paddingHorizontal: 14,
                   paddingVertical: 10,
                   fontSize: 16,
-                  color: '#111827'
+                  color: '#111827',
+                  textAlign: 'center'
                 }}
               />
             </View>
             <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
               <TouchableOpacity
-                style={[mainStyles.modalButton, { flex: 1, marginBottom: 0 }]}
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 6,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  backgroundColor: '#F3F4F6',
+                }}
                 onPress={() => {
                   const limitValue = parseFloat(String(waterLimitInput).replace(',', '.'));
                   if (!isNaN(limitValue) && limitValue > 0) {
@@ -1134,16 +1184,26 @@ const PlantDetail = () => {
                   }
                 }}
               >
-                <Feather name="save" size={24} color="#16A34A" />
-                <Text style={mainStyles.modalButtonText}>Save</Text>
+                <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_600SemiBold' }}>Save</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[mainStyles.modalButton, mainStyles.cancelButton, { flex: 1, marginBottom: 0 }]}
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 6,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  backgroundColor: '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: '#D1D5DB',
+                }}
                 onPress={() => setShowWaterLimitModal(false)}
               >
-                <Text style={mainStyles.cancelButtonText}>Cancel</Text>
+                <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_500Medium' }}>Cancel</Text>
               </TouchableOpacity>
             </View>
+          </View>
           </View>
         </View>
       </Modal>
@@ -1155,46 +1215,67 @@ const PlantDetail = () => {
         onRequestClose={() => setShowNameModal(false)}
       >
         <View style={mainStyles.modalOverlay}>
-          <View style={mainStyles.modalContent}>
-            <Text style={mainStyles.modalTitle}>Change Plant Name</Text>
-            <View style={{ width: '100%', marginVertical: 8 }}>
-              <TextInput
-                value={nameInput}
-                onChangeText={setNameInput}
-                placeholder="Enter plant name"
-                style={{
-                  borderWidth: 1,
-                  borderColor: '#D1D5DB',
-                  borderRadius: 10,
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  fontSize: 16,
-                  color: '#111827'
-                }}
-              />
-            </View>
-            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
-              <TouchableOpacity
-                style={[mainStyles.modalButton, { flex: 1, marginBottom: 0 }]}
-                onPress={() => {
-                  const newName = String(nameInput || '').trim();
-                  if (newName.length >= 1 && newName.length <= 50) {
-                    updatePlantDetails({ newPlantName: newName });
-                    setShowNameModal(false);
-                  } else {
-                    Alert.alert('Invalid Name', 'Name must be 1–50 characters.');
-                  }
-                }}
-              >
-                <Feather name="save" size={24} color="#16A34A" />
-                <Text style={mainStyles.modalButtonText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[mainStyles.modalButton, mainStyles.cancelButton, { flex: 1, marginBottom: 0 }]}
-                onPress={() => setShowNameModal(false)}
-              >
-                <Text style={mainStyles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
+            <View
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderRadius: 24,
+                padding: 24,
+                width: '100%',
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.2,
+                shadowRadius: 20,
+                elevation: 16,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 2, borderColor: '#16A34A', backgroundColor: '#F0FDF4' }}>
+                  <Feather name="settings" size={20} color="#16A34A" />
+                </View>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: '#1F2937', fontFamily: 'Nunito_600SemiBold', flex: 1 }}>Change Plant Name</Text>
+              </View>
+              <View style={{ width: '100%', marginVertical: 8 }}>
+                <TextInput
+                  value={nameInput}
+                  onChangeText={setNameInput}
+                  placeholder="Enter plant name"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    borderRadius: 10,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    fontSize: 16,
+                    color: '#111827',
+                    textAlign: 'center'
+                  }}
+                />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 6, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#F3F4F6' }}
+                  onPress={() => {
+                    const newName = String(nameInput || '').trim();
+                    if (newName.length >= 1 && newName.length <= 50) {
+                      updatePlantDetails({ newPlantName: newName });
+                      setShowNameModal(false);
+                    } else {
+                      Alert.alert('Invalid Name', 'Name must be 1–50 characters.');
+                    }
+                  }}
+                >
+                  <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_600SemiBold' }}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 6, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB' }}
+                  onPress={() => setShowNameModal(false)}
+                >
+                  <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_500Medium' }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -1207,47 +1288,68 @@ const PlantDetail = () => {
         onRequestClose={() => setShowHumidityModal(false)}
       >
         <View style={mainStyles.modalOverlay}>
-          <View style={mainStyles.modalContent}>
-            <Text style={mainStyles.modalTitle}>Change Desired Humidity</Text>
-            <View style={{ width: '100%', marginVertical: 8 }}>
-              <TextInput
-                value={humidityInput}
-                onChangeText={setHumidityInput}
-                keyboardType="numeric"
-                placeholder="Enter 0-100"
-                style={{
-                  borderWidth: 1,
-                  borderColor: '#D1D5DB',
-                  borderRadius: 10,
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  fontSize: 16,
-                  color: '#111827'
-                }}
-              />
-            </View>
-            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
-              <TouchableOpacity
-                style={[mainStyles.modalButton, { flex: 1, marginBottom: 0 }]}
-                onPress={() => {
-                  const value = parseFloat(String(humidityInput).replace(',', '.'));
-                  if (!isNaN(value) && value >= 0 && value <= 100) {
-                    updatePlantDetails({ desiredMoisture: value });
-                    setShowHumidityModal(false);
-                  } else {
-                    Alert.alert('Invalid Input', 'Please enter a number between 0 and 100');
-                  }
-                }}
-              >
-                <Feather name="save" size={24} color="#16A34A" />
-                <Text style={mainStyles.modalButtonText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[mainStyles.modalButton, mainStyles.cancelButton, { flex: 1, marginBottom: 0 }]}
-                onPress={() => setShowHumidityModal(false)}
-              >
-                <Text style={mainStyles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
+            <View
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderRadius: 24,
+                padding: 24,
+                width: '100%',
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.2,
+                shadowRadius: 20,
+                elevation: 16,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 2, borderColor: '#16A34A', backgroundColor: '#F0FDF4' }}>
+                  <Feather name="settings" size={20} color="#16A34A" />
+                </View>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: '#1F2937', fontFamily: 'Nunito_600SemiBold', flex: 1 }}>Change Desired Humidity</Text>
+              </View>
+              <View style={{ width: '100%', marginVertical: 8 }}>
+                <TextInput
+                  value={humidityInput}
+                  onChangeText={setHumidityInput}
+                  keyboardType="numeric"
+                  placeholder="Enter 0-100"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    borderRadius: 10,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    fontSize: 16,
+                    color: '#111827',
+                    textAlign: 'center'
+                  }}
+                />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 6, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#F3F4F6' }}
+                  onPress={() => {
+                    const value = parseFloat(String(humidityInput).replace(',', '.'));
+                    if (!isNaN(value) && value >= 0 && value <= 100) {
+                      updatePlantDetails({ desiredMoisture: value });
+                      setShowHumidityModal(false);
+                    } else {
+                      Alert.alert('Invalid Input', 'Please enter a number between 0 and 100');
+                    }
+                  }}
+                >
+                  <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_600SemiBold' }}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 6, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB' }}
+                  onPress={() => setShowHumidityModal(false)}
+                >
+                  <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_500Medium' }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -1262,19 +1364,51 @@ const PlantDetail = () => {
         onRequestClose={() => setShowImageSourceSheet(false)}
       >
         <View style={mainStyles.modalOverlay}>
-          <View style={mainStyles.modalContent}>
-            <Text style={mainStyles.modalTitle}>Change Plant Image</Text>
-            <TouchableOpacity style={mainStyles.modalButton} onPress={handleTakePhoto}>
-              <Feather name="camera" size={24} color="#16A34A" />
-              <Text style={mainStyles.modalButtonText}>Take Photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={mainStyles.modalButton} onPress={handleChangeImage}>
-              <Feather name="image" size={24} color="#16A34A" />
-              <Text style={mainStyles.modalButtonText}>Choose from Gallery</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[mainStyles.modalButton, mainStyles.cancelButton]} onPress={() => setShowImageSourceSheet(false)}>
-              <Text style={mainStyles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
+            <View
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderRadius: 24,
+                padding: 24,
+                width: '100%',
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.2,
+                shadowRadius: 20,
+                elevation: 16,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 2, borderColor: '#16A34A', backgroundColor: '#F0FDF4' }}>
+                  <Feather name="settings" size={20} color="#16A34A" />
+                </View>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: '#1F2937', fontFamily: 'Nunito_600SemiBold', flex: 1 }}>Change Plant Image</Text>
+              </View>
+              <TouchableOpacity
+                onPress={handleTakePhoto}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20, backgroundColor: '#F8F9FA', borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB', gap: 12 }}
+              >
+                <Feather name="camera" size={22} color="#16A34A" />
+                <Text style={{ fontSize: 16, fontWeight: '500', color: '#1F2937', fontFamily: 'Nunito_500Medium' }}>Take Photo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleChangeImage}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20, backgroundColor: '#F8F9FA', borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB', gap: 12 }}
+              >
+                <Feather name="image" size={22} color="#16A34A" />
+                <Text style={{ fontSize: 16, fontWeight: '500', color: '#1F2937', fontFamily: 'Nunito_500Medium' }}>Choose from Gallery</Text>
+              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 6, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB' }}
+                  onPress={() => setShowImageSourceSheet(false)}
+                >
+                  <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_500Medium' }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       </Modal>

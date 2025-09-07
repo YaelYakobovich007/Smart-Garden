@@ -563,7 +563,13 @@ class SmartGardenEngine:
             # Update water limit if provided
             if water_limit is not None:
                 plant.water_limit = water_limit
-                print(f"Updated water limit for plant {plant_id} to {water_limit}L")
+                # Keep valve enforcement in sync with plant setting
+                try:
+                    if hasattr(plant, 'valve') and plant.valve:
+                        plant.valve.water_limit = water_limit
+                except Exception:
+                    pass
+                print(f"Updated water limit for plant {plant_id} to {water_limit}L (plant={plant.water_limit}L, valve={getattr(getattr(plant, 'valve', None), 'water_limit', 'N/A')}L)")
             
             # Update dripper type if provided
             if dripper_type is not None:

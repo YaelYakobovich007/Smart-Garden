@@ -27,6 +27,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useUI } from '../ui/UIProvider';
 import * as ImagePicker from 'expo-image-picker';
 import { useCameraPermissions } from 'expo-camera';
 
@@ -46,6 +47,7 @@ import styles from './styles';
 const MainScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const { showAlert } = useUI();
 
   // Get irrigation state from context
   const { getPlantWateringState, getWateringPlants, rehydrateFromPlants, rehydrateIrrigationStarted, rehydrateIrrigationStopped } = useIrrigation();
@@ -62,6 +64,7 @@ const MainScreen = () => {
   const [loadingMessage, setLoadingMessage] = useState('');
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const identifyTimeoutRef = React.useRef(null);
 
   // Garden state
   const [garden, setGarden] = useState(null);
@@ -789,11 +792,14 @@ const MainScreen = () => {
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
+        // Close picker first to avoid stacked modals swallowing the popup
+        setShowImagePicker(false);
         await processImageForIdentification(result.assets[0]);
+        return;
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      showAlert({ title: 'Error', message: 'Failed to pick image. Please try again.', variant: 'error', iconName: 'leaf' });
     }
     setShowImagePicker(false);
   };
@@ -821,11 +827,14 @@ const MainScreen = () => {
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
+        // Close picker first to avoid stacked modals swallowing the popup
+        setShowImagePicker(false);
         await processImageForIdentification(result.assets[0]);
+        return;
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      showAlert({ title: 'Error', message: 'Failed to take photo. Please try again.', variant: 'error', iconName: 'leaf' });
     }
     setShowImagePicker(false);
   };
@@ -838,16 +847,17 @@ const MainScreen = () => {
   const processImageForIdentification = async (imageAsset) => {
     const base64Image = imageAsset.base64;
 
+    if (!base64Image) {
+      Alert.alert('Identification Error', 'Could not read image data. Please try again or pick a different photo.');
+      return;
+    }
+
     // Check image size before sending (5MB limit)
     const imageSizeBytes = Math.ceil((base64Image.length * 3) / 4);
     const maxSizeBytes = 5 * 1024 * 1024; // 5MB
 
     if (imageSizeBytes > maxSizeBytes) {
-      Alert.alert(
-        'Image Too Large',
-        'The selected image is too large. Please try with a smaller image or lower quality.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Image Too Large', 'The selected image is too large. Please try with a smaller image or lower quality.');
       return;
     }
 
@@ -857,8 +867,7 @@ const MainScreen = () => {
       Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
       return;
     }
-
-    // Show loading state
+    // ORIGINAL LOGIC: show loading overlay while identifying
     setLoading(true);
     setLoadingMessage('Identifying plant... This may take 10-15 seconds');
 
@@ -879,7 +888,7 @@ const MainScreen = () => {
   const handlePlantIdentified = (message) => {
     console.log('🌱 Plant identification response received:', message);
 
-    // Hide loading state
+    // ORIGINAL LOGIC: hide loading overlay
     setLoading(false);
     setLoadingMessage('');
 
@@ -888,7 +897,13 @@ const MainScreen = () => {
 
     if (message.type === 'PLANT_IDENTIFY_FAIL') {
       console.log('❌ Plant identification failed:', message.message);
-      Alert.alert('Identification Failed', message.message || 'Unable to identify the plant. Please try again.');
+      showAlert({
+        title: 'Identification Failed',
+        message: message.message || 'Unable to identify the plant. Please try again.',
+        okText: 'OK',
+        variant: 'error',
+        iconName: 'leaf',
+      });
       return;
     }
 
@@ -905,30 +920,39 @@ const MainScreen = () => {
           careData: data.careData // Pass the care data if available
         });
       } else {
-        // Show enhanced alert with care data if available
-        let message = `This appears to be a ${data.species} (${confidence}% confidence)`;
+        // Use same message format as Add Plant (without schedule note)
+        let msg = `Successfully identified as: ${data.species} (${confidence}% confidence)`;
         if (data.careData) {
-          message += `\n\n🌱 Care Tips:\n• Optimal Moisture: ${data.careData.optimalMoisture}%\n• Watering: ${data.careData.wateringFrequency}\n• ${data.careData.wateringTips}`;
+          msg += `\n\n🌱 Care Recommendations:\n• Optimal Moisture: ${data.careData.optimalMoisture}%\n• Watering: ${data.careData.wateringFrequency}`;
         }
-
-        Alert.alert(
-          'Plant Identified!',
-          message,
-          [{ text: 'OK' }]
-        );
+        showAlert({
+          title: 'Plant Identified!',
+          message: msg,
+          okText: 'OK',
+          variant: 'info',
+          iconName: 'leaf',
+        });
       }
     } else if (data.suggestions && data.suggestions.length > 0) {
       const topSuggestion = data.suggestions[0];
       const confidence = Math.round(topSuggestion.probability * 100);
       console.log('✅ Suggestion-based identification:', topSuggestion.species, confidence + '%');
-      Alert.alert(
-        'Plant Identified!',
-        `This might be a ${topSuggestion.species} (${confidence}% confidence)`,
-        [{ text: 'OK' }]
-      );
+      showAlert({
+        title: 'Plant Identified!',
+        message: `This might be a ${topSuggestion.species} (${confidence}% confidence)`,
+        okText: 'OK',
+        variant: 'info',
+        iconName: 'leaf',
+      });
     } else {
       console.log('❌ No identification results found');
-      Alert.alert('Identification Failed', 'Unable to identify the plant. Please try with a clearer image.');
+      showAlert({
+        title: 'Identification Failed',
+        message: 'Unable to identify the plant. Please try with a clearer image.',
+        okText: 'OK',
+        variant: 'error',
+        iconName: 'leaf',
+      });
     }
   };
 
@@ -975,10 +999,6 @@ const MainScreen = () => {
           resizeMode="cover"
         />
         <View style={styles.appBrandingContainer}>
-          <Image
-            source={require('../../../assets/images/Smart_Garden_Logo.png')}
-            style={styles.appBrandingLogo}
-          />
           <Text style={styles.appBrandingTitle}>Smart Garden</Text>
         </View>
         <View style={styles.helloOverlay}>
@@ -988,16 +1008,7 @@ const MainScreen = () => {
         </View>
 
         
-        <TouchableOpacity onPress={handleNotifications} style={styles.floatingNotification} activeOpacity={0.85}>
-          <Feather name="bell" size={20} color="#FFFFFF" />
-          {notifications.filter(n => !n.isRead).length > 0 && (
-            <View style={styles.notificationBadgeFloating}>
-              <Text style={styles.notificationBadgeText}>
-                {notifications.filter(n => !n.isRead).length}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        {/* Notification icon removed as requested */}
         <View style={styles.greetingOverlay} />
       </View>
 

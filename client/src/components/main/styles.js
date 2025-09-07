@@ -262,8 +262,8 @@ const styles = StyleSheet.create({
   },
   appBrandingContainer: {
     position: 'absolute',
-    left: 92,
-    bottom: 120,
+    left: 135,
+    bottom: 125,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',

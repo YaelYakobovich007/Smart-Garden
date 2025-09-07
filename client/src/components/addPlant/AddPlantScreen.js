@@ -61,6 +61,7 @@ export default function AddPlantScreen() {
   // UI state management
   const [errors, setErrors] = useState({});
   const [showImagePicker, setShowImagePicker] = useState(false);
+  const [showScanPicker, setShowScanPicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -76,7 +77,6 @@ export default function AddPlantScreen() {
         plantType: identifiedPlantType,
         // Auto-fill moisture recommendations if available
         humidity: careData?.optimalMoisture || prev.humidity,
-        waterLimit: careData?.optimalMoisture ? (careData.optimalMoisture / 100) : prev.waterLimit
       }));
 
       // Show success message with care data if available
@@ -150,6 +150,46 @@ export default function AddPlantScreen() {
       websocketService.offMessage('ADD_PLANT_FAIL', handleFail);
     };
   }, [navigation]);
+
+  /**
+   * Plant identification: process image and handle results locally
+   */
+  useEffect(() => {
+    const handlePlantIdentified = (message) => {
+      const data = message.data || message;
+
+      if (message.type === 'PLANT_IDENTIFY_FAIL') {
+        Alert.alert('Identification Failed', message.message || 'Unable to identify the plant. Please try again.');
+        return;
+      }
+
+      if (data.species && data.probability) {
+        // Update form with identified type and care recommendations if provided
+        setFormData(prev => ({
+          ...prev,
+          plantType: data.species,
+          humidity: data?.careData?.optimalMoisture ?? prev.humidity,
+        }));
+
+        let messageText = `Successfully identified as: ${data.species} (${Math.round(data.probability * 100)}% confidence)`;
+        if (data.careData) {
+          messageText += `\n\n🌱 Care Recommendations:\n• Optimal Moisture: ${data.careData.optimalMoisture}%\n• Watering: ${data.careData.wateringFrequency}`;
+          messageText += `\n\nYou can choose the number of watering days according to our recommendation or as you wish.`;
+        }
+        Alert.alert('Plant Identified!', messageText, [{ text: 'OK' }]);
+      } else {
+        Alert.alert('Identification Failed', 'Unable to identify the plant. Please try again with a clearer image.');
+      }
+    };
+
+    websocketService.onMessage('PLANT_IDENTIFY_RESULT', handlePlantIdentified);
+    websocketService.onMessage('PLANT_IDENTIFY_FAIL', handlePlantIdentified);
+
+    return () => {
+      websocketService.offMessage('PLANT_IDENTIFY_RESULT', handlePlantIdentified);
+      websocketService.offMessage('PLANT_IDENTIFY_FAIL', handlePlantIdentified);
+    };
+  }, []);
 
   /**
    * Validate form data before submission
@@ -338,6 +378,74 @@ export default function AddPlantScreen() {
     setShowImagePicker(false);
   };
 
+  // Identification: process selected image
+  const processImageForIdentification = async (imageAsset) => {
+    const base64Image = imageAsset.base64;
+    if (!base64Image) {
+      Alert.alert('Error', 'Failed to read image data. Please try again.');
+      return;
+    }
+
+    // Enforce 5MB limit similar to Main screen
+    const imageSizeBytes = Math.ceil((base64Image.length * 3) / 4);
+    const maxSizeBytes = 5 * 1024 * 1024;
+    if (imageSizeBytes > maxSizeBytes) {
+      Alert.alert('Image Too Large', 'The selected image is too large. Please try a smaller image.');
+      return;
+    }
+
+    if (!websocketService.isConnected()) {
+      Alert.alert('Error', 'Not connected to server. Please check your connection and try again.');
+      return;
+    }
+
+    websocketService.sendMessage({
+      type: 'PLANT_IDENTIFY',
+      imageBase64: base64Image,
+    });
+  };
+
+  const pickImageForIdentification = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      base64: true,
+    });
+    if (!result.canceled && result.assets && result.assets[0]) {
+      // Show the selected image immediately in the Plant Photo section
+      const asset = result.assets[0];
+      setFormData(prev => ({ ...prev, image: asset.uri }));
+      await processImageForIdentification(result.assets[0]);
+    }
+    setShowScanPicker(false);
+  };
+
+  const takePhotoForIdentification = async () => {
+    if (!cameraPermission?.granted) {
+      const permission = await requestCameraPermission();
+      if (!permission.granted) {
+        Alert.alert('Permission needed', 'Camera permission is required to take photos');
+        return;
+      }
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      base64: true,
+    });
+    if (!result.canceled && result.assets && result.assets[0]) {
+      const asset = result.assets[0];
+      // Show the captured image immediately in the Plant Photo section
+      setFormData(prev => ({ ...prev, image: asset.uri }));
+      await processImageForIdentification(asset);
+    }
+    setShowScanPicker(false);
+  };
+
   /**
    * Toggle day selection in watering schedule
    * Updates the schedule days array when user selects/deselects days
@@ -458,10 +566,7 @@ export default function AddPlantScreen() {
               />
               <TouchableOpacity
                 style={styles.scanButton}
-                onPress={() => navigation.navigate('Main', {
-                  openIdentifyPlant: true,
-                  fromAddPlant: true
-                })}
+                onPress={() => setShowScanPicker(true)}
               >
                 <Feather name="camera" size={20} color="#4CAF50" />
                 <Text style={styles.scanButtonText}>Scan</Text>
@@ -756,6 +861,34 @@ export default function AddPlantScreen() {
             <TouchableOpacity
               style={[styles.modalButton, styles.cancelButton]}
               onPress={() => setShowImagePicker(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Scan Picker Modal (Identify Plant) */}
+      <Modal
+        visible={showScanPicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowScanPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Identify Plant</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={takePhotoForIdentification}>
+              <Feather name="camera" size={24} color="#16A34A" />
+              <Text style={styles.modalButtonText}>Take Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalButton} onPress={pickImageForIdentification}>
+              <Feather name="image" size={24} color="#16A34A" />
+              <Text style={styles.modalButtonText}>Choose from Gallery</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelButton]}
+              onPress={() => setShowScanPicker(false)}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>

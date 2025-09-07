@@ -464,6 +464,37 @@ export const styles = StyleSheet.create({
     color: '#111827',
     fontFamily: 'Nunito_700Bold',
   },
+  // Mode pill
+  modePill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  modePillSmart: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#BBF7D0',
+  },
+  modePillScheduled: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#C7D2FE',
+  },
+  modePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Nunito_700Bold',
+  },
+  modePillTextSmart: {
+    color: '#4CAF50',
+  },
+  modePillTextScheduled: {
+    color: '#3730A3',
+  },
   scheduleSubtitle: {
     fontSize: 14,
     color: '#374151',
@@ -486,7 +517,7 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
   },
   scheduleChipText: {
-    color: '#059669',
+    color: '#4CAF50',
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Nunito_700Bold',
@@ -507,6 +538,43 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginTop: 8,
+    fontFamily: 'Nunito_400Regular',
+  },
+  // Empty state card for Smart mode
+  emptyStateCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  emptyStateIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyStateTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Nunito_700Bold',
+    marginBottom: 6,
+  },
+  emptyStateDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#374151',
     fontFamily: 'Nunito_400Regular',
   },
   settingsSection: {
