@@ -910,13 +910,26 @@ export const IrrigationProvider = ({ children }) => {
         });
       }
 
-      showAlert({
-        title: 'Smart Irrigation',
-        message: failureMessage,
-        okText: 'OK',
-        variant: 'error',
-        iconName: 'alert-triangle',
-      });
+      // If this is the specific water-limit case, show the dedicated red error with droplet icon
+      const msgText = String(failureMessage || '').toLowerCase();
+      const looksLikeWaterLimit = msgText.includes('water limit') || msgText.includes('limit was reached') || msgText.includes('limit reached');
+      if (looksLikeWaterLimit) {
+        showAlert({
+          title: 'Water Limit Reached',
+          message: failureMessage,
+          okText: 'OK',
+          variant: 'error',
+          iconName: 'droplet',
+        });
+      } else {
+        showAlert({
+          title: 'Smart Irrigation',
+          message: failureMessage,
+          okText: 'OK',
+          variant: 'error',
+          iconName: 'alert-triangle',
+        });
+      }
     };
 
     const handleValveBlocked = (data) => {
