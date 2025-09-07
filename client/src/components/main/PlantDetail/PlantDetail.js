@@ -257,7 +257,7 @@ const PlantDetail = () => {
     if (!isScheduledMode) {
       return (
         <View>
-          <View style={[styles.emptyStateCard, { marginTop: 12 }]}> 
+          <View style={[styles.emptyStateCard, { marginTop: 12 }]}>
             <View style={styles.emptyStateIconCircle}>
               <Feather name="cpu" size={22} color="#4CAF50" />
             </View>
@@ -598,7 +598,7 @@ const PlantDetail = () => {
         if (idMatches || nameMatches) {
           setPlant(prev => (prev ? { ...prev, valve_blocked: true } : prev));
         }
-      } catch {}
+      } catch { }
     };
 
     // Garden-wide broadcast: another device triggered a valve block → update immediately
@@ -612,7 +612,7 @@ const PlantDetail = () => {
         if (idMatches || nameMatches) {
           setPlant(prev => (prev ? { ...prev, valve_blocked: true } : prev));
         }
-      } catch {}
+      } catch { }
     };
 
     const handleTestValveBlockSuccess = (data) => {
@@ -624,9 +624,8 @@ const PlantDetail = () => {
 
     const handleStopIrrigationSuccess = (data) => {
       console.log('🛑 Stop irrigation success:', data);
-      // No need for alert since IrrigationContext will handle the state
+      // Keep UI state only; do not show a local popup to avoid duplicates.
       stoppingRef.current = false;
-      Alert.alert('Smart Irrigation', 'Smart irrigation has been stopped at your request.');
     };
 
     const handleStopIrrigationFail = (data) => {
@@ -1215,101 +1214,101 @@ const PlantDetail = () => {
       >
         <View style={mainStyles.modalOverlay}>
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
-          <View
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              borderRadius: 24,
-              padding: 24,
-              width: '100%',
-              borderWidth: 1,
-              borderColor: '#E2E8F0',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 12 },
-              shadowOpacity: 0.2,
-              shadowRadius: 20,
-              elevation: 16,
-            }}
-          >
-            {/* Header styled like StatusPopup with settings icon */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 12,
-                  borderWidth: 2,
-                  borderColor: '#16A34A',
-                  backgroundColor: '#F0FDF4',
-                }}
-              >
-                <Feather name="settings" size={20} color="#16A34A" />
+            <View
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderRadius: 24,
+                padding: 24,
+                width: '100%',
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.2,
+                shadowRadius: 20,
+                elevation: 16,
+              }}
+            >
+              {/* Header styled like StatusPopup with settings icon */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 12,
+                    borderWidth: 2,
+                    borderColor: '#16A34A',
+                    backgroundColor: '#F0FDF4',
+                  }}
+                >
+                  <Feather name="settings" size={20} color="#16A34A" />
+                </View>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: '#1F2937', fontFamily: 'Nunito_600SemiBold', flex: 1 }}>
+                  Change Water Limit
+                </Text>
               </View>
-              <Text style={{ fontSize: 18, fontWeight: '600', color: '#1F2937', fontFamily: 'Nunito_600SemiBold', flex: 1 }}>
-                Change Water Limit
-              </Text>
+              <View style={{ width: '100%', marginVertical: 8 }}>
+                <TextInput
+                  value={waterLimitInput}
+                  onChangeText={setWaterLimitInput}
+                  keyboardType="numeric"
+                  placeholder="Enter liters (e.g., 1.5)"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    borderRadius: 10,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    fontSize: 16,
+                    color: '#111827',
+                    textAlign: 'center'
+                  }}
+                />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 6,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    backgroundColor: '#F3F4F6',
+                  }}
+                  onPress={() => {
+                    const limitValue = parseFloat(String(waterLimitInput).replace(',', '.'));
+                    if (!isNaN(limitValue) && limitValue > 0) {
+                      updatePlantDetails({ waterLimit: limitValue });
+                      setShowWaterLimitModal(false);
+                    } else {
+                      Alert.alert('Invalid Input', 'Please enter a positive number');
+                    }
+                  }}
+                >
+                  <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_600SemiBold' }}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 6,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                  }}
+                  onPress={() => setShowWaterLimitModal(false)}
+                >
+                  <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_500Medium' }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={{ width: '100%', marginVertical: 8 }}>
-              <TextInput
-                value={waterLimitInput}
-                onChangeText={setWaterLimitInput}
-                keyboardType="numeric"
-                placeholder="Enter liters (e.g., 1.5)"
-                style={{
-                  borderWidth: 1,
-                  borderColor: '#D1D5DB',
-                  borderRadius: 10,
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  fontSize: 16,
-                  color: '#111827',
-                  textAlign: 'center'
-                }}
-              />
-            </View>
-            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 6,
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  backgroundColor: '#F3F4F6',
-                }}
-                onPress={() => {
-                  const limitValue = parseFloat(String(waterLimitInput).replace(',', '.'));
-                  if (!isNaN(limitValue) && limitValue > 0) {
-                    updatePlantDetails({ waterLimit: limitValue });
-                    setShowWaterLimitModal(false);
-                  } else {
-                    Alert.alert('Invalid Input', 'Please enter a positive number');
-                  }
-                }}
-              >
-                <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_600SemiBold' }}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 6,
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  backgroundColor: '#FFFFFF',
-                  borderWidth: 1,
-                  borderColor: '#D1D5DB',
-                }}
-                onPress={() => setShowWaterLimitModal(false)}
-              >
-                <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_500Medium' }}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
           </View>
         </View>
       </Modal>
