@@ -161,6 +161,9 @@ const ProfileSettingsScreen = () => {
     );
   };
 
+  // Screen title per section
+  const title = initialSection === 'location' ? 'Change Location' : initialSection === 'password' ? 'Change Password' : 'Change Name';
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -168,170 +171,158 @@ const ProfileSettingsScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Feather name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile Settings</Text>
+        <Text style={styles.headerTitle}>{title}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          {/* Hero */}
-          <View style={styles.heroCard}>
-            <View style={styles.heroIconWrap}>
-              <Feather name="user" size={22} color="#2C7A4B" />
-            </View>
-            <View style={styles.heroTextWrap}>
-              <Text style={styles.heroTitle}>Manage your profile</Text>
-              <Text style={styles.heroSubtitle}>Update your name, location and password</Text>
-            </View>
-          </View>
+          {/* Only the selected section */}
           <View style={styles.panelContainer}>
-            {/* Full Name */}
-            <View style={styles.sectionUnified}>
-              <Text style={styles.cardTitle}>Full Name</Text>
-              <Text style={styles.cardSubtitle}>This is how your name will appear across the app</Text>
-              <View style={styles.inputRow}>
-                <Feather name="user" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your full name"
-                  value={newFullName}
-                  autoCapitalize="words"
-                  onChangeText={(t) => { setNewFullName(t); setDirty(true); }}
-                />
-              </View>
-            </View>
-
-            {/* Location */}
-            <View style={styles.sectionUnified}>
-              <Text style={styles.cardTitle}>Location</Text>
-              <Text style={styles.cardSubtitle}>We use this to personalize weather and tips</Text>
-              <TouchableOpacity style={styles.pickerContainer} onPress={() => { setShowCountryPicker(true); }}>
-                <Feather name="map-pin" size={20} color="#888" style={styles.inputIcon} />
-                <View style={styles.pickerWrapper}>
-                  <Text style={[styles.pickerDisplayText, !selectedCountry && styles.pickerPlaceholder]}>
-                    {selectedCountry || 'Select Country'}
-                  </Text>
-                  <Feather name="chevron-down" size={20} color="#888" style={styles.pickerIcon} />
+            {initialSection === 'name' && (
+              <View style={styles.sectionUnified}>
+                <Text style={styles.cardTitle}>Full Name</Text>
+                <Text style={styles.cardSubtitle}>This is how your name will appear across the app</Text>
+                <View style={styles.inputRow}>
+                  <Feather name="user" size={20} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your full name"
+                    value={newFullName}
+                    autoCapitalize="words"
+                    onChangeText={(t) => { setNewFullName(t); setDirty(true); }}
+                  />
                 </View>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.pickerContainer} onPress={() => { if (selectedCountry) { setShowCityPicker(true); } }} disabled={!selectedCountry}>
-                <Feather name="map-pin" size={20} color="#888" style={styles.inputIcon} />
-                <View style={styles.pickerWrapper}>
-                  <Text style={[styles.pickerDisplayText, !selectedCity && styles.pickerPlaceholder]}>
-                    {selectedCity || (selectedCountry ? 'Select City' : 'Select Country First')}
-                  </Text>
-                  <Feather name="chevron-down" size={20} color="#888" style={styles.pickerIcon} />
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            {/* Country Picker Inline Modal */}
-            {showCountryPicker && (
-              <View style={styles.inlinePicker}>
-                <Picker selectedValue={selectedCountry} onValueChange={(val) => { setSelectedCountry(val); setDirty(true); setShowCountryPicker(false); }}>
-                  <Picker.Item label="Select Country" value="" />
-                  {countries.map((c) => (
-                    <Picker.Item key={c.code} label={c.name} value={c.name} />
-                  ))}
-                </Picker>
               </View>
             )}
-
-            {/* City Picker Inline Modal */}
-            {showCityPicker && (
-              <View style={styles.inlinePicker}>
-                <Picker selectedValue={selectedCity} onValueChange={(val) => { setSelectedCity(val); setDirty(true); setShowCityPicker(false); }}>
-                  <Picker.Item label="Select City" value="" />
-                  {cities.map((city) => (
-                    <Picker.Item key={city} label={city} value={city} />
-                  ))}
-                </Picker>
+            {initialSection === 'location' && (
+              <View style={styles.sectionUnified}>
+                <Text style={styles.cardTitle}>Location</Text>
+                <Text style={styles.cardSubtitle}>We use this to personalize weather and tips</Text>
+                <TouchableOpacity style={styles.pickerContainer} onPress={() => { setShowCountryPicker(true); }}>
+                  <Feather name="map-pin" size={20} color="#888" style={styles.inputIcon} />
+                  <View style={styles.pickerWrapper}>
+                    <Text style={[styles.pickerDisplayText, !selectedCountry && styles.pickerPlaceholder]}>
+                      {selectedCountry || 'Select Country'}
+                    </Text>
+                    <Feather name="chevron-down" size={20} color="#888" style={styles.pickerIcon} />
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.pickerContainer} onPress={() => { if (selectedCountry) { setShowCityPicker(true); } }} disabled={!selectedCountry}>
+                  <Feather name="map-pin" size={20} color="#888" style={styles.inputIcon} />
+                  <View style={styles.pickerWrapper}>
+                    <Text style={[styles.pickerDisplayText, !selectedCity && styles.pickerPlaceholder]}>
+                      {selectedCity || (selectedCountry ? 'Select City' : 'Select Country First')}
+                    </Text>
+                    <Feather name="chevron-down" size={20} color="#888" style={styles.pickerIcon} />
+                  </View>
+                </TouchableOpacity>
+                {showCountryPicker && (
+                  <View style={styles.inlinePicker}>
+                    <Picker selectedValue={selectedCountry} onValueChange={(val) => { setSelectedCountry(val); setDirty(true); setShowCountryPicker(false); }}>
+                      <Picker.Item label="Select Country" value="" />
+                      {countries.map((c) => (
+                        <Picker.Item key={c.code} label={c.name} value={c.name} />
+                      ))}
+                    </Picker>
+                  </View>
+                )}
+                {showCityPicker && (
+                  <View style={styles.inlinePicker}>
+                    <Picker selectedValue={selectedCity} onValueChange={(val) => { setSelectedCity(val); setDirty(true); setShowCityPicker(false); }}>
+                      <Picker.Item label="Select City" value="" />
+                      {cities.map((city) => (
+                        <Picker.Item key={city} label={city} value={city} />
+                      ))}
+                    </Picker>
+                  </View>
+                )}
               </View>
             )}
-            {/* Password */}
-            <View style={[styles.sectionUnified, styles.lastSection]}>
-              <Text style={styles.cardTitle}>Change Password</Text>
-              <Text style={styles.cardSubtitle}>Use a strong password you don’t use elsewhere</Text>
-              <View style={styles.inputRow}>
-                <Feather name="lock" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Current password"
-                  value={currentPassword}
-                  onChangeText={(t) => { setCurrentPassword(t); setDirty(true); }}
-                  secureTextEntry={!showCurrent}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="off"
-                  textContentType="oneTimeCode"
-                  importantForAutofill="no"
-                />
-                <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)}>
-                  <Feather name={showCurrent ? 'eye' : 'eye-off'} size={20} color="#888" />
-                </TouchableOpacity>
+            {initialSection === 'password' && (
+              <View style={styles.sectionUnified}>
+                <Text style={styles.cardTitle}>Change Password</Text>
+                <Text style={styles.cardSubtitle}>Use a strong password you don’t use elsewhere</Text>
+                <View style={styles.inputRow}>
+                  <Feather name="lock" size={20} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Current password"
+                    value={currentPassword}
+                    onChangeText={(t) => { setCurrentPassword(t); setDirty(true); }}
+                    secureTextEntry={!showCurrent}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="off"
+                    textContentType="oneTimeCode"
+                    importantForAutofill="no"
+                  />
+                  <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)}>
+                    <Feather name={showCurrent ? 'eye' : 'eye-off'} size={20} color="#888" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.inputRow}>
+                  <Feather name="lock" size={20} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="New password"
+                    value={newPassword}
+                    onChangeText={(t) => { setNewPassword(t); setDirty(true); }}
+                    secureTextEntry={!showNew}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="off"
+                    textContentType="oneTimeCode"
+                    importantForAutofill="no"
+                  />
+                  <TouchableOpacity onPress={() => setShowNew(!showNew)}>
+                    <Feather name={showNew ? 'eye' : 'eye-off'} size={20} color="#888" />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.hintText}>If you forgot your password, go to Login and tap "Forgot Password"</Text>
               </View>
-              <View style={styles.inputRow}>
-                <Feather name="lock" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="New password"
-                  value={newPassword}
-                  onChangeText={(t) => { setNewPassword(t); setDirty(true); }}
-                  secureTextEntry={!showNew}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="off"
-                  textContentType="oneTimeCode"
-                  importantForAutofill="no"
-                />
-                <TouchableOpacity onPress={() => setShowNew(!showNew)}>
-                  <Feather name={showNew ? 'eye' : 'eye-off'} size={20} color="#888" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.hintText}>If you forgot your password, go to Login and tap "Forgot Password"</Text>
-              <View style={styles.buttonRow}>
-                <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.linkButton}>
-                  <Text style={styles.linkText}>Go to Login</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.button, styles.buttonPrimary, !dirty && { opacity: 0.5 }]}
-                  onPress={() => {
-                    const payload = { type: 'UPDATE_USER_DETAILS' };
-                    if (newFullName.trim()) payload.newName = newFullName.trim();
-                    if (selectedCountry && selectedCity) {
-                      payload.country = selectedCountry;
-                      payload.city = selectedCity;
-                    }
-                    if (currentPassword && newPassword) {
-                      payload.currentPassword = currentPassword;
-                      payload.newPassword = newPassword;
-                    }
-                    if (!payload.newName && !payload.country && !payload.city && !payload.currentPassword) return;
+            )}
+          </View>
+          {/* Save button */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.button, styles.buttonPrimary, !dirty && { opacity: 0.5 }]}
+              onPress={() => {
+                const payload = { type: 'UPDATE_USER_DETAILS' };
+                if (initialSection === 'name' && newFullName.trim()) payload.newName = newFullName.trim();
+                if (initialSection === 'location' && selectedCountry && selectedCity) {
+                  payload.country = selectedCountry;
+                  payload.city = selectedCity;
+                }
+                if (initialSection === 'password' && currentPassword && newPassword) {
+                  payload.currentPassword = currentPassword;
+                  payload.newPassword = newPassword;
+                }
+                if (Object.keys(payload).length === 1) return;
 
-                    const handler = (data) => {
-                      websocketService.offMessage('UPDATE_USER_DETAILS_SUCCESS', handler);
-                      websocketService.offMessage('UPDATE_USER_DETAILS_FAIL', handler);
-                      if (data.type === 'UPDATE_USER_DETAILS_SUCCESS') {
-                        websocketService.send({ type: 'GET_USER_DETAILS' });
-                        setDirty(false);
-                        setNewFullName('');
-                        setCurrentPassword('');
-                        setNewPassword('');
-                        Alert.alert('Success', 'Your profile has been updated.');
-                      } else {
-                        Alert.alert('Update Failed', data.reason || 'Could not update your profile.');
-                      }
-                    };
-                    websocketService.onMessage('UPDATE_USER_DETAILS_SUCCESS', handler);
-                    websocketService.onMessage('UPDATE_USER_DETAILS_FAIL', handler);
-                    websocketService.send(payload);
-                  }}
-                  disabled={!dirty}
-                >
-                  <Text style={styles.buttonText}>Save Changes</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+                const handler = (data) => {
+                  websocketService.offMessage('UPDATE_USER_DETAILS_SUCCESS', handler);
+                  websocketService.offMessage('UPDATE_USER_DETAILS_FAIL', handler);
+                  if (data.type === 'UPDATE_USER_DETAILS_SUCCESS') {
+                    websocketService.send({ type: 'GET_USER_DETAILS' });
+                    setDirty(false);
+                    setNewFullName('');
+                    setCurrentPassword('');
+                    setNewPassword('');
+                    Alert.alert('Success', 'Your profile has been updated.');
+                    navigation.goBack();
+                  } else {
+                    Alert.alert('Update Failed', data.reason || 'Could not update your profile.');
+                  }
+                };
+                websocketService.onMessage('UPDATE_USER_DETAILS_SUCCESS', handler);
+                websocketService.onMessage('UPDATE_USER_DETAILS_FAIL', handler);
+                websocketService.send(payload);
+              }}
+              disabled={!dirty}
+            >
+              <Text style={styles.buttonText}>Save Changes</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
