@@ -421,7 +421,7 @@ async function handleUpdateGarden(data, ws, email) {
             // Best-effort only
         }
 
-        console.log(`[GARDEN] Updated: id=${gardenId} user=${user.full_name} email=${email}`);
+        console.log(`[GARDEN] Location Updated: id=${gardenId} user=${user.full_name} email=${email}`);
 
     } catch (error) {
         console.log(`[GARDEN] Error: Failed to update - ${error.message}`);
