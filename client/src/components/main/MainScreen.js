@@ -169,9 +169,32 @@ const MainScreen = () => {
     if (pid != null) {
       setPlants(prev => prev.map(p => (Number(p.id) === pid ? { ...p, valve_blocked: true } : p)));
     } else {
-      // Fallback: refresh plant list to show updated valve_blocked status
-      if (websocketService.isConnected()) {
-        websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+      // No plantId provided (common for the initiating client). Try to infer from irrigation context.
+      try {
+        // Prefer any plant currently in smart/watering/pending state
+        let inferredId = null;
+        if (Array.isArray(plants) && plants.length > 0) {
+          for (let i = 0; i < plants.length; i++) {
+            const p = plants[i];
+            const st = getPlantWateringState ? getPlantWateringState(p.id) : null;
+            if (st && (st.isSmartMode || st.isWateringActive || st.pendingIrrigationRequest || st.pendingValveRequest)) {
+              inferredId = p.id;
+              break;
+            }
+          }
+        }
+        if (inferredId != null) {
+          setPlants(prev => prev.map(p => (Number(p.id) === Number(inferredId) ? { ...p, valve_blocked: true } : p)));
+        } else {
+          // Fallback: refresh plant list to show updated valve_blocked status
+          if (websocketService.isConnected()) {
+            websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+          }
+        }
+      } catch {
+        if (websocketService.isConnected()) {
+          websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
+        }
       }
     }
   };

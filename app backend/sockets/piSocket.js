@@ -632,7 +632,14 @@ function handlePiSocket(ws) {
             if (responseData.error_message === 'water_limit_reached_target_not_met') {
               // Specific problem message and block state already handled in DB updates below
               const userMessage = `Water limit reached but desired moisture was not achieved. The valve has been blocked to prevent overwatering. Please check sensor placement/readings or possible leaks.`;
+              // Send fail popup for context
               sendError(pendingInfo.ws, 'IRRIGATE_FAIL', userMessage);
+              // Also send explicit valve-blocked event to the initiating client so UI updates immediately
+              try {
+                sendError(pendingInfo.ws, 'VALVE_BLOCKED', { plantId: Number(plantId), message: userMessage });
+              } catch (e) {
+                console.warn('Failed to send VALVE_BLOCKED to initiator:', e?.message);
+              }
             } else if (isValveBlocked) {
               // For valve blocking, send a more specific message
               let userMessage = responseData.error_message;

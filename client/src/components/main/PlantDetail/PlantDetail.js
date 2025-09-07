@@ -572,8 +572,31 @@ const PlantDetail = () => {
     const handleValveBlocked = (data) => {
       console.log('PlantDetail: Valve blocked message received:', data);
       Alert.alert('Valve Blocked', data?.message || 'The valve has been blocked and cannot be operated.');
-      // Refresh the plant data to show the blocked status
-      // This will trigger a re-render with the updated valve_blocked status
+      // Immediately reflect blocked state in local plant details UI
+      try {
+        const payload = data?.data || data;
+        const pidFromPayload = payload?.plantId != null ? Number(payload.plantId) : (payload?.plant_id != null ? Number(payload.plant_id) : null);
+        const nameFromPayload = payload?.plantName || payload?.plant_name || null;
+        const idMatches = pidFromPayload != null && plant?.id != null && Number(pidFromPayload) === Number(plant.id);
+        const nameMatches = nameFromPayload && plant?.name && String(nameFromPayload) === String(plant.name);
+        if (idMatches || nameMatches) {
+          setPlant(prev => (prev ? { ...prev, valve_blocked: true } : prev));
+        }
+      } catch {}
+    };
+
+    // Garden-wide broadcast: another device triggered a valve block → update immediately
+    const handleGardenValveBlocked = (message) => {
+      try {
+        const payload = message?.data || message;
+        const pid = payload?.plantId != null ? Number(payload.plantId) : null;
+        const pname = payload?.plantName || payload?.plant_name || null;
+        const idMatches = pid != null && plant?.id != null && Number(pid) === Number(plant.id);
+        const nameMatches = pname && plant?.name && String(pname) === String(plant.name);
+        if (idMatches || nameMatches) {
+          setPlant(prev => (prev ? { ...prev, valve_blocked: true } : prev));
+        }
+      } catch {}
     };
 
     const handleTestValveBlockSuccess = (data) => {
@@ -608,6 +631,7 @@ const PlantDetail = () => {
     websocketService.onMessage('UNBLOCK_VALVE_SUCCESS', handleUnblockSuccess);
     websocketService.onMessage('UNBLOCK_VALVE_FAIL', handleUnblockFail);
     websocketService.onMessage('VALVE_BLOCKED', handleValveBlocked);
+    websocketService.onMessage('GARDEN_VALVE_BLOCKED', handleGardenValveBlocked);
     websocketService.onMessage('TEST_VALVE_BLOCK_SUCCESS', handleTestValveBlockSuccess);
     websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
     websocketService.onMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
@@ -649,6 +673,7 @@ const PlantDetail = () => {
       websocketService.offMessage('UNBLOCK_VALVE_SUCCESS', handleUnblockSuccess);
       websocketService.offMessage('UNBLOCK_VALVE_FAIL', handleUnblockFail);
       websocketService.offMessage('VALVE_BLOCKED', handleValveBlocked);
+      websocketService.offMessage('GARDEN_VALVE_BLOCKED', handleGardenValveBlocked);
       websocketService.offMessage('TEST_VALVE_BLOCK_SUCCESS', handleTestValveBlockSuccess);
       websocketService.offMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
       websocketService.offMessage('STOP_IRRIGATION_FAIL', handleStopIrrigationFail);
