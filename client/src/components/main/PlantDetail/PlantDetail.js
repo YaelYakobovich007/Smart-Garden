@@ -207,7 +207,17 @@ const PlantDetail = () => {
   const handlePlantUpdateSuccess = (data) => {
     console.log('🌿 Plant update success:', data);
     console.log('🌿 Current plant state:', plant);
-    Alert.alert('Success', data.message || 'Plant updated successfully');
+    try {
+      const plantName = plant?.name || data?.plant?.name || 'Plant';
+      const msg = data?.message || `"${plantName}" updated successfully.`;
+      if (typeof showAlert === 'function') {
+        showAlert({ title: 'Update Plant', message: msg, okText: 'OK', variant: 'success', iconName: 'settings' });
+      } else {
+        Alert.alert('Update Plant', msg);
+      }
+    } catch {
+      Alert.alert('Update Plant', data?.message || 'Plant updated successfully');
+    }
     // Update the plant data to refresh the UI
     if (data.plant) {
       console.log('🌿 Updating to new plant data:', data.plant);
@@ -550,7 +560,13 @@ const PlantDetail = () => {
     };
 
     const handleUpdateSuccess = (data) => {
-      Alert.alert('Update Plant', data?.message || 'Plant details updated successfully!');
+      const plantName = plant?.name || data?.plant?.name || 'Plant';
+      const msg = data?.message || `"${plantName}" updated successfully.`;
+      if (typeof showAlert === 'function') {
+        showAlert({ title: 'Update Plant', message: msg, okText: 'OK', variant: 'success', iconName: 'settings' });
+      } else {
+        Alert.alert('Update Plant', msg);
+      }
     };
 
     const handleUpdateFail = (data) => {
@@ -1090,37 +1106,102 @@ const PlantDetail = () => {
         onRequestClose={() => setShowDripperModal(false)}
       >
         <View style={mainStyles.modalOverlay}>
-          <View style={mainStyles.modalContent}>
-            <Text style={mainStyles.modalTitle}>Select Dripper Type</Text>
-            {['2L/h', '4L/h', '8L/h'].map((opt) => (
-              <TouchableOpacity
-                key={opt}
-                style={mainStyles.modalButton}
-                onPress={() => setPendingDripperType(opt)}
-              >
-                <Feather name={pendingDripperType === opt ? 'check-circle' : 'circle'} size={24} color="#16A34A" />
-                <Text style={mainStyles.modalButtonText}>{opt}</Text>
-              </TouchableOpacity>
-            ))}
-            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
-              <TouchableOpacity
-                style={[mainStyles.modalButton, { flex: 1, marginBottom: 0 }]}
-                onPress={() => {
-                  if (pendingDripperType) {
-                    updatePlantDetails({ dripperType: pendingDripperType });
-                  }
-                  setShowDripperModal(false);
-                }}
-              >
-                <Feather name="save" size={24} color="#16A34A" />
-                <Text style={mainStyles.modalButtonText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[mainStyles.modalButton, mainStyles.cancelButton, { flex: 1, marginBottom: 0 }]}
-                onPress={() => setShowDripperModal(false)}
-              >
-                <Text style={mainStyles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
+            <View
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderRadius: 24,
+                padding: 24,
+                width: '100%',
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.2,
+                shadowRadius: 20,
+                elevation: 16,
+              }}
+            >
+              {/* Header styled like StatusPopup with settings icon */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 12,
+                    borderWidth: 2,
+                    borderColor: '#16A34A',
+                    backgroundColor: '#F0FDF4',
+                  }}
+                >
+                  <Feather name="settings" size={20} color="#16A34A" />
+                </View>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: '#1F2937', fontFamily: 'Nunito_600SemiBold', flex: 1 }}>
+                  Change Dripper
+                </Text>
+              </View>
+              {/* Options */}
+              {['2L/h', '4L/h', '8L/h'].map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12,
+                    borderWidth: 1,
+                    borderColor: pendingDripperType === opt ? '#16A34A' : '#E5E7EB',
+                    backgroundColor: '#FFFFFF',
+                    paddingVertical: 12,
+                    paddingHorizontal: 14,
+                    borderRadius: 10,
+                    marginBottom: 10,
+                  }}
+                  onPress={() => setPendingDripperType(opt)}
+                >
+                  <Feather name={pendingDripperType === opt ? 'check-circle' : 'circle'} size={22} color={pendingDripperType === opt ? '#16A34A' : '#9CA3AF'} />
+                  <Text style={{ fontSize: 16, color: '#111827', fontFamily: 'Nunito_500Medium' }}>{opt}</Text>
+                </TouchableOpacity>
+              ))}
+              <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 6,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    backgroundColor: '#F3F4F6',
+                  }}
+                  onPress={() => {
+                    if (pendingDripperType) {
+                      updatePlantDetails({ dripperType: pendingDripperType });
+                    }
+                    setShowDripperModal(false);
+                  }}
+                >
+                  <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_600SemiBold' }}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 6,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                  }}
+                  onPress={() => setShowDripperModal(false)}
+                >
+                  <Text style={{ color: '#374151', fontWeight: '500', fontFamily: 'Nunito_500Medium' }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
