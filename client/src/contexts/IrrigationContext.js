@@ -334,7 +334,8 @@ export const IrrigationProvider = ({ children }) => {
 
   // Start smart irrigation
   const startSmartIrrigation = (plant) => {
-    console.log('startSmartIrrigation called for plant:', plant?.name, 'ID:', plant?.id);
+    const plantId = Number(plant?.id ?? plant?.plant_id);
+    console.log('startSmartIrrigation called for plant:', plant?.name, 'ID:', plantId);
 
     if (!plant?.name) {
       Alert.alert('Error', 'Plant name is missing.');
@@ -346,7 +347,6 @@ export const IrrigationProvider = ({ children }) => {
       return;
     }
 
-    const plantId = plant.id;
     console.log('Setting watering state for plant ID:', plantId);
 
     // First clear any existing state
