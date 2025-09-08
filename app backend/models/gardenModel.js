@@ -4,7 +4,6 @@ const { pool } = require('../config/database');
 async function generateUniqueInviteCode() {
     let code;
     let exists = true;
-
     while (exists) {
         // Generate 6-character code: ROSE24, MINT89, etc.
         const words = ['ROSE', 'MINT', 'SAGE', 'BASIL', 'LILY', 'IRIS', 'PALM', 'FERN', 'MOSS', 'VINE'];
