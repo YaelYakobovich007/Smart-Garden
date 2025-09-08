@@ -439,11 +439,12 @@ function handlePiSocket(ws) {
 
           // Notify client of successful irrigation
           if (pendingInfo && pendingInfo.ws) {
+            const liters = Number(responseData.water_added_liters || 0).toFixed(2);
             sendSuccess(pendingInfo.ws, 'IRRIGATE_SUCCESS', {
-              message: `Plant "${pendingInfo.plantData.plant_name}" irrigated successfully! Added ${responseData.water_added_liters}L of water.`,
+              message: `Plant "${pendingInfo.plantData.plant_name}" irrigated successfully! Added ${liters}L of water.`,
               result: irrigationResult,
               irrigation_data: {
-                water_added_liters: responseData.water_added_liters,
+                water_added_liters: Number(liters),
                 final_moisture: responseData.final_moisture,
                 initial_moisture: responseData.moisture
               },

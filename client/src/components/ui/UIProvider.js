@@ -47,7 +47,7 @@ export const UIProvider = ({ children }) => {
 
   // Bridge RN Alert.alert -> SmartAlert once, after provider mounts
   useEffect(() => {
-    try { registerAlertBridge(showAlert); } catch {}
+    try { registerAlertBridge(showAlert); } catch { }
   }, [showAlert]);
 
   const handleOk = () => {
@@ -69,6 +69,10 @@ export const UIProvider = ({ children }) => {
     }
     if (alertState.variant === 'success') {
       return 'success';
+    }
+    // Respect explicit 'info' to force neutral gray button
+    if (alertState.variant === 'info') {
+      return 'info';
     }
     // Default to neutral (purple person icon) for info messages
     const message = alertState.message.toLowerCase();

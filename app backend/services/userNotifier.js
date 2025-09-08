@@ -36,12 +36,14 @@ function notifyUserOfIrrigationComplete({ plantName, email, irrigationData }) {
   if (ws) {
     const { water_added_liters, final_moisture, initial_moisture } = irrigationData;
     const moistureIncrease = final_moisture - initial_moisture;
+    const liters = Number(water_added_liters || 0);
+    const litersStr = liters.toFixed(2);
 
-    console.log(`[NOTIFY] Irrigation complete: plant=${plantName} water=${water_added_liters}L moisture=${initial_moisture}%→${final_moisture}% email=${email}`);
+    console.log(`[NOTIFY] Irrigation complete: plant=${plantName} water=${litersStr}L moisture=${initial_moisture}%→${final_moisture}% email=${email}`);
     sendSuccess(ws, 'IRRIGATION_COMPLETE', {
-      message: `Smart irrigation completed for "${plantName}"!\nWater added: ${water_added_liters}L\nMoisture: ${initial_moisture}% → ${final_moisture}% (+${moistureIncrease.toFixed(1)}%)`,
+      message: `Smart irrigation completed for "${plantName}"!\nWater added: ${litersStr}L\nMoisture: ${initial_moisture}% → ${final_moisture}% (+${moistureIncrease.toFixed(1)}%)`,
       plantName,
-      irrigationData
+      irrigationData: { ...irrigationData, water_added_liters: liters }
     });
   }
 }

@@ -1138,8 +1138,8 @@ export const IrrigationProvider = ({ children }) => {
           title: 'Smart Irrigation',
           message: msg,
           okText: 'OK',
-          variant: 'info', // gray button
-          iconName: 'droplet', // blue droplet
+          variant: 'info',
+          iconName: 'droplet',
         });
         if (targetPlantId != null) markFinalNotified(targetPlantId);
       }

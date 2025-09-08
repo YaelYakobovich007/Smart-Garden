@@ -103,15 +103,15 @@ function getPendingIrrigationIds() {
 }
 
 /**
- * Clean up old pending irrigations (irrigations waiting more than 2 minutes)
+ * Clean up old pending irrigations (irrigations waiting more than 30 minutes)
  * This prevents memory leaks from failed/disconnected requests
  */
 function cleanupOldPendingIrrigations() {
-    const twoMinutesAgo = Date.now() - (2 * 60 * 1000); // 2 minutes
+    const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000); // 30 minutes
     let cleanedCount = 0;
 
     for (const [plantId, info] of pendingIrrigations.entries()) {
-        if (info.timestamp < twoMinutesAgo) {
+        if (info.timestamp < thirtyMinutesAgo) {
             pendingIrrigations.delete(plantId);
             cleanedCount++;
             console.log(`[PENDING] Cleaned old request: plant=${plantId}`);
