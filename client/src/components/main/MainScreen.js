@@ -103,7 +103,7 @@ const MainScreen = () => {
    * @param {Object} data - Broadcast data
    */
   const handlePlantAddedToGarden = (data) => {
-    console.log('Plant added to garden by another user:', data);
+    console.log('MainScreen: Plant added to garden by another user:', data);
 
     // Refresh plant list to show the new plant
     if (websocketService.isConnected()) {
@@ -131,7 +131,7 @@ const MainScreen = () => {
    * @param {Object} data - Broadcast data
    */
   const handlePlantDeletedFromGarden = (data) => {
-    console.log('Plant deleted from garden by another user:', data);
+    console.log('MainScreen: Plant deleted from garden by another user:', data);
 
     // Refresh plant list to remove the deleted plant
     if (websocketService.isConnected()) {
@@ -145,7 +145,7 @@ const MainScreen = () => {
    * @param {Object} data - Broadcast data
    */
   const handlePlantUpdatedInGarden = (data) => {
-    console.log('Plant updated in garden by another user:', data);
+    console.log('MainScreen: Plant updated in garden by another user:', data);
 
     // Show notification to user
     if (data.message) {
@@ -648,15 +648,15 @@ const MainScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       if (websocketService.isConnected()) {
-        console.log('🔄 MainScreen: Screen focused, requesting data...');
+        console.log('MainScreen: Screen focused, requesting data...');
         websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
         // Request moisture and temperature data for all plants
-        console.log('🌡️ MainScreen: Requesting moisture and temperature for all plants...');
+        console.log('MainScreen: Requesting moisture and temperature for all plants...');
         websocketService.sendMessage({ type: 'GET_ALL_PLANTS_MOISTURE' });
         // Refresh session when user is active
         sessionService.refreshSession();
       } else {
-        console.log('❌ MainScreen: WebSocket not connected, cannot request data');
+        console.log('MainScreen: WebSocket not connected, cannot request data');
       }
     }, [])
   );
@@ -909,7 +909,7 @@ const MainScreen = () => {
    * @param {Object} data - Plant identification response data
    */
   const handlePlantIdentified = (message) => {
-    console.log('🌱 Plant identification response received:', message);
+    console.log('Plant identification response received:', message);
 
     // ORIGINAL LOGIC: hide loading overlay
     setLoading(false);
@@ -919,7 +919,7 @@ const MainScreen = () => {
     const data = message.data || message;
 
     if (message.type === 'PLANT_IDENTIFY_FAIL') {
-      console.log('❌ Plant identification failed:', message.message);
+      console.log('Plant identification failed:', message.message);
       showAlert({
         title: 'Identification Failed',
         message: message.message || 'Unable to identify the plant. Please try again.',
@@ -932,7 +932,7 @@ const MainScreen = () => {
 
     if (data.species && data.probability) {
       const confidence = Math.round(data.probability * 100);
-      console.log('✅ High confidence identification:', data.species, confidence + '%');
+      console.log('High confidence identification:', data.species, confidence + '%');
 
       // Check if we came from AddPlantScreen
       if (route.params?.fromAddPlant) {
@@ -959,7 +959,7 @@ const MainScreen = () => {
     } else if (data.suggestions && data.suggestions.length > 0) {
       const topSuggestion = data.suggestions[0];
       const confidence = Math.round(topSuggestion.probability * 100);
-      console.log('✅ Suggestion-based identification:', topSuggestion.species, confidence + '%');
+      console.log('Suggestion-based identification:', topSuggestion.species, confidence + '%');
       showAlert({
         title: 'Plant Identified!',
         message: `This might be a ${topSuggestion.species} (${confidence}% confidence)`,
@@ -968,7 +968,7 @@ const MainScreen = () => {
         iconName: 'leaf',
       });
     } else {
-      console.log('❌ No identification results found');
+      console.log('No identification results found');
       showAlert({
         title: 'Identification Failed',
         message: 'Unable to identify the plant. Please try with a clearer image.',
@@ -1030,7 +1030,7 @@ const MainScreen = () => {
           </Text>
         </View>
 
-        
+
         {/* Notification icon removed as requested */}
         <View style={styles.greetingOverlay} />
       </View>

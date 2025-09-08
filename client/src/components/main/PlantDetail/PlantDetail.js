@@ -205,8 +205,8 @@ const PlantDetail = () => {
 
   // Handle successful plant update
   const handlePlantUpdateSuccess = (data) => {
-    console.log('🌿 Plant update success:', data);
-    console.log('🌿 Current plant state:', plant);
+    console.log('Plant update success:', data);
+    console.log('Current plant state:', plant);
     try {
       const plantName = plant?.name || data?.plant?.name || 'Plant';
       const msg = data?.message || `"${plantName}" updated successfully.`;
@@ -220,7 +220,7 @@ const PlantDetail = () => {
     }
     // Update the plant data to refresh the UI
     if (data.plant) {
-      console.log('🌿 Updating to new plant data:', data.plant);
+      console.log('Updating to new plant data:', data.plant);
       // Update the plant data in the route params
       navigation.setParams({ plant: data.plant });
       // Update the local state to trigger re-render
@@ -525,7 +525,7 @@ const PlantDetail = () => {
 
     const handleSkipped = (data) => {
       // This is now handled by IrrigationContext, but keep local handler for any additional PlantDetail-specific logic
-      console.log('🔄 PlantDetail: Irrigation skipped for', plant.name);
+      console.log('PlantDetail: Irrigation skipped for', plant.name);
     };
 
     const handleDeleteSuccess = (data) => {
@@ -623,13 +623,13 @@ const PlantDetail = () => {
     };
 
     const handleStopIrrigationSuccess = (data) => {
-      console.log('🛑 Stop irrigation success:', data);
+      console.log('Stop irrigation success:', data);
       // Keep UI state only; do not show a local popup to avoid duplicates.
       stoppingRef.current = false;
     };
 
     const handleStopIrrigationFail = (data) => {
-      console.log('❌ Stop irrigation failed:', data);
+      console.log('Stop irrigation failed:', data);
       Alert.alert('Stop Failed', data?.message || 'Failed to stop irrigation. Please try again.');
       stoppingRef.current = false;
     };

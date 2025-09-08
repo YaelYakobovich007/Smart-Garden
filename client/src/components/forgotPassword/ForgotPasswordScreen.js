@@ -54,7 +54,6 @@ const ForgotPasswordScreen = () => {
     const handleForgotPasswordResponse = (data) => {
         console.log('handleForgotPasswordResponse called with:', data);
         setIsLoading(false);
-        console.log('aa');
 
         if (data.type === 'FORGOT_PASSWORD_SUCCESS') {
             setMessage('Password reset code has been sent to your email.');
