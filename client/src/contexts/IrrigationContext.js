@@ -548,7 +548,9 @@ export const IrrigationProvider = ({ children }) => {
           const reason = payload?.reason || payload?.data?.reason;
           const decisionMsg = reason === 'rain_expected'
             ? 'Watering skipped due to rain expected today.'
-            : 'Irrigation is not required at this time.';
+            : (reason === 'already_moist'
+              ? 'Watering skipped – desired moisture already achieved.'
+              : 'Irrigation is not required at this time.');
           showAlert({
             title: 'Smart Irrigation',
             message: decisionMsg,
@@ -556,6 +558,10 @@ export const IrrigationProvider = ({ children }) => {
             variant: 'info',
             iconName: 'droplet',
           });
+          // Mark as final-notified to suppress a later IRRIGATION_COMPLETE popup
+          if (targetPlantId != null) {
+            markFinalNotified(targetPlantId);
+          }
         } else {
           // Will irrigate → stop showing the checking loader; wait for IRRIGATION_STARTED
           updatePlantWateringState(targetPlantId, {
@@ -1006,13 +1012,18 @@ export const IrrigationProvider = ({ children }) => {
         if (alreadyNotified) {
           // Cleanup the marker for future cycles
           skipAlertedPlantIdsRef.current.delete(targetPlantId);
+          // Also mark as final-notified to suppress any subsequent IRRIGATION_COMPLETE popup
+          markFinalNotified(targetPlantId);
         } else {
-          // Show alert for user feedback after a short delay to ensure UI has updated
+          // Mark as final-notified immediately, then show alert after a short delay
+          markFinalNotified(targetPlantId);
           setTimeout(() => {
             const reason = data?.reason || data?.data?.reason;
             const skipMsg = reason === 'rain_expected'
               ? 'Watering skipped due to rain expected today.'
-              : (data?.message || 'Irrigation was skipped - not necessary at this time.');
+              : (reason === 'already_moist'
+                ? 'Watering skipped – desired moisture already achieved.'
+                : (data?.message || 'Irrigation was skipped - not necessary at this time.'));
             showAlert({
               title: 'Smart Irrigation',
               message: skipMsg,
@@ -1188,8 +1199,7 @@ export const IrrigationProvider = ({ children }) => {
     websocketService.onMessage('IRRIGATION_STARTED', handleIrrigationStarted);
     websocketService.onMessage('IRRIGATE_SUCCESS', handleIrrigatePlantSuccess);
     websocketService.onMessage('IRRIGATE_FAIL', handleIrrigatePlantFail);
-    websocketService.onMessage('IRRIGATE_SKIPPED', handleIrrigatePlantSkipped);
-    websocketService.onMessage('IRRIGATION_SKIPPED', handleIrrigatePlantSkipped);  // Handle both message types
+    //websocketService.onMessage('IRRIGATE_SKIPPED', handleIrrigatePlantSkipped);
     websocketService.onMessage('IRRIGATION_DECISION', handleIrrigationDecision);
     websocketService.onMessage('IRRIGATION_COMPLETE', handleIrrigationComplete);
     websocketService.onMessage('STOP_IRRIGATION_SUCCESS', handleStopIrrigationSuccess);
