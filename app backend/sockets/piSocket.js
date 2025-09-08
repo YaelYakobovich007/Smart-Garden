@@ -257,6 +257,7 @@ function handlePiSocket(ws) {
               currentMoisture: decisionData.current_moisture,
               targetMoisture: decisionData.target_moisture
             });
+            console.log(`Sent irrigation start notification to user ${pendingInfo.email} for plant ${pendingInfo.plantData.plant_name}`);
           }
           // Persist irrigation state: smart started
           try {
@@ -297,18 +298,6 @@ function handlePiSocket(ws) {
           } catch (e) {
             console.warn('Failed to clear irrigation state on decision skip:', e.message);
           }
-        }
-
-        // Send email notification if available
-        if (pendingInfo.email) {
-          const { notifyUserOfIrrigationStart } = require('../services/userNotifier');
-          notifyUserOfIrrigationStart({
-            plantName: pendingInfo.plantData.plant_name,
-            email: pendingInfo.email,
-            initialMoisture: decisionData.current_moisture,
-            targetMoisture: decisionData.target_moisture
-          });
-          console.log(`Sent irrigation start notification to user ${pendingInfo.email} for plant ${pendingInfo.plantData.plant_name}`);
         }
       }
 
