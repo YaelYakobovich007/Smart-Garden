@@ -125,7 +125,7 @@ async function updatePlantSchedule(plantId, days, time) {
 
 // Update plant details with optimistic locking
 async function updatePlantDetails(userId, plantId, updateData) {
-  console.log('🔍 DEBUG - updatePlantDetails called with:', { userId, plantId, updateData });
+  console.log(' DEBUG - updatePlantDetails called with:', { userId, plantId, updateData });
   const client = await pool.connect();
 
   try {
@@ -207,8 +207,8 @@ async function updatePlantDetails(userId, plantId, updateData) {
       RETURNING plant_id, name, plant_type, ideal_moisture, water_limit, dripper_type, sensor_port, valve_id, valve_blocked, image_url, created_at, updated_at
     `;
 
-    console.log('🔍 DEBUG - Executing SQL query:', updateQuery);
-    console.log('🔍 DEBUG - With values:', updateValues);
+    console.log('DEBUG - Executing SQL query:', updateQuery);
+    console.log('DEBUG - With values:', updateValues);
     const result = await client.query(updateQuery, updateValues);
 
     if (result.rows.length === 0) {

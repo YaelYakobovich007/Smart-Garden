@@ -35,12 +35,12 @@ const ArticlesSection = () => {
 
   // Fetch articles from backend on component mount
   useEffect(() => {
-    console.log('📱 ArticlesSection: useEffect triggered');
+    console.log('ArticlesSection: useEffect triggered');
     const fetchArticles = () => {
-      console.log('📱 ArticlesSection: fetchArticles called, WebSocket connected:', websocketService.isConnected());
+      console.log('ArticlesSection: fetchArticles called, WebSocket connected:', websocketService.isConnected());
       // Check if WebSocket is connected before sending request
       if (!websocketService.isConnected()) {
-        console.log('📱 ArticlesSection: WebSocket not connected, retry count:', retryCount);
+        console.log('ArticlesSection: WebSocket not connected, retry count:', retryCount);
         // Prevent infinite retries
         if (retryCount >= 10) {
           setError('Failed to connect to server. Please check your internet connection.');
@@ -54,15 +54,15 @@ const ArticlesSection = () => {
         return;
       }
 
-      console.log('📱 ArticlesSection: WebSocket connected, calling getAllArticles');
+      console.log('ArticlesSection: WebSocket connected, calling getAllArticles');
       getAllArticles(
         (data) => {
-          console.log('📱 ArticlesSection: Success callback, data length:', data ? data.length : 0);
+          console.log('ArticlesSection: Success callback, data length:', data ? data.length : 0);
           setArticles(data);
           setLoading(false);
         },
         (error) => {
-          console.log('📱 ArticlesSection: Error callback:', error);
+          console.log('ArticlesSection: Error callback:', error);
           setError(error);
           setLoading(false);
         }
@@ -125,45 +125,45 @@ const ArticlesSection = () => {
 
         {/* Article Content */}
         <View style={{ padding: 16, flex: 1 }}>
-        {/* Article Header with Category Badge */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <View style={{
-            backgroundColor: '#4CAF50',
-            paddingHorizontal: 8,
-            paddingVertical: 4,
-            borderRadius: 12,
-          }}>
-            <Text style={{
-              color: '#FFFFFF',
-              fontSize: 10,
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-            }}>{item.category}</Text>
+          {/* Article Header with Category Badge */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <View style={{
+              backgroundColor: '#4CAF50',
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 12,
+            }}>
+              <Text style={{
+                color: '#FFFFFF',
+                fontSize: 10,
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+              }}>{item.category}</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: '#7F8C8D' }}>{item.read_time}</Text>
           </View>
-          <Text style={{ fontSize: 12, color: '#7F8C8D' }}>{item.read_time}</Text>
-        </View>
 
-        {/* Article Title */}
-        <Text style={{
-          fontSize: 16,
-          fontWeight: '600',
-          color: '#2C3E50',
-          marginBottom: 8,
-          lineHeight: 22,
-        }} numberOfLines={2}>
-          {item.title}
-        </Text>
+          {/* Article Title */}
+          <Text style={{
+            fontSize: 16,
+            fontWeight: '600',
+            color: '#2C3E50',
+            marginBottom: 8,
+            lineHeight: 22,
+          }} numberOfLines={2}>
+            {item.title}
+          </Text>
 
-        {/* Article Description */}
-        <Text style={{
-          fontSize: 14,
-          color: '#7F8C8D',
-          lineHeight: 20,
-          marginBottom: 12,
-        }} numberOfLines={3}>
-          {item.description}
-        </Text>
+          {/* Article Description */}
+          <Text style={{
+            fontSize: 14,
+            color: '#7F8C8D',
+            lineHeight: 20,
+            marginBottom: 12,
+          }} numberOfLines={3}>
+            {item.description}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -183,12 +183,12 @@ const ArticlesSection = () => {
         paddingHorizontal: 16,
         marginBottom: 12,
       }}>
-                 <Text style={{
-           fontSize: 18,
-           fontWeight: '600',
-           color: '#2C3E50',
-           fontFamily: 'Nunito_500Medium',
-         }}>Gardening Tips & Articles</Text>
+        <Text style={{
+          fontSize: 18,
+          fontWeight: '600',
+          color: '#2C3E50',
+          fontFamily: 'Nunito_500Medium',
+        }}>Gardening Tips & Articles</Text>
         <TouchableOpacity onPress={handleSeeAllPress} style={{
           flexDirection: 'row',
           alignItems: 'center',

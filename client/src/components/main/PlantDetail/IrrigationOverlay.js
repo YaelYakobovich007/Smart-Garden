@@ -97,11 +97,11 @@ const IrrigationOverlay = ({ isActive, timeLeft, onStop }) => {
       <Animated.View style={[styles.drop, styles.drop1, { transform: [{ translateY: dropAnim1 }] }]}>
         <Feather name="droplet" size={24} color="#4CAF50" />
       </Animated.View>
-      
+
       <Animated.View style={[styles.drop, styles.drop2, { transform: [{ translateY: dropAnim2 }] }]}>
         <Feather name="droplet" size={20} color="#66BB6A" />
       </Animated.View>
-      
+
       <Animated.View style={[styles.drop, styles.drop3, { transform: [{ translateY: dropAnim3 }] }]}>
         <Feather name="droplet" size={18} color="#81C784" />
       </Animated.View>
@@ -118,13 +118,13 @@ const IrrigationOverlay = ({ isActive, timeLeft, onStop }) => {
             <Text style={styles.statusTimer}>{formatTime(timeLeft)}</Text>
           )}
         </View>
-        
+
         {/* Control section */}
         <View style={styles.controlSection}>
-          <TouchableOpacity 
-            style={[styles.controlButton, styles.stopButton]} 
+          <TouchableOpacity
+            style={[styles.controlButton, styles.stopButton]}
             onPress={() => {
-              console.log('🛑 Stop button pressed in IrrigationOverlay');
+              console.log('Stop button pressed in IrrigationOverlay');
               onStop();
             }}
             activeOpacity={0.7}

@@ -26,14 +26,14 @@ async function identifyPlantFromBase64(imageBase64) {
             }
         });
 
-        console.log('🌱 Plant.id API Response:');
+        console.log('Plant.id API Response:');
         console.log(JSON.stringify(data, null, 2));
 
         // Extract the first suggestion
         const suggestions = data?.result?.classification?.suggestions || [];
         if (suggestions.length > 0) {
             const top = suggestions[0];
-            console.log('✅ Top suggestion:', top.name, 'with', Math.round(top.probability * 100) + '% confidence');
+            console.log('`[IDENTIFY] Top suggestion:', top.name, 'with', Math.round(top.probability * 100) + '% confidence');
 
             // Get comprehensive result with care data
             const resultWithCare = await getPlantIdentificationWithCare(top.name, top.probability);
