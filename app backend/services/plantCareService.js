@@ -1437,18 +1437,17 @@ async function getPlantCare(speciesName) {
 
     const normalizedName = normalizePlantName(speciesName);
     if (!normalizedName) {
-        console.log(`[CARE] Error: Failed to normalize name - species=${speciesName}`);
-        return null;
+        console.log(`[CARE] Error: Failed to normalize name - species=${speciesName} (will try ChatGPT fallback)`);
     }
 
-    const careData = plantCareDatabase[normalizedName];
+    const careData = normalizedName ? plantCareDatabase[normalizedName] : null;
     if (careData) {
         console.log(`[CARE] Found data: species=${speciesName} normalized=${normalizedName}`);
         return careData;
     }
 
     console.log(`[CARE] No data found: species=${speciesName} normalized=${normalizedName}`);
-    console.log('[CARE] Trying ChatGPT fallback');
+    console.log(`[CARE] Trying ChatGPT fallback (OPENAI configured=${!!process.env.OPENAI_API_KEY})`);
 
     // Try ChatGPT as fallback
     try {
