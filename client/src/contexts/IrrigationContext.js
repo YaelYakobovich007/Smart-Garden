@@ -808,9 +808,21 @@ export const IrrigationProvider = ({ children }) => {
           const prev = wateringPlantsRef.current.get(targetPlantId);
           const wasScheduled = prev?.currentMode === 'scheduled';
           if (wasScheduled) {
-            Alert.alert('Scheduled Irrigation', 'Scheduled irrigation was stopped for today. It will run again on the next scheduled day.');
+            showAlert({
+              title: 'Scheduled Irrigation',
+              message: 'Scheduled irrigation was stopped for today. It will run again on the next scheduled day.',
+              okText: 'OK',
+              variant: 'info',
+              iconName: 'droplet',
+            });
           } else {
-            Alert.alert('Smart Irrigation', data?.message || 'Smart irrigation stopped successfully!');
+            showAlert({
+              title: 'Smart Irrigation',
+              message: data?.message || 'Smart irrigation has been stopped at your request.',
+              okText: 'OK',
+              variant: 'info',
+              iconName: 'droplet',
+            });
           }
           markFinalNotified(targetPlantId);
         }
@@ -1117,18 +1129,30 @@ export const IrrigationProvider = ({ children }) => {
       // Show completion popup only if this wasn't a user-initiated stop
       if (!wasRecentlyStopped(targetPlantId) && !wasFinalNotified(targetPlantId)) {
         // Prefer a clean, app-styled summary with blue droplet and gray OK button
-        const result = data?.result || {};
+        const result = data?.result || data?.irrigationData || {};
         const liters = result?.water_added_liters != null ? Number(result.water_added_liters) : null;
         const waterStr = liters != null && !Number.isNaN(liters) ? `${liters.toFixed(2)}L` : null;
-        const finalMoist = result?.final_moisture != null ? `${result.final_moisture}%` : null;
-        const initialMoist = result?.moisture != null ? `${result.moisture}%` : null;
+        const roundPct = (v) => {
+          const n = Number(v);
+          if (Number.isNaN(n)) return null;
+          const s = n.toFixed(1);
+          return s.endsWith('.0') ? s.slice(0, -2) : s;
+        };
+        const finalMoistVal = result?.final_moisture != null ? roundPct(result.final_moisture) : null;
+        const initialMoistVal = result?.initial_moisture != null ? roundPct(result.initial_moisture) : (result?.moisture != null ? roundPct(result.moisture) : null);
+        const finalMoist = finalMoistVal != null ? `${finalMoistVal}%` : null;
+        const initialMoist = initialMoistVal != null ? `${initialMoistVal}%` : null;
+        const deltaMoist = (finalMoistVal != null && initialMoistVal != null) ? roundPct(finalMoistVal - initialMoistVal) : null;
 
         let msg;
         if (waterStr || finalMoist) {
           // Construct a friendly summary with trimmed numbers
           msg = `Smart irrigation completed successfully.`;
           if (waterStr) msg += `\nWater added: ${waterStr}`;
-          if (initialMoist && finalMoist) msg += `\nMoisture: ${initialMoist} → ${finalMoist}`;
+          if (initialMoist && finalMoist) {
+            msg += `\nMoisture: ${initialMoist} → ${finalMoist}`;
+            if (deltaMoist != null) msg += ` (+${deltaMoist}%)`;
+          }
         } else {
           const rawMsg = data?.message || 'Smart irrigation completed successfully!';
           msg = normalizeMessageNumbers(rawMsg);
@@ -1167,7 +1191,20 @@ export const IrrigationProvider = ({ children }) => {
         });
         // Mark this plant as recently stopped to suppress cancellation failures
         markRecentlyStopped(targetPlantId);
-        // Do not show a popup here; the final confirmation will be shown on IRRIGATE_PLANT_RESPONSE
+        // If this was a scheduled run, show confirmation here (scheduled stops don't emit a final event to the requester)
+        try {
+          const wasScheduled = prevState?.currentMode === 'scheduled';
+          if (wasScheduled && !wasFinalNotified(targetPlantId)) {
+            showAlert({
+              title: 'Scheduled Irrigation',
+              message: 'Scheduled irrigation was stopped for today. It will run again on the next scheduled day.',
+              okText: 'OK',
+              variant: 'info',
+              iconName: 'droplet',
+            });
+            markFinalNotified(targetPlantId);
+          }
+        } catch { }
         // Clear stored mode now to avoid stale state
         updatePlantWateringState(targetPlantId, { currentMode: null });
       }
@@ -1253,7 +1290,13 @@ export const IrrigationProvider = ({ children }) => {
           currentPlant: null
         });
       }
-      Alert.alert('Restart Valve', payload?.message || 'Valve restarted successfully.');
+      showAlert({
+        title: 'Valve Unblocked',
+        message: payload?.message || 'Valve restarted successfully.',
+        okText: 'OK',
+        variant: 'info',
+        iconName: 'droplet',
+      });
     };
 
     const handleRestartValveFail = (msg) => {

@@ -576,7 +576,17 @@ const PlantDetail = () => {
     };
 
     const handleUnblockSuccess = (data) => {
-      Alert.alert('Valve Unblocked', data?.message || 'Valve has been unblocked successfully!');
+      if (typeof showAlert === 'function') {
+        showAlert({
+          title: 'Valve Unblocked',
+          message: data?.message || 'Valve has been unblocked successfully!',
+          okText: 'OK',
+          variant: 'info',
+          iconName: 'droplet',
+        });
+      } else {
+        Alert.alert('Valve Unblocked', data?.message || 'Valve has been unblocked successfully!');
+      }
       // Refresh the plant data or navigate back
       navigation.goBack();
     };
@@ -587,7 +597,17 @@ const PlantDetail = () => {
 
     const handleValveBlocked = (data) => {
       console.log('PlantDetail: Valve blocked message received:', data);
-      Alert.alert('Valve Blocked', data?.message || 'The valve has been blocked and cannot be operated.');
+      if (typeof showAlert === 'function') {
+        showAlert({
+          title: 'Valve Blocked',
+          message: data?.message || 'The valve has been blocked and cannot be operated.',
+          okText: 'OK',
+          variant: 'error',
+          iconName: 'alert-triangle',
+        });
+      } else {
+        Alert.alert('Valve Blocked', data?.message || 'The valve has been blocked and cannot be operated.');
+      }
       // Immediately reflect blocked state in local plant details UI
       try {
         const payload = data?.data || data;
