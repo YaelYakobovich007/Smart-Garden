@@ -530,15 +530,36 @@ const PlantDetail = () => {
 
     const handleDeleteSuccess = (data) => {
       const plantName = plant?.name || 'Plant';
-      Alert.alert('Delete Plant', data?.message || `"${plantName}" was deleted successfully.`, [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      if (typeof showAlert === 'function') {
+        showAlert({
+          title: 'Delete Plant',
+          message: data?.message || `"${plantName}" was deleted successfully.`,
+          okText: 'OK',
+          variant: 'info',
+          iconName: 'leaf',
+          onOk: () => navigation.goBack(),
+        });
+      } else {
+        Alert.alert('Delete Plant', data?.message || `"${plantName}" was deleted successfully.`, [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      }
     };
 
     const handleDeleteFail = (data) => {
       // Show error only; keep user on screen to try again
       const errorMessage = data?.reason || data?.message || 'Failed to delete plant.';
-      Alert.alert('Delete Plant', errorMessage, [{ text: 'OK' }]);
+      if (typeof showAlert === 'function') {
+        showAlert({
+          title: 'Delete Plant',
+          message: errorMessage,
+          okText: 'OK',
+          variant: 'error',
+          iconName: 'leaf',
+        });
+      } else {
+        Alert.alert('Delete Plant', errorMessage, [{ text: 'OK' }]);
+      }
     };
 
     const handleMoistureSuccess = (data) => {

@@ -36,6 +36,7 @@ import { Feather } from '@expo/vector-icons';
 import styles from './styles';
 import websocketService from '../../services/websocketService';
 import HelpTooltip from './HelpTooltip';
+import { useUI } from '../ui/UIProvider';
 
 // Days of the week for schedule configuration
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -43,6 +44,7 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export default function AddPlantScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { showAlert } = useUI();
 
   // Form data state management
   const [formData, setFormData] = useState({
@@ -87,11 +89,13 @@ export default function AddPlantScreen() {
         message += `\n\nYou can choose the number of watering days according to our recommendation or as you wish.`;
       }
 
-      Alert.alert(
-        'Plant Identified!',
+      showAlert({
+        title: 'Plant Identified!',
         message,
-        [{ text: 'OK' }]
-      );
+        okText: 'OK',
+        variant: 'info',
+        iconName: 'leaf',
+      });
 
       // Clear the parameter to prevent setting it again
       navigation.setParams({
@@ -159,7 +163,13 @@ export default function AddPlantScreen() {
       const data = message.data || message;
 
       if (message.type === 'PLANT_IDENTIFY_FAIL') {
-        Alert.alert('Identification Failed', message.message || 'Unable to identify the plant. Please try again.');
+        showAlert({
+          title: 'Identification Failed',
+          message: message.message || 'Unable to identify the plant. Please try again.',
+          okText: 'OK',
+          variant: 'error',
+          iconName: 'alert-triangle',
+        });
         return;
       }
 
@@ -176,9 +186,21 @@ export default function AddPlantScreen() {
           messageText += `\n\n🌱 Care Recommendations:\n• Optimal Moisture: ${data.careData.optimalMoisture}%\n• Watering: ${data.careData.wateringFrequency}`;
           messageText += `\n\nYou can choose the number of watering days according to our recommendation or as you wish.`;
         }
-        Alert.alert('Plant Identified!', messageText, [{ text: 'OK' }]);
+        showAlert({
+          title: 'Plant Identified!',
+          message: messageText,
+          okText: 'OK',
+          variant: 'info',
+          iconName: 'leaf',
+        });
       } else {
-        Alert.alert('Identification Failed', 'Unable to identify the plant. Please try again with a clearer image.');
+        showAlert({
+          title: 'Identification Failed',
+          message: 'Unable to identify the plant. Please try again with a clearer image.',
+          okText: 'OK',
+          variant: 'error',
+          iconName: 'alert-triangle',
+        });
       }
     };
 

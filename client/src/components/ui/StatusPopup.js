@@ -3,29 +3,30 @@ import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Leaf } from 'lucide-react-native';
 
-const StatusPopup = ({ 
-  visible, 
+const StatusPopup = ({
+  visible,
   type, // 'success', 'error', or 'info'
-  title, 
-  description, 
-  buttonText, 
-  onButtonPress, 
+  title,
+  description,
+  buttonText,
+  onButtonPress,
   onClose,
   cancelText,
   onCancel,
   iconName,
 }) => {
   const hasCancelButton = cancelText && onCancel;
-  
+
   const getIconName = () => {
     if (iconName) return iconName;
     if (type === 'error') return 'x-circle';
     if (type === 'success') return 'check';
     return 'user'; // Default person icon like in the User Profile dialog
   };
-  
+
   const getIconColor = () => {
     if (iconName === 'droplet') return '#2563EB';
+    if (iconName === 'leaf') return type === 'error' ? '#EF4444' : '#2E7D32';
     if (type === 'error') return '#EF4444';
     if (type === 'success') return '#2E7D32';
     return '#8B5CF6'; // Purple like in the User Profile dialog
@@ -33,6 +34,7 @@ const StatusPopup = ({
 
   const getIconBackgroundColor = () => {
     if (iconName === 'droplet') return '#EFF6FF';
+    if (iconName === 'leaf') return type === 'error' ? '#FEF2F2' : '#F0FDF4';
     if (type === 'error') return '#FEF2F2';
     if (type === 'success') return '#F0FDF4';
     return '#F8FAFC'; // Light blue-gray like in the User Profile dialog
@@ -61,9 +63,9 @@ const StatusPopup = ({
         <View style={styles.card}>
           {/* Icon and Title Section */}
           <View style={styles.header}>
-            <View style={[styles.iconContainer, { 
+            <View style={[styles.iconContainer, {
               backgroundColor: getIconBackgroundColor(),
-              borderColor: getIconColor() 
+              borderColor: getIconColor()
             }]}>
               {iconName === 'leaf' ? (
                 <Leaf size={20} color={getIconColor()} />
@@ -73,21 +75,21 @@ const StatusPopup = ({
             </View>
             <Text style={styles.title}>{title}</Text>
           </View>
-          
+
           {/* Description */}
           <Text style={styles.description}>{description}</Text>
-          
+
           {/* Action Buttons */}
           <View style={[styles.buttonContainer, hasCancelButton && styles.dualButtonContainer]}>
             {hasCancelButton && (
-              <TouchableOpacity 
-                style={[styles.button, styles.cancelButton, { flex: 1 }]} 
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton, { flex: 1 }]}
                 onPress={onCancel}
               >
                 <Text style={styles.cancelButtonText}>{cancelText}</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.button,
                 styles.primaryButton,
