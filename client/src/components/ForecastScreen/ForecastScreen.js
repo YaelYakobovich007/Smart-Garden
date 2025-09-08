@@ -38,23 +38,23 @@ const FORECAST_HEIGHT = 400;          // height of the white forecast area (incr
 const ForecastScreen = ({ navigation, route }) => {
   // Get weather data from navigation params
   const { weatherData } = route.params || {};
-  
+
   // Removed simulation mode UI/state
 
   /**
    * Toggle simulation mode on/off
    */
-  const toggleSimulation = () => {};
+  const toggleSimulation = () => { };
 
   /**
    * Toggle auto-cycle mode
    */
-  const toggleAutoCycle = () => {};
+  const toggleAutoCycle = () => { };
 
   /**
    * Cycle to next hour in simulation
    */
-  const nextHour = () => {};
+  const nextHour = () => { };
 
   /**
    * Get sunrise/sunset times from weather API data
@@ -63,20 +63,20 @@ const ForecastScreen = ({ navigation, route }) => {
   const getSunTimes = () => {
     if (weatherData?.sunrise && weatherData?.sunset) {
       // API provides Unix timestamps - convert to time strings for display
-      const sunriseTime = new Date(weatherData.sunrise * 1000).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        hour12: false 
+      const sunriseTime = new Date(weatherData.sunrise * 1000).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
       });
-      const sunsetTime = new Date(weatherData.sunset * 1000).toLocaleTimeString('en-US', { 
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-      
+      const sunsetTime = new Date(weatherData.sunset * 1000).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+
       // Debug: Show what the API is providing
-      console.log(`🌅 Using OpenWeatherMap sunrise/sunset: ${sunriseTime} → ${sunsetTime}`);
-      
+      console.log('ForecastScreen: Using OpenWeatherMap sunrise/sunset:', `${sunriseTime} -> ${sunsetTime}`);
+
       return {
         sunrise: weatherData.sunrise,
         sunset: weatherData.sunset,
@@ -85,12 +85,12 @@ const ForecastScreen = ({ navigation, route }) => {
         source: 'weather_api'
       };
     }
-    
+
     // Fallback to reasonable defaults if no API data
     const today = new Date();
     const fallbackSunrise = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 7, 0, 0);
     const fallbackSunset = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 19, 0, 0);
-    
+
     return {
       sunrise: fallbackSunrise.getTime() / 1000,
       sunset: fallbackSunset.getTime() / 1000,
@@ -105,20 +105,20 @@ const ForecastScreen = ({ navigation, route }) => {
    */
   const getTimePeriodName = (hour) => {
     // Debug: Check what weatherData contains
-    console.log('🔍 weatherData in ForecastScreen:', {
+    console.log('ForecastScreen: weatherData:', {
       hasWeatherData: !!weatherData,
       sunrise: weatherData?.sunrise,
       sunset: weatherData?.sunset,
       sunriseDate: weatherData?.sunrise ? new Date(weatherData.sunrise * 1000) : 'N/A',
       sunsetDate: weatherData?.sunset ? new Date(weatherData.sunset * 1000) : 'N/A'
     });
-    
+
     const sunTimes = getSunTimes();
-    console.log('🌅 getSunTimes result:', sunTimes);
-    
+    console.log('ForecastScreen: getSunTimes result:', sunTimes);
+
     const sunriseTime = sunTimes.sunriseTime || new Date(sunTimes.sunrise * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     const sunsetTime = sunTimes.sunsetTime || new Date(sunTimes.sunset * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    
+
     if (hour >= 0 && hour < 5) return `${hour}:00 - Deep Night 🌌\n☀️ ${sunriseTime} → 🌙 ${sunsetTime}`;
     if (hour >= 5 && hour < 6) return `${hour}:00 - Pre-Dawn 🌆\n☀️ ${sunriseTime} → 🌙 ${sunsetTime}`;
     if (hour >= 6 && hour < 8) return `${hour}:00 - Early Morning 🌅\n☀️ ${sunriseTime} → 🌙 ${sunsetTime}`;
@@ -140,7 +140,7 @@ const ForecastScreen = ({ navigation, route }) => {
       if (interval) clearInterval(interval);
     };
   }, []);
-  
+
   /**
    * Calculate time-based gradient colors
    * Returns different gradients for morning, day, evening, night with smooth transitions
@@ -148,19 +148,19 @@ const ForecastScreen = ({ navigation, route }) => {
   const getTimeBasedGradient = () => {
     let currentTime;
     let sunrise, sunset;
-    
-      currentTime = Date.now() / 1000;
-      const sunTimes = getSunTimes();
-      sunrise = sunTimes.sunrise;
-      sunset = sunTimes.sunset;
-    
+
+    currentTime = Date.now() / 1000;
+    const sunTimes = getSunTimes();
+    sunrise = sunTimes.sunrise;
+    sunset = sunTimes.sunset;
+
     // Calculate time periods
     const earlyMorning = sunrise - 1800; // 30 min before sunrise
     const midMorning = sunrise + 1800;   // 30 min after sunrise
     const midDay = sunrise + (sunset - sunrise) / 2; // Noon
     const lateAfternoon = sunset - 3600; // 1 hour before sunset
     const lateEvening = sunset + 1800;   // 30 min after sunset
-    
+
     if (currentTime < earlyMorning) {
       // Deep Night - Purple with stars
       return ['#2D1B69', '#11998e', '#38004c'];
@@ -195,23 +195,23 @@ const ForecastScreen = ({ navigation, route }) => {
   const calculateSunProgress = () => {
     let currentTime;
     let sunrise, sunset;
-    
-      currentTime = Date.now() / 1000;
-      const sunTimes = getSunTimes();
-      sunrise = sunTimes.sunrise;
-      sunset = sunTimes.sunset;
-    
+
+    currentTime = Date.now() / 1000;
+    const sunTimes = getSunTimes();
+    sunrise = sunTimes.sunrise;
+    sunset = sunTimes.sunset;
+
     // Before sunrise - dot at left (0)
     if (currentTime < sunrise) return 0;
-    
+
     // After sunset - dot at right (1) 
     if (currentTime > sunset) return 1;
-    
+
     // During the day - calculate position between sunrise and sunset
     const elapsed = currentTime - sunrise;
     const dayDuration = sunset - sunrise;
     const progress = elapsed / dayDuration;
-    
+
     // Ensure progress stays between 0 and 1
     return Math.max(0, Math.min(progress, 1));
   };
@@ -282,38 +282,43 @@ const ForecastScreen = ({ navigation, route }) => {
   // Calculate gradient colors and sun position
   const gradientColors = getTimeBasedGradient();
   const sunProgress = calculateSunProgress();
-  
+
   // Check if it's night time for stars
   let currentTime, sunrise, sunset;
-  
-    currentTime = Date.now() / 1000;
+
+  currentTime = Date.now() / 1000;
   const sunTimesTop = getSunTimes();
   sunrise = sunTimesTop.sunrise;
   sunset = sunTimesTop.sunset;
-  
+
   const isNightTime = currentTime < sunrise || currentTime > sunset + 1800;
-  
+
   // Get animation source based on weather condition
   const animationSource = getAnimationSource(weatherData?.weatherId || 800);
-  
+
   // Clamp progress between 0 and 1
   const clamped = Math.max(0, Math.min(sunProgress, 1));
   // Calculate x-position of the dot (subtract radius to center it)
   const dotX = CARD_WIDTH_SINGLE * clamped - 6;
   // Calculate Y position on the curve for the given progress (quadratic Bezier curve)
   const curveY = CURVE_HEIGHT * (1 - 2 * clamped + 2 * clamped * clamped);
-  
+
   // Debug: Log dot position to verify it's updating
-  console.log(`🌟 Glowing dot position: x=${Math.round(dotX)}, y=${Math.round(curveY)}, progress=${Math.round(clamped * 100)}%`);
+  console.log(
+    'ForecastScreen: Glowing dot position:',
+    `x=${Math.round(dotX)}`,
+    `y=${Math.round(curveY)}`,
+    `progress=${Math.round(clamped * 100)}%`
+  );
 
   // Generate current date/time
-  const currentDateTime = new Date().toLocaleDateString('en-US', { 
-    month: 'long', 
-    day: 'numeric' 
-  }) + ' · ' + new Date().toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    hour12: false 
+  const currentDateTime = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric'
+  }) + ' · ' + new Date().toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
   });
 
   // Generate forecast data - show all available days
@@ -342,7 +347,7 @@ const ForecastScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
+
       {/* Background Gradient - Full Screen */}
       <LinearGradient
         colors={gradientColors}
@@ -350,7 +355,7 @@ const ForecastScreen = ({ navigation, route }) => {
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
       >
-        
+
         {/* Stars for night time */}
         {isNightTime && (
           <View style={styles.starsContainer}>
@@ -370,10 +375,10 @@ const ForecastScreen = ({ navigation, route }) => {
             ))}
           </View>
         )}
-        
+
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
@@ -387,7 +392,7 @@ const ForecastScreen = ({ navigation, route }) => {
 
         {/* Beautiful Weather Card Content */}
         <View style={styles.weatherCardContainer}>
-          
+
           {/* Top section with temperature, condition, city, and time */}
           <View style={styles.topSection}>
             <Text style={styles.temperatureText}>
@@ -403,7 +408,7 @@ const ForecastScreen = ({ navigation, route }) => {
                 style={styles.weatherAnimation}
               />
             </View>
-            
+
             <Text style={styles.conditionText}>
               {weatherData?.description || 'Sunny'}
             </Text>
@@ -411,8 +416,8 @@ const ForecastScreen = ({ navigation, route }) => {
               {weatherData?.city || 'MADRID'}
             </Text>
             <Text style={styles.dateText}>{currentDateTime}</Text>
-              </View>
-              
+          </View>
+
           {/* Spacer to push the forecast area to the bottom */}
           <View style={{ flex: 1 }} />
 
@@ -443,13 +448,13 @@ const ForecastScreen = ({ navigation, route }) => {
                 fill="#fff"
               />
               {/* Curved line marking the day arc */}
-                  <Path
+              <Path
                 d={`M0 ${CURVE_HEIGHT} Q ${CARD_WIDTH_SINGLE / 2} 0 ${CARD_WIDTH_SINGLE} ${CURVE_HEIGHT}`}
                 stroke="#fff"
                 strokeWidth={2}
-                    fill="none"
+                fill="none"
               />
-              
+
               {/* White glowing halo effect - multiple layers with high opacity */}
               <Circle
                 cx={dotX + 6}
@@ -481,7 +486,7 @@ const ForecastScreen = ({ navigation, route }) => {
                 r="6"
                 fill="rgba(255, 255, 255, 0.8)"
               />
-              
+
               {/* Main small bright white dot */}
               <Circle
                 cx={dotX + 6}
@@ -490,20 +495,20 @@ const ForecastScreen = ({ navigation, route }) => {
                 fill="#ffffff"
                 stroke="rgba(255, 255, 255, 0.9)"
                 strokeWidth="2"
-                />
-              </Svg>
-              
+              />
+            </Svg>
+
             {/* Scrollable Content Section */}
             <View style={styles.forecastSection}>
-              <ScrollView 
+              <ScrollView
                 style={styles.detailsScrollView}
                 contentContainerStyle={styles.detailsScrollContent}
                 showsVerticalScrollIndicator={false}
               >
                 {/* Weekly Forecast - Horizontal Scrollable */}
                 <View style={styles.weeklyForecastContainer}>
-                  <ScrollView 
-                    horizontal 
+                  <ScrollView
+                    horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.forecastScrollContent}
                     style={styles.forecastScrollView}
@@ -527,63 +532,63 @@ const ForecastScreen = ({ navigation, route }) => {
                 {/* Weather Details Section */}
                 <View style={styles.weatherDetailsSection}>
                   <Text style={styles.detailsTitle}>Today's Details</Text>
-            
-            <View style={styles.detailsGrid}>
-              <View style={styles.detailItem}>
-                <Feather name="thermometer" size={20} color="#4FC3F7" />
-                <Text style={styles.detailLabel}>Feels like</Text>
-                <Text style={styles.detailValue}>
-                  {Math.round(weatherData?.feels_like || 0)}°
-                </Text>
-              </View>
-              
-              <View style={styles.detailItem}>
-                <Feather name="wind" size={20} color="#66BB6A" />
-                <Text style={styles.detailLabel}>Wind</Text>
-                <Text style={styles.detailValue}>
-                  {Math.round(weatherData?.wind_speed || 0)} km/h
-                </Text>
-              </View>
-              
-              <View style={styles.detailItem}>
-                <Feather name="droplet" size={20} color="#42A5F5" />
-                <Text style={styles.detailLabel}>Humidity</Text>
-                <Text style={styles.detailValue}>
-                  {weatherData?.humidity || 0}%
-                </Text>
-              </View>
-              
-              <View style={styles.detailItem}>
-                <Feather name="activity" size={20} color="#AB47BC" />
-                <Text style={styles.detailLabel}>Pressure</Text>
-                <Text style={styles.detailValue}>
-                  {weatherData?.pressure || 0} hPa
-                </Text>
-              </View>
-              
-              <View style={styles.detailItem}>
-                <Feather name="sun" size={20} color="#FFA726" />
-                <Text style={styles.detailLabel}>UV Index</Text>
-                <Text style={styles.detailValue}>
-                  {weatherData?.uv_index || 0}
-                </Text>
-              </View>
-              
-              <View style={styles.detailItem}>
-                <Feather name="eye" size={20} color="#78909C" />
-                <Text style={styles.detailLabel}>Visibility</Text>
-                <Text style={styles.detailValue}>
-                  {weatherData?.visibility ? `${(weatherData.visibility / 1000).toFixed(1)} km` : 'N/A'}
-                </Text>
-              </View>
-            </View>
-          </View>
-              </ScrollView>
+
+                  <View style={styles.detailsGrid}>
+                    <View style={styles.detailItem}>
+                      <Feather name="thermometer" size={20} color="#4FC3F7" />
+                      <Text style={styles.detailLabel}>Feels like</Text>
+                      <Text style={styles.detailValue}>
+                        {Math.round(weatherData?.feels_like || 0)}°
+                      </Text>
+                    </View>
+
+                    <View style={styles.detailItem}>
+                      <Feather name="wind" size={20} color="#66BB6A" />
+                      <Text style={styles.detailLabel}>Wind</Text>
+                      <Text style={styles.detailValue}>
+                        {Math.round(weatherData?.wind_speed || 0)} km/h
+                      </Text>
+                    </View>
+
+                    <View style={styles.detailItem}>
+                      <Feather name="droplet" size={20} color="#42A5F5" />
+                      <Text style={styles.detailLabel}>Humidity</Text>
+                      <Text style={styles.detailValue}>
+                        {weatherData?.humidity || 0}%
+                      </Text>
+                    </View>
+
+                    <View style={styles.detailItem}>
+                      <Feather name="activity" size={20} color="#AB47BC" />
+                      <Text style={styles.detailLabel}>Pressure</Text>
+                      <Text style={styles.detailValue}>
+                        {weatherData?.pressure || 0} hPa
+                      </Text>
+                    </View>
+
+                    <View style={styles.detailItem}>
+                      <Feather name="sun" size={20} color="#FFA726" />
+                      <Text style={styles.detailLabel}>UV Index</Text>
+                      <Text style={styles.detailValue}>
+                        {weatherData?.uv_index || 0}
+                      </Text>
+                    </View>
+
+                    <View style={styles.detailItem}>
+                      <Feather name="eye" size={20} color="#78909C" />
+                      <Text style={styles.detailLabel}>Visibility</Text>
+                      <Text style={styles.detailValue}>
+                        {weatherData?.visibility ? `${(weatherData.visibility / 1000).toFixed(1)} km` : 'N/A'}
+                      </Text>
+                    </View>
                   </View>
+                </View>
+              </ScrollView>
             </View>
           </View>
+        </View>
       </LinearGradient>
-          </View>
+    </View>
   );
 };
 
