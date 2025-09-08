@@ -1105,9 +1105,31 @@ export const IrrigationProvider = ({ children }) => {
 
       // Show completion popup only if this wasn't a user-initiated stop
       if (!wasRecentlyStopped(targetPlantId) && !wasFinalNotified(targetPlantId)) {
-        const rawMsg = data?.message || 'Smart irrigation completed successfully!';
-        const formatted = normalizeMessageNumbers(rawMsg);
-        showAlert({ title: 'Smart Irrigation', message: formatted, okText: 'OK' });
+        // Prefer a clean, app-styled summary with blue droplet and gray OK button
+        const result = data?.result || {};
+        const liters = result?.water_added_liters != null ? Number(result.water_added_liters) : null;
+        const waterStr = liters != null && !Number.isNaN(liters) ? `${liters.toFixed(2)}L` : null;
+        const finalMoist = result?.final_moisture != null ? `${result.final_moisture}%` : null;
+        const initialMoist = result?.moisture != null ? `${result.moisture}%` : null;
+
+        let msg;
+        if (waterStr || finalMoist) {
+          // Construct a friendly summary with trimmed numbers
+          msg = `Smart irrigation completed successfully.`;
+          if (waterStr) msg += `\nWater added: ${waterStr}`;
+          if (initialMoist && finalMoist) msg += `\nMoisture: ${initialMoist} → ${finalMoist}`;
+        } else {
+          const rawMsg = data?.message || 'Smart irrigation completed successfully!';
+          msg = normalizeMessageNumbers(rawMsg);
+        }
+
+        showAlert({
+          title: 'Smart Irrigation',
+          message: msg,
+          okText: 'OK',
+          variant: 'info', // gray button
+          iconName: 'droplet', // blue droplet
+        });
         if (targetPlantId != null) markFinalNotified(targetPlantId);
       }
     };
