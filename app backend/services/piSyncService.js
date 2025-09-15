@@ -1,3 +1,9 @@
+/**
+ * Pi Sync Service
+ *
+ * Resolves gardens and prepares plant payloads for syncing with the Pi when a
+ * controller connects using a family/invite code.
+ */
 const { getGardenByInviteCode: getGardenByInviteCodeModel, getGardenById } = require('../models/gardenModel');
 const { getPlantsByGardenId } = require('../models/plantModel');
 const { getLatLonForCountryCity } = require('../services/locationService');

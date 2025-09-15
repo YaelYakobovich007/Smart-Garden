@@ -1,3 +1,8 @@
+/**
+ * Weather Controller
+ *
+ * Fetches weather and forecast for the user's location using OpenWeatherMap.
+ */
 const axios = require('axios');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getUser } = require('../models/userModel');
@@ -5,7 +10,9 @@ const { getEmailBySocket } = require('../models/userSessions');
 
 const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
 
-// Normalize city name for better API compatibility
+/**
+ * Normalize a city string to increase geocoding hit rate.
+ */
 function normalizeCityName(cityName) {
   return cityName
     .normalize('NFD') // Decompose Unicode characters
@@ -15,7 +22,9 @@ function normalizeCityName(cityName) {
     .trim();
 }
 
-// Try multiple variations of the city name
+/**
+ * Try multiple city string variations to get coordinates from OWM Geo API.
+ */
 async function findCityCoordinates(cityName, countryName, apiKey) {
   const normalizedCity = normalizeCityName(cityName);
 
@@ -45,6 +54,10 @@ async function findCityCoordinates(cityName, countryName, apiKey) {
   return null;
 }
 
+/**
+ * Get current, daily and hourly weather for the requesting user.
+ * @param {import('ws')} ws
+ */
 async function handleGetWeather(ws) {
   try {
     const email = getEmailBySocket(ws);

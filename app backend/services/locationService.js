@@ -1,7 +1,13 @@
+/**
+ * Location Service
+ *
+ * Utilities to normalize city names and resolve lat/lon via OpenWeather Geo API.
+ */
 const axios = require('axios');
 
 const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
 
+/** Normalize a city name for better geocoding hit rate */
 function normalizeCityName(cityName) {
     return (cityName || '')
         .normalize('NFD')
@@ -11,6 +17,7 @@ function normalizeCityName(cityName) {
         .trim();
 }
 
+/** Try several variations to resolve coordinates */
 async function findCityCoordinates(cityName, countryName) {
     if (!WEATHER_API_KEY) {
         return null;
@@ -40,6 +47,7 @@ async function findCityCoordinates(cityName, countryName) {
     return null;
 }
 
+/** Resolve {lat,lon} for a given country and city or return null */
 async function getLatLonForCountryCity(country, city) {
     try {
         const data = await findCityCoordinates(city, country);

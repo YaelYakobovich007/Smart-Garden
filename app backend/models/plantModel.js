@@ -1,8 +1,13 @@
+/**
+ * Plant Model
+ *
+ * Database access for plants, schedules, updates, hardware assignment
+ * and irrigation state persistence.
+ */
 const hardwarePool = require('./hardwarePool');
 const { pool } = require('../config/database');
 
-// This module manages plant data storage and operations
-// It uses in-memory storage for simplicity, but can be replaced with a database in production
+// Historic notes left for context:
 // const plantStorage = new Map(); // Map<email, Array<Plant>>
 // const plantIdIndex = new Map(); // Map<plantId, { plant, email }>
 
@@ -30,6 +35,7 @@ async function checkDuplicatePlantName(userId, plantName) {
   return existing.rows.length > 0;
 }
 
+/** Insert a new plant (without hardware ids) and return the row */
 async function addPlant(userId, plantData) {
   // Get user's garden ID
   const gardenId = await getUserGardenId(userId);
@@ -73,6 +79,7 @@ async function addPlant(userId, plantData) {
   return { plant: result.rows[0] };
 }
 
+/** Get plant by id */
 async function getPlantById(plantId) {
   const result = await pool.query('SELECT * FROM plants WHERE plant_id = $1', [plantId]);
   return result.rows[0] || null;

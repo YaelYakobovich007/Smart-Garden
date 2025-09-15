@@ -1,3 +1,8 @@
+/**
+ * Garden Controller
+ *
+ * WebSocket handlers for garden CRUD, membership, search and updates.
+ */
 const { createGarden, getUserGardens, getGardenById, getGardenByInviteCode, joinGardenByInviteCode, getGardenMembers, leaveGarden, updateGarden, isUserMemberOfGarden } = require('../models/gardenModel');
 const { getUser } = require('../models/userModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
@@ -14,6 +19,11 @@ const gardenHandlers = {
     UPDATE_GARDEN: handleUpdateGarden
 };
 
+/**
+ * Route garden message after authentication.
+ * @param {Object} data
+ * @param {import('ws')} ws
+ */
 async function handleGardenMessage(data, ws) {
     try {
         const email = getEmailBySocket(ws);
@@ -33,7 +43,9 @@ async function handleGardenMessage(data, ws) {
     }
 }
 
-// Create a new garden
+/**
+ * Create a garden and return invite code.
+ */
 async function handleCreateGarden(data, ws, email) {
     const { gardenName, country, city } = data;
 
@@ -103,7 +115,9 @@ async function handleCreateGarden(data, ws, email) {
     }
 }
 
-// Get user's gardens
+/**
+ * Return gardens for current user (or hint to create one).
+ */
 async function handleGetUserGardens(data, ws, email) {
     try {
         const user = await getUser(email);
@@ -143,7 +157,9 @@ async function handleGetUserGardens(data, ws, email) {
     }
 }
 
-// Get garden details
+/**
+ * Return details for a specified garden.
+ */
 async function handleGetGardenDetails(data, ws, email) {
     const { gardenId } = data;
 
@@ -180,7 +196,9 @@ async function handleGetGardenDetails(data, ws, email) {
     }
 }
 
-// Search garden by invite code
+/**
+ * Find a garden by invite code.
+ */
 async function handleSearchGardenByCode(data, ws, email) {
     const { inviteCode } = data;
 
@@ -217,7 +235,9 @@ async function handleSearchGardenByCode(data, ws, email) {
     }
 }
 
-// Join a garden by invite code
+/**
+ * Join a garden via invite code if not already a member.
+ */
 async function handleJoinGarden(data, ws, email) {
     const { inviteCode } = data;
 
@@ -269,7 +289,9 @@ async function handleJoinGarden(data, ws, email) {
     }
 }
 
-// Get garden members
+/**
+ * Return member list for a garden (only if requester is a member).
+ */
 async function handleGetGardenMembers(data, ws, email) {
     const { gardenId } = data;
 
@@ -302,7 +324,9 @@ async function handleGetGardenMembers(data, ws, email) {
     }
 }
 
-// Leave a garden
+/**
+ * Leave a garden.
+ */
 async function handleLeaveGarden(data, ws, email) {
     const { gardenId } = data;
 
@@ -343,7 +367,9 @@ async function handleLeaveGarden(data, ws, email) {
     }
 }
 
-// Update garden details (admin only)
+/**
+ * Update garden settings (admin only). Broadcast location change to Pi.
+ */
 async function handleUpdateGarden(data, ws, email) {
     const { gardenId, name, max_members, country, city } = data;
 
@@ -418,7 +444,6 @@ async function handleUpdateGarden(data, ws, email) {
                 }
             }
         } catch (e) {
-            // Best-effort only
         }
 
         console.log(`[GARDEN] Location Updated: id=${gardenId} user=${user.full_name} email=${email}`);

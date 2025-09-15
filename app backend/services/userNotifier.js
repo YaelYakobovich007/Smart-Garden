@@ -1,6 +1,13 @@
+/**
+ * User Notifier Service
+ *
+ * Sends real-time WebSocket notifications to users about irrigation events
+ * and hardware assignments.
+ */
 const { sendSuccess } = require('../utils/wsResponses');
 const { getSocketByEmail } = require('../models/userSessions');
 
+/** Notify that a sensor port was assigned to a plant */
 function notifyUserOfSensorUpdate({ plant, email }) {
   const ws = getSocketByEmail(email);
   if (ws) {
@@ -11,6 +18,7 @@ function notifyUserOfSensorUpdate({ plant, email }) {
   }
 }
 
+/** Notify that a valve was assigned to a plant */
 function notifyUserOfValveUpdate({ plant, email }) {
   const ws = getSocketByEmail(email);
   if (ws) {
@@ -21,6 +29,7 @@ function notifyUserOfValveUpdate({ plant, email }) {
   }
 }
 
+/** Notify that both sensor and valve are ready to connect */
 function notifyUserReadyToConnect(plantId, { sensorPort, valveId, email }) {
   const ws = getSocketByEmail(email);
   if (ws) {
@@ -31,6 +40,7 @@ function notifyUserReadyToConnect(plantId, { sensorPort, valveId, email }) {
   }
 }
 
+/** Notify that smart irrigation completed */
 function notifyUserOfIrrigationComplete({ plantName, email, irrigationData }) {
   const ws = getSocketByEmail(email);
   if (ws) {
@@ -48,6 +58,7 @@ function notifyUserOfIrrigationComplete({ plantName, email, irrigationData }) {
   }
 }
 
+/** Notify that irrigation was skipped and why */
 function notifyUserOfIrrigationSkipped({ plantName, email, reason }) {
   const ws = getSocketByEmail(email);
   if (ws) {
@@ -60,6 +71,7 @@ function notifyUserOfIrrigationSkipped({ plantName, email, reason }) {
   }
 }
 
+/** Notify that irrigation failed */
 function notifyUserOfIrrigationError({ plantName, email, errorMessage }) {
   const ws = getSocketByEmail(email);
   if (ws) {
@@ -72,6 +84,7 @@ function notifyUserOfIrrigationError({ plantName, email, errorMessage }) {
   }
 }
 
+/** Notify that irrigation started with initial/target moisture */
 function notifyUserOfIrrigationStart({ plantName, email, initialMoisture, targetMoisture }) {
   const ws = getSocketByEmail(email);
   if (ws) {

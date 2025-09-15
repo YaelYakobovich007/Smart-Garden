@@ -1,3 +1,9 @@
+/**
+ * Garden Broadcaster
+ *
+ * Sends a WebSocket message to all connected members of a garden, optionally
+ * excluding the initiating user's email.
+ */
 const { getSocketByEmail } = require('../models/userSessions');
 const { getGardenMembers } = require('../models/gardenModel');
 const { sendSuccess } = require('../utils/wsResponses');

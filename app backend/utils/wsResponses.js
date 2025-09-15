@@ -1,3 +1,10 @@
+/**
+ * Send a success-style message over WebSocket. If payload is an object,
+ * merge it with the envelope; otherwise place it under `data`.
+ * @param {import('ws')} ws
+ * @param {string} type
+ * @param {any} payload
+ */
 function sendSuccess(ws, type, payload) {
     try {
         if (ws.readyState === 1) { // WebSocket.OPEN
@@ -13,6 +20,12 @@ function sendSuccess(ws, type, payload) {
     }
 }
 
+/**
+ * Send an error-style message over WebSocket with a reason field.
+ * @param {import('ws')} ws
+ * @param {string} type
+ * @param {string|object} reason
+ */
 function sendError(ws, type, reason) {
     try {
         if (ws.readyState === 1) { // WebSocket.OPEN

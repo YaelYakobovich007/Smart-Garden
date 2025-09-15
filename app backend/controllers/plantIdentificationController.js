@@ -1,6 +1,16 @@
+/**
+ * Plant Identification Controller
+ *
+ * Accepts a base64 image and returns identification results.
+ */
 const { identifyPlantFromBase64 } = require('../services/plantIdentificationService');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 
+/**
+ * Identify plant from base64 image sent by client.
+ * @param {{imageBase64:string}} data
+ * @param {import('ws')} ws
+ */
 async function handlePlantIdentify(data, ws) {
     console.log(`[IDENTIFY] Request received: keys=${Object.keys(data)} image_size=${data?.imageBase64?.length || 'undefined'}`);
 

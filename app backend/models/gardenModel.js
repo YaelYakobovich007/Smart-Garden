@@ -1,3 +1,8 @@
+/**
+ * Garden Model
+ *
+ * Database access for gardens, memberships, invite codes and updates.
+ */
 const { pool } = require('../config/database');
 
 // Generate unique invite code for garden

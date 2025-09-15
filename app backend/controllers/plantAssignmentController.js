@@ -1,9 +1,17 @@
+/**
+ * Plant Assignment Controller
+ *
+ * Persists hardware assignments arriving from the Pi and notifies users.
+ */
 const { assignSensor, assignValve } = require('../models/plantModel');
 const { sendError } = require('../utils/wsResponses');
 const { notifyUserOfSensorUpdate, notifyUserOfValveUpdate } = require('../services/userNotifier');
 const { updateAssignedParts } = require('../services/assignmentTracker');
 
-// הפונקציות כעת אסינכרוניות ועובדות מול הדאטהבייס
+/**
+ * Persist assigned sensor port for a plant and notify initiating user.
+ * @param {{plantId:number, sensorPort:string}} data
+ */
 async function handleSensorAssigned(data, ws) {
   const { plantId, sensorPort } = data;
   if (!plantId || !sensorPort) {
@@ -20,6 +28,10 @@ async function handleSensorAssigned(data, ws) {
   }
 }
 
+/**
+ * Persist assigned valve id for a plant and notify initiating user.
+ * @param {{plantId:number, valveId:string}} data
+ */
 async function handleValveAssigned(data, ws) {
   const { plantId, valveId } = data;
   if (!plantId || !valveId) {

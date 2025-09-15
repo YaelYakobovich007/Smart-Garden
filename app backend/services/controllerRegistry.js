@@ -1,7 +1,13 @@
-// Simple in-memory registry for family/garden → controller socket
+/**
+ * Controller Registry Service
+ *
+ * Tracks the WebSocket for each garden's Raspberry Pi controller and provides
+ * helpers to look it up, heartbeat it, and remove stale entries.
+ */
 
 const registry = new Map(); // gardenId (number) -> { ws, lastSeen, familyCode }
 
+/** Register/replace the controller socket for a garden */
 function setControllerForGarden(gardenId, ws, familyCode) {
     const key = Number(gardenId);
     const existing = registry.get(key);
@@ -13,10 +19,12 @@ function setControllerForGarden(gardenId, ws, familyCode) {
     registry.set(key, { ws, lastSeen: Date.now(), familyCode });
 }
 
+/** Get raw registry entry for a garden */
 function getControllerEntry(gardenId) {
     return registry.get(Number(gardenId)) || null;
 }
 
+/** Return OPEN WebSocket for a garden or null */
 function getControllerSocketByGardenId(gardenId) {
     const entry = getControllerEntry(gardenId);
     if (!entry) return null;
@@ -25,11 +33,13 @@ function getControllerSocketByGardenId(gardenId) {
     return ws;
 }
 
+/** Update lastSeen for a controller if socket matches */
 function updateHeartbeat(gardenId, ws) {
     const entry = registry.get(Number(gardenId));
     if (entry && entry.ws === ws) entry.lastSeen = Date.now();
 }
 
+/** Remove controller entry for a garden (optionally only if socket matches) */
 function removeControllerByGardenId(gardenId, ws) {
     const entry = registry.get(Number(gardenId));
     if (entry && (!ws || entry.ws === ws)) {
@@ -37,6 +47,7 @@ function removeControllerByGardenId(gardenId, ws) {
     }
 }
 
+/** Remove controller by socket reference */
 function removeBySocket(ws) {
     const gid = ws?._gardenId;
     if (gid != null) {
@@ -45,21 +56,6 @@ function removeBySocket(ws) {
     }
 }
 
-// Optional stale eviction disabled to avoid unintended disconnects of active controllers.
-// To re-enable, gate behind an env flag and tune timeouts conservatively.
-// const STALE_MS = 15 * 60 * 1000; // 15 minutes
-// if (process.env.CONTROLLER_EVICTION_ENABLED === 'true') {
-//   setInterval(() => {
-//     const cutoff = Date.now() - STALE_MS;
-//     for (const [gid, entry] of registry.entries()) {
-//       const notOpen = !entry.ws || entry.ws.readyState !== 1;
-//       if (notOpen || entry.lastSeen < cutoff) {
-//         try { if (entry.ws && entry.ws.readyState === 1) entry.ws.close(4000, 'Stale'); } catch { }
-//         registry.delete(gid);
-//       }
-//     }
-//   }, 30_000);
-// }
 
 module.exports = {
     setControllerForGarden,

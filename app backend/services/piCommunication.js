@@ -1,3 +1,11 @@
+/**
+ * Pi Communication Service
+ *
+ * Thin wrapper for sending typed JSON messages to the Raspberry Pi controller.
+ * Methods prefer a family-scoped controller socket when `gardenId` is known
+ * and fall back to the global Pi socket otherwise. All methods are best-effort
+ * and return { success, error? } immediately without awaiting a response.
+ */
 const { getPiSocket } = require('../sockets/piSocket');
 const { getControllerSocketByGardenId } = require('./controllerRegistry');
 

@@ -1,3 +1,11 @@
+/**
+ * Authentication Controller
+ *
+ * Handles WebSocket messages related to authentication:
+ * - REGISTER: create a new user after validating inputs
+ * - LOGIN: email/password login
+ * - LOGIN_GOOGLE: Google OAuth token login (creates user on first login)
+ */
 const authService = require('../services/authService');
 const userModel = require('../models/userModel');
 const { verifyGoogleToken } = require('../services/googleService');
@@ -11,6 +19,11 @@ const authHandlers = {
   LOGIN_GOOGLE: handleGoogleLogin,
 };
 
+/**
+ * Route incoming auth message to the relevant handler.
+ * @param {Object} data - The parsed WebSocket message.
+ * @param {import('ws')} ws - WebSocket connection to the client.
+ */
 async function handleAuthMessage(data, ws) {
   const handler = authHandlers[data.type];
   if (handler) {
@@ -20,6 +33,12 @@ async function handleAuthMessage(data, ws) {
   }
 }
 
+/**
+ * Handle user registration.
+ * Validates email/password/name/location and creates the user.
+ * @param {Object} data - { email, password, fullName, country, city }
+ * @param {import('ws')} ws - WebSocket connection
+ */
 async function handleRegister(data, ws) {
   if (!data.email || !data.password) {
     return sendError(ws, 'REGISTER_FAIL', 'Email and password are required');
@@ -66,6 +85,11 @@ async function handleRegister(data, ws) {
   }
 }
 
+/**
+ * Handle email/password login. On success stores the session.
+ * @param {Object} data - { email, password }
+ * @param {import('ws')} ws - WebSocket connection
+ */
 async function handleLogin(data, ws) {
   try {
     const user = await authService.login((data.email || '').toLowerCase().trim(), data.password);
@@ -82,6 +106,11 @@ async function handleLogin(data, ws) {
   }
 }
 
+/**
+ * Handle Google OAuth login using an ID token. If user does not exist, create it.
+ * @param {Object} data - { googleToken }
+ * @param {import('ws')} ws - WebSocket connection
+ */
 async function handleGoogleLogin(data, ws) {
   if (!data.googleToken) {
     return sendError(ws, 'LOGIN_FAIL', 'Google token is required');

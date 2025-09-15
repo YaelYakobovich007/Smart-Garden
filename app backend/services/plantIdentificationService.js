@@ -1,9 +1,11 @@
+/**
+ * Plant Identification Service
+ *
+ * Calls Plant.id API with a base64 image and enriches the result with local
+ * plant care data (or ChatGPT fallback via plantCareService).
+ */
 const axios = require('axios');
 const { getPlantIdentificationWithCare } = require('./plantCareService');
-
-/**
- * Plant identification service using Plant.id API with integrated care data
- */
 
 async function identifyPlantFromBase64(imageBase64) {
     const apiKey = process.env.PLANT_ID_API_KEY;

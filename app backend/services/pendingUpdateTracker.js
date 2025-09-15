@@ -1,9 +1,11 @@
-// Track pending plant update requests
+/**
+ * Pending Update Tracker
+ *
+ * Tracks plant detail updates awaiting confirmation from the Pi.
+ */
 const pendingUpdates = new Map();
 
-/**
- * Store pending update request
- */
+/** Store pending update request */
 function storePendingUpdate(plantId, ws, email, updateData) {
   pendingUpdates.set(plantId, {
     ws,
@@ -14,9 +16,7 @@ function storePendingUpdate(plantId, ws, email, updateData) {
   console.log(`[UPDATE] Added pending: plant=${plantId}`);
 }
 
-/**
- * Get and remove pending update request
- */
+/** Get and remove pending update request */
 function getPendingUpdate(plantId) {
   const pending = pendingUpdates.get(plantId);
   if (pending) {
@@ -26,9 +26,7 @@ function getPendingUpdate(plantId) {
   return pending;
 }
 
-/**
- * Clean up old pending updates (older than 5 minutes)
- */
+/** Clean up old pending updates (older than 5 minutes) */
 function cleanupOldUpdates() {
   const now = Date.now();
   const fiveMinutes = 5 * 60 * 1000;

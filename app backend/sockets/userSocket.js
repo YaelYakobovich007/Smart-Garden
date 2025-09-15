@@ -1,3 +1,8 @@
+/**
+ * User Socket Handler
+ *
+ * Receives messages from mobile/web clients and routes them to controllers.
+ */
 const { handleAuthMessage } = require('../controllers/authController');
 const { handlePlantMessage } = require('../controllers/plantController');
 const { handleGetWeather } = require('../controllers/weatherController');
@@ -10,6 +15,10 @@ const { handleGardenMessage } = require('../controllers/gardenController');
 const { handleArticleMessage } = require('../controllers/articleController');
 
 
+/**
+ * Initialize handlers for a connected user WebSocket.
+ * @param {import('ws')} ws
+ */
 function handleUserSocket(ws) {
   console.log('USER connected');
   ws.clientType = 'USER';

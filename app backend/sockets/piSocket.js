@@ -1,3 +1,9 @@
+/**
+ * Pi Socket Handler
+ *
+ * Handles messages from the Raspberry Pi controller: garden sync, live
+ * irrigation progress, valve operations, diagnostics and more.
+ */
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { handleSensorAssigned, handleValveAssigned } = require('../controllers/plantAssignmentController');
 const { completePendingPlant } = require('../services/pendingPlantsTracker');
@@ -14,6 +20,10 @@ let piSocket = null;
 const VERBOSE_LOGS = process.env.VERBOSE_LOGS === 'true';
 const vLog = (...args) => console.log(...args);
 
+/**
+ * Initialize handlers for a connected Pi WebSocket.
+ * @param {import('ws')} ws
+ */
 function handlePiSocket(ws) {
   piSocket = ws;
   console.log('[PI] Connected: raspberrypi_main_controller');
@@ -1330,7 +1340,6 @@ function handlePiSocket(ws) {
             return sendError(ws, 'DELETE_PLANT_FAIL', 'Pi removed plant but database deletion failed');
           }
 
-          // Best-effort: delete irrigation history after plant deletion (no-op if not present)
           try {
             const { deleteIrrigationResultsByPlantId } = require('../models/irrigationModel');
             await deleteIrrigationResultsByPlantId(plantId);
@@ -1345,14 +1354,13 @@ function handlePiSocket(ws) {
               await broadcastToGarden(gardenId, 'PLANT_DELETED_FROM_GARDEN', {
                 plant: plantData,
                 message: `Plant "${plantData.name}" was removed from your garden`
-              }, null); // Send to all users including the one who deleted
+              }, null);
               console.log(`[BROADCAST] Plant deletion sent: plant="${plantData.name}" garden=${gardenId}`);
             }
           } catch (broadcastError) {
             console.log(`[PI] Error: Failed to broadcast deletion - ${broadcastError.message}`);
           }
 
-          // Send success to client
           sendSuccess(ws, 'DELETE_PLANT_SUCCESS', { message: 'Plant deleted successfully' });
 
         } catch (dbError) {
@@ -1362,7 +1370,6 @@ function handlePiSocket(ws) {
 
       } else {
         console.log(`[PI] Error: Failed to remove plant - id=${plantId} error=${responseData.error_message}`);
-        // Pi failed to remove - send error to client
         sendError(ws, 'DELETE_PLANT_FAIL', `Pi failed to remove plant: ${responseData.error_message}`);
       }
       return;
@@ -1378,6 +1385,9 @@ function handlePiSocket(ws) {
   });
 }
 
+/**
+ * Get the currently connected Pi socket (if any).
+ */
 function getPiSocket() {
   return piSocket;
 }

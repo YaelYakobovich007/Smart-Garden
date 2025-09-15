@@ -1,7 +1,12 @@
-// services/authService.js
+/**
+ * Auth Service
+ *
+ * Wraps user registration and login with hashing and normalization.
+ */
 const bcrypt = require('bcrypt');
 const userModel = require('../models/userModel');
 
+/** Register user, returning the created user object or false if exists */
 async function register(email, password, fullName, country, city) {
   const normalizedEmail = (email || '').toLowerCase().trim();
   const hashed = await bcrypt.hash(password, 10);
@@ -11,6 +16,7 @@ async function register(email, password, fullName, country, city) {
   return await userModel.getUser(normalizedEmail);
 }
 
+/** Validate credentials and return user or false */
 async function login(email, password) {
   const normalizedEmail = (email || '').toLowerCase().trim();
   const user = await userModel.getUser(normalizedEmail);

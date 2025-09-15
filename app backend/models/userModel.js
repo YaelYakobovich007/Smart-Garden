@@ -1,7 +1,13 @@
+/**
+ * User Model
+ *
+ * Database access layer for users and password-reset flow.
+ */
 const { pool } = require('../config/database');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
+/** Create a user if email not taken; returns true if created */
 async function createUser(email, hashedPassword, fullName, country, city) {
     // Normalize email to lowercase
     const normalizedEmail = (email || '').toLowerCase().trim();
@@ -16,17 +22,20 @@ async function createUser(email, hashedPassword, fullName, country, city) {
     return true;
 }
 
+/** Get a user by email (case-insensitive) */
 async function getUser(email) {
     const normalizedEmail = (email || '').toLowerCase().trim();
     const result = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [normalizedEmail]);
     return result.rows[0] || null;
 }
 
+/** Get a user by id */
 async function getUserById(id) {
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
     return result.rows[0] || null;
 }
 
+/** Update full_name by email and return the new name */
 async function updateUserName(email, newName) {
     const normalizedEmail = (email || '').toLowerCase().trim();
     const result = await pool.query(
@@ -36,6 +45,7 @@ async function updateUserName(email, newName) {
     return result.rows[0]?.full_name || null;
 }
 
+/** Update location by email and return updated fields */
 async function updateUserLocation(email, country, city) {
     const normalizedEmail = (email || '').toLowerCase().trim();
     const result = await pool.query(
@@ -45,6 +55,7 @@ async function updateUserLocation(email, country, city) {
     return result.rows[0] || null;
 }
 
+/** Hash and update password for email */
 async function updateUserPassword(email, newPassword) {
     const normalizedEmail = (email || '').toLowerCase().trim();
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -55,7 +66,7 @@ async function updateUserPassword(email, newPassword) {
     return result.rows.length > 0;
 }
 
-// Password Reset Functions
+/** Create a 6-digit reset code for a user; returns token info */
 async function createPasswordResetToken(email) {
     try {
         // Check if user exists (case-insensitive)
@@ -90,6 +101,7 @@ async function createPasswordResetToken(email) {
     }
 }
 
+/** Validate reset code and return joined token+user row if valid */
 async function validatePasswordResetToken(token) {
     try {
         const result = await pool.query(`
@@ -106,6 +118,7 @@ async function validatePasswordResetToken(token) {
     }
 }
 
+/** Use a valid reset code to set a new password and mark token used */
 async function usePasswordResetToken(token, newPassword) {
     try {
         // Get token info
@@ -136,6 +149,7 @@ async function usePasswordResetToken(token, newPassword) {
     }
 }
 
+/** Delete expired or used password reset tokens */
 async function cleanupExpiredTokens() {
     try {
         await pool.query('DELETE FROM password_reset_tokens WHERE expires_at < NOW() OR used = TRUE');

@@ -1,3 +1,9 @@
+/**
+ * Google Cloud Storage Service
+ *
+ * Handles base64 image uploads to a GCS bucket and signed URL generation for
+ * read access. Uses service account locally and default credentials on Cloud Run.
+ */
 const { Storage } = require('@google-cloud/storage');
 
 class GoogleCloudStorageService {

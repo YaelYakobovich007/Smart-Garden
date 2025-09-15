@@ -1,3 +1,8 @@
+/**
+ * Article Controller
+ *
+ * WebSocket handlers for fetching articles and categories.
+ */
 const {
     getAllArticles,
     getArticleById,
@@ -5,16 +10,6 @@ const {
     getArticleCategories
 } = require('../models/articleModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
-
-/**
- * Article Controller - WebSocket message handlers for article operations
- * 
- * This module handles WebSocket messages related to articles including:
- * - Fetching all articles
- * - Getting specific articles by ID
- * - Filtering articles by category
- * - Getting available categories
- */
 
 const articleHandlers = {
     GET_ALL_ARTICLES: handleGetAllArticles,

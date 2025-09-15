@@ -1,6 +1,10 @@
-// Email service for password reset functionality
-// This is a basic implementation that logs emails to console
-// In production, you would integrate with services like SendGrid, AWS SES, or Nodemailer
+/**
+ * Email Service
+ *
+ * Sends password-reset emails when USE_REAL_EMAIL=true is set; otherwise logs
+ * codes to the console for development. Supports Gmail (OAuth app password) or
+ * SendGrid via SMTP.
+ */
 
 const nodemailer = require('nodemailer');
 
@@ -15,6 +19,7 @@ class EmailService {
         }
     }
 
+    /** Configure nodemailer transporter based on env */
     setupTransporter() {
         // Configure email transporter based on environment
         const emailService = process.env.EMAIL_SERVICE || 'gmail';
@@ -41,6 +46,7 @@ class EmailService {
         }
     }
 
+    /** Send the password reset code or log in dev mode */
     async sendPasswordResetEmail(email, fullName, resetCode) {
         try {
             // Validate reset code
@@ -65,6 +71,7 @@ class EmailService {
         }
     }
 
+    /** Actually send an email using the configured transporter */
     async sendRealEmail(to, subject, content, resetCode) {
         try {
             const mailOptions = {
@@ -84,6 +91,7 @@ class EmailService {
         }
     }
 
+    /** Plaintext content for password-reset email */
     generatePasswordResetEmail(fullName, resetCode) {
         return `
 Dear ${fullName},
@@ -108,6 +116,7 @@ This is an automated message, please do not reply to this email.
         `.trim();
     }
 
+    /** HTML content for password-reset email */
     generateHTMLEmail(textContent, resetCode) {
         return `
 <!DOCTYPE html>

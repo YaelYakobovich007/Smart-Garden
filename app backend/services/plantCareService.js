@@ -1,5 +1,9 @@
-// Plant Care Service - Provides moisture recommendations and care tips
-// This service integrates with plant identification to provide comprehensive plant care data
+/**
+ * Plant Care Service
+ *
+ * Provides soil moisture targets and care tips for many common plants. Also
+ * integrates with ChatGPT as a fallback when a species isn’t in the local DB.
+ */
 
 // Plant name mapping - maps Plant.id API names to our database keys
 const plantNameMapping = {

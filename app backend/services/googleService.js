@@ -1,7 +1,12 @@
-// services/googleService.js
+/**
+ * Google Service
+ *
+ * Verifies Google ID tokens and returns minimal profile info.
+ */
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+/** Verify a Google ID token and return { email, name } */
 async function verifyGoogleToken(token) {
   console.log('[GOOGLE] Verifying token...');
   try {

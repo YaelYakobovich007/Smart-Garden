@@ -1,3 +1,8 @@
+/**
+ * Plant Controller
+ *
+ * WebSocket handlers for plant CRUD, images, and moisture reads.
+ */
 // Models
 const { addPlant, getPlants, getPlantByName, deletePlantById, updatePlantDetails, getUserGardenId } = require('../models/plantModel');
 const { getUser } = require('../models/userModel');
@@ -32,6 +37,11 @@ const plantHandlers = {
   GET_ALL_PLANTS_MOISTURE: handleGetAllPlantsMoisture
 };
 
+/**
+ * Route incoming plant message to the relevant handler after auth.
+ * @param {Object} data
+ * @param {import('ws')} ws
+ */
 async function handlePlantMessage(data, ws) {
   try {
     const email = getEmailBySocket(ws);
@@ -51,6 +61,13 @@ async function handlePlantMessage(data, ws) {
   }
 }
 
+/**
+ * Create a plant in DB and then request hardware assignment from Pi.
+ * Requires plantData and optional imageData with base64.
+ * @param {{plantData:Object, imageData?:{base64:string, filename:string, mimeType:string}}} data
+ * @param {import('ws')} ws
+ * @param {string} email
+ */
 async function handleAddPlant(data, ws, email) {
   // Only support new structure with plantData and imageData
   const { plantData, imageData } = data;
@@ -185,6 +202,10 @@ async function handleAddPlant(data, ws, email) {
   }
 }
 
+/**
+ * Return plant details by name for current user.
+ * @param {{plantName:string}} data
+ */
 async function handleGetPlantDetails(data, ws, email) {
   const { plantName } = data;
   if (!plantName) return sendError(ws, 'GET_PLANT_DETAILS_FAIL', 'Missing plantName');
@@ -202,6 +223,9 @@ async function handleGetPlantDetails(data, ws, email) {
   sendSuccess(ws, 'GET_PLANT_DETAILS_RESPONSE', { plant });
 }
 
+/**
+ * Return all plants for current user (normalized schedule fields).
+ */
 async function handleGetMyPlants(data, ws, email) {
   const user = await getUser(email);
   if (!user) return sendError(ws, 'GET_MY_PLANTS_FAIL', 'User not found');
@@ -216,7 +240,9 @@ async function handleGetMyPlants(data, ws, email) {
   sendSuccess(ws, 'GET_MY_PLANTS_RESPONSE', { plants: normalized });
 }
 
-// Delete plant (and its irrigation events)
+/**
+ * Request plant removal via Pi and, on confirmation, delete from DB.
+ */
 async function handleDeletePlant(data, ws, email) {
   const { plantName } = data;
   if (!plantName) return sendError(ws, 'DELETE_PLANT_FAIL', 'Missing plantName');
@@ -265,6 +291,9 @@ async function handleDeletePlant(data, ws, email) {
   // Final success will be sent from piSocket.js after Pi confirms deletion
 }
 
+/**
+ * Update plant attributes and optionally image; propagate to Pi if assigned.
+ */
 async function handleUpdatePlantDetails(data, ws, email) {
   try {
     console.log(`[PLANT] Update request received: ${JSON.stringify(data)}`);
@@ -407,7 +436,9 @@ async function handleUpdatePlantDetails(data, ws, email) {
   }
 }
 
-// Updated function for image processing with Google Cloud Storage
+/**
+ * Upload base64 image to GCS and return public URL.
+ */
 async function processAndSaveImage(imageData, userId, plantName) {
   try {
     console.log(`[PLANT] Processing image: user=${userId} plant=${plantName}`);
@@ -430,7 +461,9 @@ async function processAndSaveImage(imageData, userId, plantName) {
   }
 }
 
-// Handle request for single plant moisture
+/**
+ * Request a live moisture read for one plant via Pi.
+ */
 async function handleGetPlantMoisture(data, ws, email) {
   const { plantName } = data;
 
@@ -471,7 +504,9 @@ async function handleGetPlantMoisture(data, ws, email) {
   }
 }
 
-// Handle request for all plants moisture
+/**
+ * Request moisture reads for all plants in user's garden via Pi.
+ */
 async function handleGetAllPlantsMoisture(data, ws, email) {
   try {
     const user = await getUser(email);

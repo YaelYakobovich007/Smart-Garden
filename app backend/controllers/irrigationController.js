@@ -1,3 +1,9 @@
+/**
+ * Irrigation Controller
+ *
+ * WebSocket handlers for irrigation operations: schedule updates, smart runs,
+ * manual valve open/close, diagnostics, and fetching results.
+ */
 const { getUser } = require('../models/userModel');
 const { getPlantByName, updatePlantSchedule, getCurrentMoisture, getUserGardenId, updateIrrigationState, getPlantById, updateValveStatus } = require('../models/plantModel');
 const irrigationModel = require('../models/irrigationModel');
@@ -32,6 +38,11 @@ const irrigationHandlers = {
   TEST_VALVE_BLOCK: handleTestValveBlock
 };
 
+/**
+ * Route irrigation message after authentication.
+ * @param {Object} data
+ * @param {import('ws')} ws
+ */
 async function handleIrrigationMessage(data, ws) {
   try {
     const email = getEmailBySocket(ws);
@@ -49,7 +60,10 @@ async function handleIrrigationMessage(data, ws) {
     sendError(ws, 'IRRIGATION_ERROR', 'Internal server error');
   }
 }
-// Diagnostics: Check Pi power supply health
+
+/**
+ * Ask Pi to run a power-supply health check.
+ */
 async function handleCheckPowerSupply(data, ws, email) {
   const { plantName } = data;
   if (!plantName) return sendError(ws, 'CHECK_POWER_SUPPLY_FAIL', 'Missing plantName');
@@ -70,7 +84,9 @@ async function handleCheckPowerSupply(data, ws, email) {
   }
 }
 
-// Update irrigation schedule
+/**
+ * Update schedule in DB and push the change to Pi if connected.
+ */
 async function handleUpdatePlantSchedule(data, ws, email) {
   const { plantName, days, time } = data;
   if (!plantName || !days || !time) {
@@ -118,7 +134,9 @@ async function handleUpdatePlantSchedule(data, ws, email) {
   }
 }
 
-// Irrigate plant
+/**
+ * Start smart irrigation session for a plant; tracks by sessionId.
+ */
 async function handleIrrigatePlant(data, ws, email) {
   const { plantName } = data;
   if (!plantName) return sendError(ws, 'IRRIGATE_FAIL', 'Missing plantName');
@@ -173,7 +191,9 @@ async function handleIrrigatePlant(data, ws, email) {
   }
 }
 
-// Stop smart irrigation for a specific plant
+/**
+ * Stop any active irrigation for the plant and clear state.
+ */
 async function handleStopIrrigation(data, ws, email) {
   console.log(`[IRRIGATION] Stop request received: ${JSON.stringify(data)}`);
 
@@ -243,7 +263,9 @@ async function handleStopIrrigation(data, ws, email) {
   console.log(`[IRRIGATION] Added to pending: plant=${plant.plant_id} name=${plant.name}`);
 }
 
-// Open valve for a specific duration
+/**
+ * Open valve manually for a duration in minutes.
+ */
 async function handleOpenValve(data, ws, email) {
   console.log(`[VALVE] Open request received: ${JSON.stringify(data)}`);
 
@@ -281,7 +303,6 @@ async function handleOpenValve(data, ws, email) {
 
   // Send open valve request to Pi controller
   const gardenId = plant.garden_id || await getUserGardenId(user.id);
-  // Pre-add pending so fast Pi responses don't race the tracker
   try {
     addPendingIrrigation(plant.plant_id, ws, email, {
       plant_id: plant.plant_id,
@@ -303,16 +324,16 @@ async function handleOpenValve(data, ws, email) {
     });
 
     console.log(`[VALVE] Added to pending: plant=${plant.plant_id} name=${plant.name} time=${timeMinutes}min`);
-    // No immediate response - client will get success/failure when Pi responds with open valve result
   } else {
     console.log(`[VALVE] Error: Pi communication failed - ${piResult.error}`);
-    // Pi not connected - return error 
     return sendError(ws, 'OPEN_VALVE_FAIL',
       'Pi controller not connected. Cannot open valve. Please try again when Pi is online.');
   }
 }
 
-// Close valve for a specific plant
+/**
+ * Close valve manually for a plant.
+ */
 async function handleCloseValve(data, ws, email) {
   console.log(`[VALVE] Close request received: ${JSON.stringify(data)}`);
 
@@ -345,7 +366,6 @@ async function handleCloseValve(data, ws, email) {
 
   console.log(`[VALVE] Closing: plant=${plant.plant_id}`);
 
-  // Best-effort: immediately clear persisted irrigation state
   try {
     const { updateIrrigationState } = require('../models/plantModel');
     await updateIrrigationState(plant.plant_id, { mode: 'none', startAt: null, endAt: null, sessionId: null });
@@ -377,16 +397,16 @@ async function handleCloseValve(data, ws, email) {
     });
 
     console.log(`[VALVE] Added to pending: plant=${plant.plant_id} name=${plant.name}`);
-    // No immediate response - client will get success/failure when Pi responds with close valve result
   } else {
     console.log(`[VALVE] Error: Pi communication failed - ${piResult.error}`);
-    // Pi not connected - return error 
     return sendError(ws, 'CLOSE_VALVE_FAIL',
       'Pi controller not connected. Cannot close valve. Please try again when Pi is online.');
   }
 }
 
-// Restart valve (attempt to unblock and test)
+/**
+ * Ask Pi to restart/unblock a valve; updates DB and notifies on result.
+ */
 async function handleRestartValve(data, ws, email) {
   const { plantName } = data;
   if (!plantName) return sendError(ws, 'RESTART_VALVE_FAIL', 'Missing plantName');
@@ -407,7 +427,9 @@ async function handleRestartValve(data, ws, email) {
   addPendingIrrigation(plant.plant_id, ws, email, { plant_id: plant.plant_id, plant_name: plant.name });
 }
 
-// Get irrigation result for a specific plant
+/**
+ * Return irrigation history for a plant.
+ */
 async function handleGetIrrigationResult(data, ws, email) {
   console.log(`[IRRIGATION] Get result request: ${JSON.stringify(data)}`);
   const { plantName } = data;
@@ -440,7 +462,9 @@ async function handleGetIrrigationResult(data, ws, email) {
   console.log(`[IRRIGATION] Sent results: plant=${plantName}`);
 }
 
-// Get valve status for debugging
+/**
+ * Request current valve status from Pi.
+ */
 async function handleGetValveStatus(data, ws, email) {
   console.log(`[VALVE] Status request received: ${JSON.stringify(data)}`);
 
@@ -483,7 +507,9 @@ async function handleGetValveStatus(data, ws, email) {
   }
 }
 
-// Diagnostics: Check sensor connection
+/**
+ * Ask Pi to test sensor connectivity and return moisture/temperature.
+ */
 async function handleCheckSensorConnection(data, ws, email) {
   const { plantName, timeoutSeconds } = data;
   if (!plantName) return sendError(ws, 'CHECK_SENSOR_CONNECTION_FAIL', 'Missing plantName');
@@ -504,7 +530,9 @@ async function handleCheckSensorConnection(data, ws, email) {
   }
 }
 
-// Diagnostics: Check valve mechanism (safe pulse)
+/**
+ * Ask Pi to pulse the valve briefly to verify the mechanism.
+ */
 async function handleCheckValveMechanism(data, ws, email) {
   const { plantName, pulseSeconds } = data;
   if (!plantName) return sendError(ws, 'CHECK_VALVE_MECHANISM_FAIL', 'Missing plantName');
@@ -525,7 +553,9 @@ async function handleCheckValveMechanism(data, ws, email) {
   }
 }
 
-// Unblock valve for a specific plant
+/**
+ * Mark a valve as unblocked in DB and broadcast to garden clients.
+ */
 async function handleUnblockValve(data, ws, email) {
   const { plantName } = data;
   if (!plantName) return sendError(ws, 'UNBLOCK_VALVE_FAIL', 'Missing plantName');
@@ -562,7 +592,9 @@ async function handleUnblockValve(data, ws, email) {
   }
 }
 
-// Test valve block for a specific plant (for testing purposes)
+/**
+ * Testing helper: mark valve as blocked in DB.
+ */
 async function handleTestValveBlock(data, ws, email) {
   const { plantName } = data;
   if (!plantName) return sendError(ws, 'TEST_VALVE_BLOCK_FAIL', 'Missing plantName');

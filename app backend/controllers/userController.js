@@ -1,3 +1,8 @@
+/**
+ * User Controller
+ *
+ * WebSocket handlers for user profile operations and password reset flow.
+ */
 const { getUser, updateUserName, updateUserLocation, updateUserPassword, createPasswordResetToken, validatePasswordResetToken, usePasswordResetToken } = require('../models/userModel');
 const { sendSuccess, sendError } = require('../utils/wsResponses');
 const { getEmailBySocket } = require('../models/userSessions');
@@ -12,11 +17,15 @@ userHandlers.FORGOT_PASSWORD = handleForgotPassword;
 userHandlers.RESET_PASSWORD = handleResetPassword;
 userHandlers.VALIDATE_RESET_TOKEN = handleValidateResetToken;
 
+/**
+ * Route user message; some routes are public (forgot/reset/validate).
+ * @param {Object} data
+ * @param {import('ws')} ws
+ */
 async function handleUserMessage(data, ws) {
   try {
     const email = getEmailBySocket(ws);
 
-    // Some handlers don't require authentication (forgot password, reset password)
     const publicHandlers = ['FORGOT_PASSWORD', 'RESET_PASSWORD', 'VALIDATE_RESET_TOKEN'];
 
     if (!publicHandlers.includes(data.type) && !email) {
@@ -35,6 +44,9 @@ async function handleUserMessage(data, ws) {
   }
 }
 
+/**
+ * Return minimal user profile for settings screens.
+ */
 async function handleGetUserDetails(data, ws, email) {
   const user = await getUser(email);
   if (!user) return sendError(ws, 'GET_USER_DETAILS_FAIL', 'User not found');
@@ -42,7 +54,9 @@ async function handleGetUserDetails(data, ws, email) {
   sendSuccess(ws, 'GET_USER_DETAILS_SUCCESS', { fullName: user.full_name, country: user.country, city: user.city });
 }
 
-// Unified update handler - updates only provided fields
+/**
+ * Update name, location and/or password in one endpoint.
+ */
 async function handleUpdateUserDetails(data, ws, email) {
   try {
     const { newName, country, city, currentPassword, newPassword } = data;
@@ -120,6 +134,9 @@ async function handleUpdateUserDetails(data, ws, email) {
   }
 }
 
+/**
+ * Start password reset: generate a 6-digit code and send email.
+ */
 async function handleForgotPassword(data, ws, email) {
   try {
     const { email: requestEmail } = data;
@@ -160,6 +177,9 @@ async function handleForgotPassword(data, ws, email) {
   }
 }
 
+/**
+ * Complete password reset using the code from email.
+ */
 async function handleResetPassword(data, ws, email) {
   try {
     const { token, newPassword } = data;
@@ -188,6 +208,9 @@ async function handleResetPassword(data, ws, email) {
   }
 }
 
+/**
+ * Validate a reset code (without changing password).
+ */
 async function handleValidateResetToken(data, ws, email) {
   try {
     const { token } = data;
