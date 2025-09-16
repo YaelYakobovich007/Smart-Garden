@@ -99,7 +99,6 @@ async function handleGetWeather(ws) {
     sendSuccess(ws, 'WEATHER', {
       city: cityData.name || city, // Use the name returned by the API
       country: country,
-      // Current weather data (for main display)
       temp: current.temp,
       feels_like: current.feels_like,
       description: current.weather[0].description,
@@ -116,11 +115,8 @@ async function handleGetWeather(ws) {
       sunset: today.sunset,
       rain: rain_amount,
       willRain,
-      // Daily forecast data (7-8 days)
       daily_forecast: dataWeather.daily,
-      // Hourly forecast for next 24 hours
       hourly_forecast: dataWeather.hourly.slice(0, 24),
-      // Current conditions
       current_conditions: current
     });
   } catch (err) {

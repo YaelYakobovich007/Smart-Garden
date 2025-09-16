@@ -75,9 +75,7 @@ const MainScreen = () => {
     const unsubscribe = navigation.addListener('focus', () => {
       const params = route.params;
       if (params?.openIdentifyPlant) {
-        // Clear the parameter to prevent opening again
         navigation.setParams({ openIdentifyPlant: undefined });
-        // Open plant identification
         handleIdentifyPlant();
       }
     });
@@ -206,16 +204,11 @@ const MainScreen = () => {
    */
   const handlePlantsReceived = (data) => {
     if (data.plants) {
-      // Transform server data to match our plant format
-      // Preserve existing sensor data to prevent flicker
       setPlants(prevPlants => {
         const transformedPlants = data.plants.map(plant => {
-          // Find existing plant data to preserve sensor values
           const pid = Number(plant.plant_id ?? plant.id);
           const existingPlant = prevPlants.find(p => Number(p.id) === pid);
 
-
-          // Normalize schedule fields from backend (DB columns: irrigation_days, irrigation_time)
           let normalizedDays = null;
           if (plant.irrigation_days) {
             if (Array.isArray(plant.irrigation_days)) {
@@ -255,15 +248,12 @@ const MainScreen = () => {
             valve_blocked: plant.valve_blocked || false,
             sensor_port: plant.sensor_port || null,
             valve_id: plant.valve_id || null,
-            // Include config fields for PlantDetail
             ideal_moisture: plant.ideal_moisture,
             water_limit: plant.water_limit,
             dripper_type: plant.dripper_type,
-            // Schedule-related fields
             watering_mode: plant.watering_mode || inferredMode,
             schedule_days: normalizedDays,
             schedule_time: normalizedTime,
-            // Persisted irrigation state (for rehydration)
             irrigation_mode: plant.irrigation_mode || 'none',
             irrigation_start_at: plant.irrigation_start_at || null,
             irrigation_end_at: plant.irrigation_end_at || null,
@@ -274,10 +264,8 @@ const MainScreen = () => {
         return transformedPlants;
       });
 
-      // Rehydrate irrigation state from persisted fields AFTER plants state update commits
       try {
         setTimeout(() => {
-          // Ensure ids are numbers when rehydrating
           rehydrateFromPlants(data.plants.map(p => ({ ...p, id: Number(p.plant_id ?? p.id) })));
         }, 0);
       } catch (e) {
@@ -382,7 +370,6 @@ const MainScreen = () => {
   const handleUserNameReceived = (data) => {
     if (data.fullName) {
       setUserName(data.fullName);
-      // Now that we're authenticated, request plants and garden data
       websocketService.sendMessage({ type: 'GET_MY_PLANTS' });
       websocketService.sendMessage({ type: 'GET_USER_GARDENS' });
       websocketService.sendMessage({ type: 'GET_WEATHER' });
@@ -398,7 +385,6 @@ const MainScreen = () => {
    */
   const handleUserNameError = (data) => {
     console.error('Failed to fetch user name:', data.message);
-    // Don't force logout on connection issues - just log the error
     console.log('MainScreen: User name fetch failed, but keeping user logged in');
   };
 
@@ -544,7 +530,6 @@ const MainScreen = () => {
     const handleConnectionChange = (connected) => {
       setIsConnected(connected);
       if (connected) {
-        // First check if we're authenticated by requesting user name
         websocketService.sendMessage({ type: 'GET_USER_DETAILS' });
       }
     };

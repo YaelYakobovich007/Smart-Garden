@@ -49,16 +49,14 @@ class SessionService {
     try {
       const sessionData = await AsyncStorage.getItem(SESSION_KEY);
       if (!sessionData) return null;
-      
+
       const session = JSON.parse(sessionData);
-      
-      // Check if session has expired
       if (session.expiresAt && new Date(session.expiresAt) < new Date()) {
         console.log('Session expired, clearing...');
         await this.clearSession();
         return null;
       }
-      
+
       return session;
     } catch (error) {
       console.error('Error getting session:', error);

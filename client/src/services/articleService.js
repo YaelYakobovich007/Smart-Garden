@@ -16,14 +16,12 @@ const messageHandlers = new Map();
 export const getAllArticles = (onSuccess, onError) => {
     const messageId = `get_all_articles_${Date.now()}`;
 
-    // Store the success handler
     messageHandlers.set(messageId, {
         type: 'GET_ALL_ARTICLES',
         onSuccess,
         onError
     });
 
-    // Send request to backend
     const message = {
         type: 'GET_ALL_ARTICLES',
         messageId
@@ -40,14 +38,12 @@ export const getAllArticles = (onSuccess, onError) => {
 export const getArticleById = (articleId, onSuccess, onError) => {
     const messageId = `get_article_${articleId}_${Date.now()}`;
 
-    // Store the success handler
     messageHandlers.set(messageId, {
         type: 'GET_ARTICLE_BY_ID',
         onSuccess,
         onError
     });
 
-    // Send request to backend
     websocketService.sendMessage({
         type: 'GET_ARTICLE_BY_ID',
         messageId,
@@ -64,14 +60,12 @@ export const getArticleById = (articleId, onSuccess, onError) => {
 export const getArticlesByCategory = (category, onSuccess, onError) => {
     const messageId = `get_articles_category_${category}_${Date.now()}`;
 
-    // Store the success handler
     messageHandlers.set(messageId, {
         type: 'GET_ARTICLES_BY_CATEGORY',
         onSuccess,
         onError
     });
 
-    // Send request to backend
     websocketService.sendMessage({
         type: 'GET_ARTICLES_BY_CATEGORY',
         messageId,
@@ -87,14 +81,12 @@ export const getArticlesByCategory = (category, onSuccess, onError) => {
 export const getArticleCategories = (onSuccess, onError) => {
     const messageId = `get_categories_${Date.now()}`;
 
-    // Store the success handler
     messageHandlers.set(messageId, {
         type: 'GET_ARTICLE_CATEGORIES',
         onSuccess,
         onError
     });
 
-    // Send request to backend
     websocketService.sendMessage({
         type: 'GET_ARTICLE_CATEGORIES',
         messageId
@@ -106,14 +98,10 @@ export const getArticleCategories = (onSuccess, onError) => {
  * @param {Object} message - The message from WebSocket
  */
 export const handleArticleMessage = (message) => {
-    // handle article message
 
-    // The server sends response with type and articles directly
-    // We need to find the handler by checking all handlers
     for (const [messageId, handler] of messageHandlers.entries()) {
         if (handler.type === 'GET_ALL_ARTICLES' && message.type === 'GET_ALL_ARTICLES_SUCCESS') {
             if (handler.onSuccess) {
-                // call success with articles
                 handler.onSuccess(message.articles);
             }
             messageHandlers.delete(messageId);
@@ -121,7 +109,6 @@ export const handleArticleMessage = (message) => {
         }
     }
 
-    // no handler found for message type
 };
 
 /**
@@ -129,7 +116,6 @@ export const handleArticleMessage = (message) => {
  */
 export const cleanupArticleHandlers = () => {
     messageHandlers.clear();
-    // Remove message handlers from WebSocket service
     websocketService.offMessage('GET_ALL_ARTICLES_SUCCESS', handleArticleMessage);
     websocketService.offMessage('GET_ARTICLE_BY_ID_SUCCESS', handleArticleMessage);
     websocketService.offMessage('GET_ARTICLES_BY_CATEGORY_SUCCESS', handleArticleMessage);

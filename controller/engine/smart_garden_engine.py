@@ -732,16 +732,16 @@ class SmartGardenEngine:
         Raises:
             ValueError: If plant_id is not found
         """
-        print(f"🔍 DEBUG - SmartGardenEngine.open_valve() called:")
+        print(f"DEBUG - SmartGardenEngine.open_valve() called:")
         print(f"   - plant_id: {plant_id}")
         print(f"   - time_minutes: {time_minutes}")
         
         if plant_id not in self.plants:
-            print(f"❌ ERROR - Plant {plant_id} not found")
+            print(f"ERROR - Plant {plant_id} not found")
             raise ValueError(f"Plant {plant_id} not found")
         
         plant = self.plants[plant_id]
-        print(f"✅ DEBUG - Found plant: {plant_id}")
+        print(f"DEBUG - Found plant: {plant_id}")
         print(f"   - plant.valve.valve_id: {plant.valve.valve_id}")
         print(f"   - plant.valve.simulation_mode: {plant.valve.simulation_mode}")
         print(f"   - plant.valve.relay_controller: {plant.valve.relay_controller}")
@@ -749,11 +749,11 @@ class SmartGardenEngine:
         async with self._lock:
             # Check if valve is already in use
             if plant_id in self.valve_tasks and not self.valve_tasks[plant_id].done():
-                print(f"❌ ERROR - Valve for plant {plant_id} is already in use")
+                print(f"ERROR - Valve for plant {plant_id} is already in use")
                 return False
             
             try:
-                print(f"🔍 DEBUG - Opening valve for plant {plant_id} for {time_minutes} minutes")
+                print(f"DEBUG - Opening valve for plant {plant_id} for {time_minutes} minutes")
                 
                 # Calculate duration in seconds
                 duration_seconds = time_minutes * 60
@@ -772,10 +772,10 @@ class SmartGardenEngine:
                 
                 # Open the valve
                 plant.valve.request_open()
-                print(f"✅ DEBUG - Valve opened successfully for plant {plant_id}")
-                print(f"✅ DEBUG - Start time: {datetime.fromtimestamp(start_time).strftime('%H:%M:%S')}")
-                print(f"✅ DEBUG - Duration: {time_minutes} minutes ({duration_seconds} seconds)")
-                print(f"✅ DEBUG - Expected close time: {datetime.fromtimestamp(start_time + duration_seconds).strftime('%H:%M:%S')}")
+                print(f"DEBUG - Valve opened successfully for plant {plant_id}")
+                print(f"DEBUG - Start time: {datetime.fromtimestamp(start_time).strftime('%H:%M:%S')}")
+                print(f"DEBUG - Duration: {time_minutes} minutes ({duration_seconds} seconds)")
+                print(f"DEBUG - Expected close time: {datetime.fromtimestamp(start_time + duration_seconds).strftime('%H:%M:%S')}")
                 
                 # Create background task to close valve after duration
                 close_task = asyncio.create_task(self._close_valve_after_duration(plant_id, duration_seconds))

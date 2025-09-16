@@ -52,7 +52,7 @@ export default function AddPlantScreen() {
     plantType: '',
     humidity: 60,
     waterLimit: 1.0,
-    dripperType: '2L/h', // Default dripper type
+    dripperType: '2L/h',
     image: null,
     schedule: {
       days: [false, false, false, false, false, false, false],
@@ -77,7 +77,6 @@ export default function AddPlantScreen() {
       setFormData(prev => ({
         ...prev,
         plantType: identifiedPlantType,
-        // Auto-fill moisture recommendations if available
         humidity: careData?.optimalMoisture || prev.humidity,
       }));
 
@@ -85,7 +84,6 @@ export default function AddPlantScreen() {
       let message = `Successfully identified as: ${identifiedPlantType} (${Math.round(confidence * 100)}% confidence)`;
       if (careData) {
         message += `\n\n🌱 Care Recommendations:\n• Optimal Moisture: ${careData.optimalMoisture}%\n• Watering: ${careData.wateringFrequency}`;
-        // Guidance: days can be chosen per recommendation or user preference
         message += `\n\nYou can choose the number of watering days according to our recommendation or as you wish.`;
       }
 
@@ -265,23 +263,18 @@ export default function AddPlantScreen() {
     if (validateForm()) {
       setIsSaving(true);
       try {
-        // Prepare irrigation schedule data (required)
         const irrigationDays = DAYS.filter((day, idx) => formData.schedule.days[idx]);
-        // Format time as 'HH:mm'
         const t = formData.schedule.time;
         const pad = (n) => n.toString().padStart(2, '0');
         const irrigationTime = `${pad(t.getHours())}:${pad(t.getMinutes())}`;
 
-        // Process image data if an image is selected
         let imageData = null;
         if (formData.image) {
           try {
-            // Convert image to base64 for server transmission
             const response = await fetch(formData.image);
             const blob = await response.blob();
 
-            // Check image size (limit to 5MB)
-            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+            const maxSize = 5 * 1024 * 1024;
             if (blob.size > maxSize) {
               Alert.alert(
                 'Image Too Large',
@@ -292,7 +285,6 @@ export default function AddPlantScreen() {
               return;
             }
 
-            // Convert blob to base64
             const base64 = await new Promise((resolve, reject) => {
               const reader = new FileReader();
               reader.onload = () => resolve(reader.result);
@@ -300,7 +292,6 @@ export default function AddPlantScreen() {
               reader.readAsDataURL(blob);
             });
 
-            // Extract filename and mime type from image
             const filename = formData.image.split('/').pop() || 'plant_image.jpg';
             const mimeType = blob.type || 'image/jpeg';
 
@@ -379,7 +370,6 @@ export default function AddPlantScreen() {
    * Handles camera permissions and captures new plant image
    */
   const takePhoto = async () => {
-    // Check camera permissions
     if (!cameraPermission?.granted) {
       const permission = await requestCameraPermission();
       if (!permission.granted) {
@@ -390,8 +380,8 @@ export default function AddPlantScreen() {
 
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
-      aspect: [1, 1], // Square aspect ratio
-      quality: 0.8, // 80% quality for file size optimization
+      aspect: [1, 1],
+      quality: 0.8,
     });
 
     if (!result.canceled) {
@@ -436,7 +426,6 @@ export default function AddPlantScreen() {
       base64: true,
     });
     if (!result.canceled && result.assets && result.assets[0]) {
-      // Show the selected image immediately in the Plant Photo section
       const asset = result.assets[0];
       setFormData(prev => ({ ...prev, image: asset.uri }));
       await processImageForIdentification(result.assets[0]);
@@ -461,7 +450,6 @@ export default function AddPlantScreen() {
     });
     if (!result.canceled && result.assets && result.assets[0]) {
       const asset = result.assets[0];
-      // Show the captured image immediately in the Plant Photo section
       setFormData(prev => ({ ...prev, image: asset.uri }));
       await processImageForIdentification(asset);
     }

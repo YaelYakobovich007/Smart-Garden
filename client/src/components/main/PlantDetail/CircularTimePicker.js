@@ -1,3 +1,9 @@
+/**
+ * CircularTimePicker - Radial duration selector
+ *
+ * Lets users select irrigation duration on a circular dial with
+ * snap-to options (5..60). Supports drag and tap interactions.
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -13,10 +19,10 @@ import { Feather } from '@expo/vector-icons';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-const CircularTimePicker = ({ 
-  visible, 
-  onClose, 
-  onTimeSelected, 
+const CircularTimePicker = ({
+  visible,
+  onClose,
+  onTimeSelected,
   initialTime = 60,
   // Clock-style: 60 at top, then ascending 5..55 clockwise back to 60
   timeOptions = [60, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
@@ -27,9 +33,7 @@ const CircularTimePicker = ({
   const circleRadius = 120;
   const centerX = 160;
   const centerY = 160;
-
-  // Place 60 at the top (-90 degrees), advance clockwise by equal segments
-  const BASE_ANGLE = -90; // degrees (top)
+  const BASE_ANGLE = -90;
   const getAngleFromDuration = (duration) => {
     const index = Math.max(0, timeOptions.indexOf(duration));
     return BASE_ANGLE + (index * (360 / timeOptions.length));
@@ -37,7 +41,6 @@ const CircularTimePicker = ({
 
   const getDurationFromAngle = (angle) => {
     const segmentSize = 360 / timeOptions.length;
-    // Normalize so that BASE_ANGLE maps to index 0
     let normalized = (angle - BASE_ANGLE) % 360;
     normalized = (normalized + 360) % 360;
     const segmentIndex = Math.round(normalized / segmentSize) % timeOptions.length;
@@ -98,17 +101,17 @@ const CircularTimePicker = ({
     const endAngle = getAngleFromDuration(selectedDuration);
     const startRadian = (startAngle * Math.PI) / 180;
     const endRadian = (endAngle * Math.PI) / 180;
-    
+
     const startX = centerX + Math.cos(startRadian) * circleRadius;
     const startY = centerY + Math.sin(startRadian) * circleRadius;
     const endX = centerX + Math.cos(endRadian) * circleRadius;
     const endY = centerY + Math.sin(endRadian) * circleRadius;
-    
+
     let angleDiff = endAngle - startAngle;
     if (angleDiff < 0) angleDiff += 360;
-    
+
     const largeArcFlag = angleDiff > 180 ? 1 : 0;
-    
+
     const pathData = [
       `M ${centerX} ${centerY}`,
       `L ${startX} ${startY}`,
@@ -119,7 +122,7 @@ const CircularTimePicker = ({
     return (
       <View style={styles.circularPicker} {...panResponder.panHandlers}>
         <View style={styles.outerCircle} />
-        
+
         {/* Time markers and labels (60 at top, descending clockwise) */}
         {timeOptions.map((time, index) => {
           const markerAngle = BASE_ANGLE + (index * (360 / timeOptions.length));
@@ -127,11 +130,11 @@ const CircularTimePicker = ({
           const markerRadius = 130;
           const markerX = Math.cos(markerRadian) * markerRadius + centerX;
           const markerY = Math.sin(markerRadian) * markerRadius + centerY;
-          
+
           const labelRadius = 105;
           const labelX = Math.cos(markerRadian) * labelRadius + centerX;
           const labelY = Math.sin(markerRadian) * labelRadius + centerY;
-          
+
           return (
             <View key={time}>
               <View
@@ -157,7 +160,7 @@ const CircularTimePicker = ({
             </View>
           );
         })}
-        
+
         {/* Selection arc - show for any selected duration */}
         {selectedDuration > 0 && (
           <Svg style={styles.svgOverlay} width={320} height={320}>
@@ -169,7 +172,7 @@ const CircularTimePicker = ({
             />
           </Svg>
         )}
-        
+
         {/* Full circle for 1 hour (60 minutes) */}
         {selectedDuration === 60 && (
           <Svg style={styles.svgOverlay} width={320} height={320}>
@@ -183,7 +186,7 @@ const CircularTimePicker = ({
             />
           </Svg>
         )}
-        
+
         {/* Draggable handle - only show if a valid time is selected */}
         {selectedDuration > 0 && (
           <View
@@ -200,7 +203,7 @@ const CircularTimePicker = ({
             <View style={styles.handleInner} />
           </View>
         )}
-        
+
         {/* Center indicator */}
         <View style={styles.centerIndicator}>
           <Feather name="clock" size={20} color="#FFFFFF" />
@@ -224,7 +227,7 @@ const CircularTimePicker = ({
           >
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
-          
+
           <View style={styles.modalHeader}>
             <View style={styles.iconContainer}>
               <Feather name="clock" size={28} color="#4CAF50" />
@@ -232,38 +235,38 @@ const CircularTimePicker = ({
             <Text style={styles.modalTitle}>Set Timer</Text>
             <Text style={styles.modalSubtitle}>Drag the handle to select your desired duration</Text>
           </View>
-          
+
           {renderCircularPicker()}
-          
-                      <View style={styles.durationDisplay}>
-              {selectedDuration === 0 ? (
-                <>
-                  <Text style={[styles.durationText, { color: '#6b7280' }]}>Select a time</Text>
-                  <Text style={styles.durationLabel}>Drag the handle to choose duration</Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.durationText}>{formatDuration(selectedDuration)}</Text>
-                  <Text style={styles.durationLabel}>Selected duration</Text>
-                </>
-              )}
-            </View>
-          
-                      <TouchableOpacity 
-              style={[
-                styles.startButton, 
-                selectedDuration === 0 && styles.disabledButton
-              ]} 
-              onPress={handleStartTimer}
-              disabled={selectedDuration === 0}
-            >
-              <Text style={[
-                styles.startButtonText,
-                selectedDuration === 0 && styles.disabledButtonText
-              ]}>
-                {selectedDuration === 0 ? 'Select a time first' : 'Start Timer'}
-              </Text>
-            </TouchableOpacity>
+
+          <View style={styles.durationDisplay}>
+            {selectedDuration === 0 ? (
+              <>
+                <Text style={[styles.durationText, { color: '#6b7280' }]}>Select a time</Text>
+                <Text style={styles.durationLabel}>Drag the handle to choose duration</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.durationText}>{formatDuration(selectedDuration)}</Text>
+                <Text style={styles.durationLabel}>Selected duration</Text>
+              </>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.startButton,
+              selectedDuration === 0 && styles.disabledButton
+            ]}
+            onPress={handleStartTimer}
+            disabled={selectedDuration === 0}
+          >
+            <Text style={[
+              styles.startButtonText,
+              selectedDuration === 0 && styles.disabledButtonText
+            ]}>
+              {selectedDuration === 0 ? 'Select a time first' : 'Start Timer'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>

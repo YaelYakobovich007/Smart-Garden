@@ -39,22 +39,19 @@ const getSensorNumber = (sensorPort) => {
   if (typeof sensorPort === 'number') {
     return sensorPort;
   }
-  
+
   if (typeof sensorPort === 'string') {
-    // Extract number from port string (e.g., "/dev/ttyUSB0" -> 1, "/dev/ttyUSB1" -> 2)
     const match = sensorPort.match(/ttyUSB(\d+)/);
     if (match) {
-      return parseInt(match[1]) + 1; // Convert 0-based to 1-based
+      return parseInt(match[1]) + 1;
     }
-    
-    // Try to extract any number from the string
+
     const numberMatch = sensorPort.match(/(\d+)/);
     if (numberMatch) {
       return parseInt(numberMatch[1]);
     }
   }
-  
-  // Default fallback
+
   return 1;
 };
 
@@ -199,23 +196,17 @@ function PlaceSensorFlow({ sensorPort, onConfirm }) {
   }, [translateY, rotate]);
 
   const rotateDeg = rotate.interpolate({ inputRange: [0, 1], outputRange: ["-4deg", "4deg"] });
-  const handleConfirm = () => { 
-    setConfirmed(true); 
-    setTimeout(() => onConfirm?.(), 450); 
+  const handleConfirm = () => {
+    setConfirmed(true);
+    setTimeout(() => onConfirm?.(), 450);
   };
 
   // ---- Geometry ----
   const PLANTER_H = 180;
   const SOIL_H = 36;
   const PLANTER_W = stage.w || 320;
-
-  // "צמוד לתחתית": דוחפים את האדנית למטה טיפונת (שלילי = עוד יותר צמוד)
   const BOTTOM_OFFSET = -6;
-
-  // קו האדמה למסכה (בהתאם ל-offset)
   const SOIL_TOP_FROM_BOTTOM = BOTTOM_OFFSET + PLANTER_H - SOIL_H;
-
-  // מיקום החיישן
   const SENSOR_Y_ADJUST = -8;
 
   return (
@@ -281,8 +272,8 @@ function PlaceSensorFlow({ sensorPort, onConfirm }) {
           <Text style={styles.instructionText}>3. The sensor should be stable and upright.</Text>
         </View>
 
-        <TouchableOpacity 
-          onPress={handleConfirm} 
+        <TouchableOpacity
+          onPress={handleConfirm}
           style={[styles.confirmButton, confirmed && styles.confirmButtonPressed]}
           disabled={confirmed}
         >
@@ -301,7 +292,7 @@ export default function SensorPlacementScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const [done, setDone] = useState(false);
-  
+
   // Get sensor port from route params or use default
   const sensorPort = route.params?.sensorId || route.params?.sensorPort || "/dev/ttyUSB0";
   const valveId = route.params?.valveId;
@@ -316,7 +307,7 @@ export default function SensorPlacementScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#EAF5E4' }}>
       <StatusBar barStyle="dark-content" backgroundColor="#EAF5E4" />
-            {/* Header with title only */}
+      {/* Header with title only */}
       <View style={styles.header}>
         <View style={styles.headerSpacer} />
         <View style={styles.headerTitleContainer}>
@@ -341,8 +332,8 @@ export default function SensorPlacementScreen() {
               Your plant is now ready for monitoring.
             </Text>
           </View>
-                 )}
-       </ScrollView>
-     </SafeAreaView>
-   );
- }
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

@@ -113,7 +113,6 @@ async function handleUpdatePlantSchedule(data, ws, email) {
         dripper_type: plant.dripper_type
       }
     );
-    // Also send a dedicated schedule update message via family controller
     const familySocket = gardenId ? getControllerSocketByGardenId(gardenId) : null;
     const piSocket = familySocket || getPiSocket();
     if (piSocket) {
@@ -130,7 +129,6 @@ async function handleUpdatePlantSchedule(data, ws, email) {
       try { piSocket.send(JSON.stringify(schedulePayload)); } catch { }
     }
   } catch (e) {
-    // Non-fatal: schedule still saved in DB; Pi will pick up on next sync
   }
 }
 
@@ -149,7 +147,6 @@ async function handleIrrigatePlant(data, ws, email) {
   const { v4: uuidv4 } = require('uuid');
   const sessionId = uuidv4();
 
-  // Optimistically persist sessionId and mode start
   try {
     await updateIrrigationState(plant.plant_id, { mode: 'smart', startAt: new Date(), endAt: null, sessionId });
   } catch (e) {
@@ -182,10 +179,8 @@ async function handleIrrigatePlant(data, ws, email) {
     });
 
     console.log(`Irrigation request for plant ${plant.plant_id} (${plant.name}) sent to Pi with sessionId ${sessionId}`);
-    // Immediately acknowledge to client with sessionId so UI can correlate
     sendSuccess(ws, 'IRRIGATION_REQUEST_ACCEPTED', { plantId: plant.plant_id, plantName: plant.name, sessionId });
   } else {
-    // Pi not connected - return error 
     return sendError(ws, 'IRRIGATE_FAIL',
       'Pi controller not connected. Cannot irrigate plant. Please try again when Pi is online.');
   }
@@ -228,7 +223,6 @@ async function handleStopIrrigation(data, ws, email) {
   console.log(`[IRRIGATION] Plant found: id=${plant.plant_id} name=${plant.name}`);
   console.log('[IRRIGATION] Sending stop request to Pi');
 
-  // Best-effort: immediately clear persisted irrigation state
   try {
     await updateIrrigationState(plant.plant_id, { mode: 'none', startAt: null, endAt: null, sessionId: null });
   } catch (e) {
@@ -375,7 +369,6 @@ async function handleCloseValve(data, ws, email) {
 
   // Send close valve request to Pi controller
   const gardenId = plant.garden_id || await getUserGardenId(user.id);
-  // Pre-add pending so fast Pi responses don't race the tracker
   try {
     addPendingIrrigation(plant.plant_id, ws, email, {
       plant_id: plant.plant_id,
@@ -415,7 +408,6 @@ async function handleRestartValve(data, ws, email) {
   const plant = await require('../models/plantModel').getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'RESTART_VALVE_FAIL', 'Plant not found');
 
-  // Disallow during active irrigation (best-effort check is on Pi too)
   // Forward to Pi
   const gardenId = plant.garden_id || await getUserGardenId(user.id);
   const result = piCommunication.restartValve(plant.plant_id, gardenId);
@@ -499,7 +491,6 @@ async function handleGetValveStatus(data, ws, email) {
     });
 
     console.log(`[VALVE] Added to pending: plant=${plant.plant_id} name=${plant.name} type=status`);
-    // No immediate response - client will get status when Pi responds
   } else {
     console.log(`[VALVE] Error: Failed to get status - ${piResult.error}`);
     return sendError(ws, 'GET_VALVE_STATUS_FAIL',

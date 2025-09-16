@@ -1,3 +1,9 @@
+/**
+ * All Plants Screen - Flat list of all user plants
+ *
+ * Fetches/normalizes plant data from backend and allows navigation
+ * to detailed plant view.
+ */
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

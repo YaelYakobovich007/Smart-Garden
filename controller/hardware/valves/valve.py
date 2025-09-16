@@ -57,7 +57,7 @@ class Valve:
         print(f"DEBUG - Valve.request_open() valve={self.valve_id} is_blocked={self.is_blocked} simulation_mode={self.simulation_mode} current_state={'OPEN' if self.is_open else 'CLOSED'}")
         
         if self.is_blocked:
-            print(f"❌ ERROR - Valve {self.valve_id} is blocked")
+            print(f"ERROR - Valve {self.valve_id} is blocked")
             raise RuntimeError(f"Error: Valve {self.valve_id} is blocked")
 
         if self.simulation_mode:

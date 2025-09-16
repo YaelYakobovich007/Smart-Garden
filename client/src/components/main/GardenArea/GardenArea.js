@@ -1,3 +1,11 @@
+/**
+ * Garden Area Component - Garden Overview Card
+ *
+ * Shows user's garden status and quick actions:
+ * - Garden name and location
+ * - Member count visualization
+ * - Connect/Create garden CTA when none exists
+ */
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';

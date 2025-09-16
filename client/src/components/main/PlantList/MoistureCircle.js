@@ -1,3 +1,9 @@
+/**
+ * MoistureCircle - Circular moisture progress indicator
+ *
+ * Shows current soil moisture percent with an icon and ring.
+ * Handles loading state when value is missing.
+ */
 import React from 'react';
 import { View, Text } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
@@ -9,7 +15,6 @@ const RADIUS = (SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const MoistureCircle = ({ percent }) => {
-  // Handle null/undefined values - show loading state
   if (percent === null || percent === undefined) {
     return (
       <View style={{ alignItems: 'center', justifyContent: 'center' }}>

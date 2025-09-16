@@ -1,3 +1,10 @@
+/**
+ * Irrigation Context - Global irrigation state and actions
+ *
+ * Provides per-plant irrigation state, message handlers for
+ * WebSocket events, and helper actions to start/stop irrigation.
+ * Expose via `useIrrigation()` hook throughout the app.
+ */
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useUI } from '../components/ui/UIProvider';

@@ -161,7 +161,7 @@ async function handleForgotPassword(data, ws, email) {
     const emailSent = await emailService.sendPasswordResetEmail(
       tokenInfo.email,
       tokenInfo.fullName,
-      tokenInfo.token // This is now the 6-digit code
+      tokenInfo.token
     );
 
     if (emailSent) {

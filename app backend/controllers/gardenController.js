@@ -135,7 +135,6 @@ async function handleGetUserGardens(data, ws, email) {
                 showCreateGarden: true
             });
         } else {
-            // User has gardens
             sendSuccess(ws, 'GET_USER_GARDENS_SUCCESS', {
                 gardens: gardens.map(garden => ({
                     id: garden.id,
@@ -269,7 +268,6 @@ async function handleJoinGarden(data, ws, email) {
             return sendError(ws, 'JOIN_GARDEN_FAIL', 'Failed to join garden. Please try again.');
         }
 
-        // Success - user joined garden
         sendSuccess(ws, 'JOIN_GARDEN_SUCCESS', {
             garden: {
                 id: result.garden.id,
@@ -354,7 +352,6 @@ async function handleLeaveGarden(data, ws, email) {
             return sendError(ws, 'LEAVE_GARDEN_FAIL', 'Failed to leave garden. Please try again.');
         }
 
-        // Success - user left garden
         sendSuccess(ws, 'LEAVE_GARDEN_SUCCESS', {
             message: 'Successfully left the garden'
         });
@@ -415,7 +412,6 @@ async function handleUpdateGarden(data, ws, email) {
             return sendError(ws, 'UPDATE_GARDEN_FAIL', 'Failed to update garden. Please try again.');
         }
 
-        // Success - garden updated
         sendSuccess(ws, 'UPDATE_GARDEN_SUCCESS', {
             garden: result.garden,
             message: 'Garden updated successfully'

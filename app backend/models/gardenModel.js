@@ -230,12 +230,10 @@ async function leaveGarden(userId, gardenId) {
             return { error: 'NOT_MEMBER' };
         }
 
-        // Check if user is admin (admin cannot leave, must transfer ownership first)
         if (membership.rows[0].role === 'admin') {
             return { error: 'ADMIN_CANNOT_LEAVE' };
         }
 
-        // Remove user from garden
         await pool.query(
             'UPDATE user_gardens SET is_active = false WHERE user_id = $1 AND garden_id = $2',
             [userId, gardenId]

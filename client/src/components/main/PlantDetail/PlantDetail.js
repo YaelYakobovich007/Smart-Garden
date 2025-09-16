@@ -106,13 +106,11 @@ const PlantDetail = () => {
   useFocusEffect(
     React.useCallback(() => {
       if (plant?.name && websocketService.isConnected()) {
-        // Get fresh moisture data
         websocketService.sendMessage({
           type: 'GET_PLANT_MOISTURE',
           plantName: plant.name
         });
 
-        // Get fresh plant details to ensure target humidity is current
         websocketService.sendMessage({
           type: 'GET_PLANT_DETAILS',
           plantName: plant.name
@@ -127,7 +125,6 @@ const PlantDetail = () => {
       const data = message?.data || message;
       const incoming = data?.plant;
       if (incoming) {
-        // Normalize schedule fields and watering mode using existing DB columns
         let normalizedDays = null;
         if (incoming.irrigation_days != null) {
           if (Array.isArray(incoming.irrigation_days)) {
@@ -155,7 +152,6 @@ const PlantDetail = () => {
           id: incoming.plant_id != null ? Number(incoming.plant_id) : (plant?.id ?? incoming.id),
           type: incoming.plant_type || incoming.type || plant?.type,
           image_url: incoming.image_url != null ? incoming.image_url : plant?.image_url,
-          // Expose unified schedule fields for UI
           schedule_days: normalizedDays,
           schedule_time: normalizedTime,
           watering_mode: normalizedMode,
@@ -199,7 +195,6 @@ const PlantDetail = () => {
   // After settings modal closes, show the image source sheet
   useEffect(() => {
     if (!showSettingsModal && showImageSourceSheet) {
-      // no-op; sheet visibility already true
     }
   }, [showSettingsModal, showImageSourceSheet]);
 
@@ -221,9 +216,7 @@ const PlantDetail = () => {
     // Update the plant data to refresh the UI
     if (data.plant) {
       console.log('Updating to new plant data:', data.plant);
-      // Update the plant data in the route params
       navigation.setParams({ plant: data.plant });
-      // Update the local state to trigger re-render
       setPlant(data.plant);
     }
   };
@@ -251,8 +244,6 @@ const PlantDetail = () => {
     const hasSchedule = Array.isArray(days) ? days.length > 0 : !!days;
     const hasTime = !!time;
     const isScheduledMode = (mode && typeof mode === 'string' && mode.toLowerCase() === 'scheduled') || (hasSchedule && hasTime);
-
-    // Debug logging removed
 
     if (!isScheduledMode) {
       return (
@@ -335,7 +326,6 @@ const PlantDetail = () => {
 
   const handleChangeImage = async () => {
     try {
-      // Ensure media library permission is granted
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission needed', 'Media library permission is required to change the plant image.');
@@ -369,7 +359,6 @@ const PlantDetail = () => {
         });
         setShowImageSourceSheet(false);
       } else {
-        // Close the sheet even if canceled for consistent UX
         setShowImageSourceSheet(false);
       }
     } catch (error) {
@@ -432,7 +421,7 @@ const PlantDetail = () => {
     websocketService.sendMessage({
       type: 'UPDATE_PLANT_DETAILS',
       plant_id: plant.id,
-      plantName: plant.name, // Keep for backward compatibility
+      plantName: plant.name,
       ...updateData
     });
   };
@@ -510,12 +499,10 @@ const PlantDetail = () => {
 
   useEffect(() => {
     const handleSuccess = (data) => {
-      // Suppress duplicate popup; completion is handled centrally in IrrigationContext
       console.log('Irrigation success (suppressed local alert):', data);
     };
 
     const handleFail = (data) => {
-      // Suppress here; the styled popup is handled globally in IrrigationContext
       if (stoppingRef.current) {
         stoppingRef.current = false;
         console.log('IRRIGATE_FAIL received after stop request, suppressing alert:', data);
@@ -524,7 +511,6 @@ const PlantDetail = () => {
     };
 
     const handleSkipped = (data) => {
-      // This is now handled by IrrigationContext, but keep local handler for any additional PlantDetail-specific logic
       console.log('PlantDetail: Irrigation skipped for', plant.name);
     };
 
@@ -547,7 +533,6 @@ const PlantDetail = () => {
     };
 
     const handleDeleteFail = (data) => {
-      // Show error only; keep user on screen to try again
       const errorMessage = data?.reason || data?.message || 'Failed to delete plant.';
       if (typeof showAlert === 'function') {
         showAlert({
@@ -565,12 +550,10 @@ const PlantDetail = () => {
     const handleMoistureSuccess = (data) => {
       if (data.moisture !== undefined) {
         setCurrentMoisture(roundSensorValue(data.moisture));
-        // Updated moisture
       }
 
       if (data.temperature !== undefined) {
         setCurrentTemperature(roundSensorValue(data.temperature));
-        // Updated temperature
       }
     };
 

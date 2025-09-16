@@ -1,3 +1,9 @@
+/**
+ * Auth Service - Authentication request helpers
+ *
+ * Sends auth-related payloads over WebSocket and wires callback
+ * handlers for common auth response message types.
+ */
 import websocketService from './websocketService';
 
 export const connectAndSend = (payload, onMessage, onError) => {

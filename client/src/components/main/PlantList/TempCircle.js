@@ -1,3 +1,9 @@
+/**
+ * TempCircle - Circular temperature indicator
+ *
+ * Visualizes ambient temperature on a ring scaled to 0-40°C
+ * and shows value inside with a thermometer icon.
+ */
 import React from 'react';
 import { View, Text } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
@@ -9,7 +15,6 @@ const RADIUS = (SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const TempCircle = ({ value }) => {
-  // Handle null/undefined values - show loading state
   if (value === null || value === undefined) {
     return (
       <View style={{ alignItems: 'center', justifyContent: 'center' }}>

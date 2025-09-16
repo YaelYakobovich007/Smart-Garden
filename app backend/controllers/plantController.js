@@ -1,8 +1,9 @@
 /**
  * Plant Controller
  *
- * WebSocket handlers for plant CRUD, images, and moisture reads.
+ * WebSocket handlers for plant operations.
  */
+
 // Models
 const { addPlant, getPlants, getPlantByName, deletePlantById, updatePlantDetails, getUserGardenId } = require('../models/plantModel');
 const { getUser } = require('../models/userModel');
@@ -69,7 +70,6 @@ async function handlePlantMessage(data, ws) {
  * @param {string} email
  */
 async function handleAddPlant(data, ws, email) {
-  // Only support new structure with plantData and imageData
   const { plantData, imageData } = data;
 
   if (!plantData) {
@@ -123,8 +123,8 @@ async function handleAddPlant(data, ws, email) {
     irrigation_days: irrigationDays || null,
     irrigation_time: irrigationTime || null,
     plantType: plantType || null,
-    dripper_type: dripperType || '2L/h', // Default to 2L/h if not provided
-    image_url: imageUrl // Add image URL to plant data
+    dripper_type: dripperType || '2L/h',
+    image_url: imageUrl
   };
 
   // Step 1: Save plant to database WITHOUT hardware IDs (get stable plant_id)
@@ -161,10 +161,7 @@ async function handleAddPlant(data, ws, email) {
       testMode: true
     });
 
-    // Note: In test mode, no Pi involved, so no broadcast for now
   } else {
-    // Production mode: Require Pi connection
-    // Enrich with lat/lon from garden location if possible
     try {
       const garden = await getGardenById(result.plant.garden_id);
       if (garden?.country && garden?.city) {
@@ -175,7 +172,6 @@ async function handleAddPlant(data, ws, email) {
         }
       }
     } catch (e) {
-      // Non-fatal: proceed without coords if lookup fails
     }
 
     // Use the garden we just fetched for clarity (id equals result.plant.garden_id)
@@ -190,9 +186,7 @@ async function handleAddPlant(data, ws, email) {
       });
 
       console.log(`[PLANT] Sent to Pi: id=${result.plant.plant_id} name=${result.plant.name}`);
-      // No immediate response - client will get success only after hardware assignment
     } else {
-      // Pi not connected - DELETE the plant we just saved and return error
       await deletePlantById(result.plant.plant_id, user.id);
       console.log(`[PLANT] Deleted from database: id=${result.plant.plant_id} reason=pi_not_connected`);
 
@@ -214,7 +208,6 @@ async function handleGetPlantDetails(data, ws, email) {
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'GET_PLANT_DETAILS_FAIL', 'Plant not found');
 
-  // Ensure schedule fields are normalized for client
   try {
     if (plant && plant.irrigation_days && typeof plant.irrigation_days === 'string') {
       try { plant.irrigation_days = JSON.parse(plant.irrigation_days); } catch { }
@@ -230,7 +223,6 @@ async function handleGetMyPlants(data, ws, email) {
   const user = await getUser(email);
   if (!user) return sendError(ws, 'GET_MY_PLANTS_FAIL', 'User not found');
   const plants = await getPlants(user.id);
-  // Best-effort: normalize schedule array for client
   const normalized = (plants || []).map(p => {
     if (p && p.irrigation_days && typeof p.irrigation_days === 'string') {
       try { p.irrigation_days = JSON.parse(p.irrigation_days); } catch { }
@@ -253,7 +245,6 @@ async function handleDeletePlant(data, ws, email) {
   const plant = await getPlantByName(user.id, plantName);
   if (!plant) return sendError(ws, 'DELETE_PLANT_FAIL', 'Plant not found');
 
-  // Best-effort: cancel any pending trackers for this plant
   try {
 
     const pending = getPendingIrrigation(plant.plant_id);
@@ -264,10 +255,6 @@ async function handleDeletePlant(data, ws, email) {
     console.log(`[PLANT] Warning: Failed to clear pending trackers - ${e?.message}`);
   }
 
-  // Do not delete irrigation history here; it will be cleaned after DB deletion succeeds
-
-
-  // First check if Pi is connected and send removal request
   const gardenId = await getUserGardenId(user.id);
   const piResult = piCommunication.removePlant(plant.plant_id, gardenId);
 
@@ -277,10 +264,7 @@ async function handleDeletePlant(data, ws, email) {
     return sendError(ws, 'DELETE_PLANT_FAIL', 'Cannot delete plant: Pi controller is not connected');
   }
 
-  // Pi is connected - store pending deletion for when Pi responds
   storePendingDeletion(plant.plant_id, ws, email, plant);
-
-  // Send immediate acknowledgment to client
   sendSuccess(ws, 'DELETE_PLANT_PENDING', {
     message: `Plant "${plant.name}" deletion request sent to Pi controller. Please wait for confirmation.`,
     plant_id: plant.plant_id,
@@ -288,7 +272,6 @@ async function handleDeletePlant(data, ws, email) {
   });
 
   console.log(`[PLANT] Deletion request sent to Pi: plant=${plant.plant_id}`);
-  // Final success will be sent from piSocket.js after Pi confirms deletion
 }
 
 /**
@@ -389,7 +372,6 @@ async function handleUpdatePlantDetails(data, ws, email) {
       try {
         console.log(`[PLANT] Sending update to Pi: id=${updatedPlant.plant_id} name=${updatedPlant.name} moisture=${updatedPlant.ideal_moisture} limit=${updatedPlant.water_limit} dripper=${updatedPlant.dripper_type}`);
 
-        // Ensure plant_id is available
         if (!updatedPlant.plant_id) {
           console.log(`[PLANT] Warning: Missing plant_id in update, using original: ${plant.plant_id}`);
           updatedPlant.plant_id = plant.plant_id;
@@ -412,24 +394,18 @@ async function handleUpdatePlantDetails(data, ws, email) {
         );
         if (!piResult.success) {
           console.log(`[PLANT] Warning: Failed to update on Pi - ${piResult.error}`);
-          // Remove pending update since Pi update failed
           getPendingUpdate(updatedPlant.plant_id);
         }
       } catch (piError) {
         console.log(`[PLANT] Error: Failed to update on Pi - ${piError.message}`);
-        // Remove pending update since Pi update failed
         getPendingUpdate(updatedPlant.plant_id);
       }
     } else {
-      // Plant doesn't have hardware IDs, send success immediately
       sendSuccess(ws, 'UPDATE_PLANT_DETAILS_SUCCESS', {
         plant: updatedPlant,
         message: 'Plant details updated successfully'
       });
     }
-
-    // Note: Broadcast will happen in piSocket.js after Pi processes update
-
   } catch (err) {
     console.log(`[PLANT] Error: Failed to update details - ${err.message}`);
     sendError(ws, 'UPDATE_PLANT_DETAILS_FAIL', 'Failed to update plant details');

@@ -7,10 +7,6 @@
 const hardwarePool = require('./hardwarePool');
 const { pool } = require('../config/database');
 
-// Historic notes left for context:
-// const plantStorage = new Map(); // Map<email, Array<Plant>>
-// const plantIdIndex = new Map(); // Map<plantId, { plant, email }>
-
 // Get user's garden ID
 async function getUserGardenId(userId) {
   const result = await pool.query(
@@ -69,7 +65,7 @@ async function addPlant(userId, plantData) {
       plantData.irrigation_days ? JSON.stringify(plantData.irrigation_days) : null,
       plantData.irrigation_time || null,
       plantData.plantType || null,
-      plantData.dripper_type || '2L/h', // Default to 2L/h if not provided
+      plantData.dripper_type || '2L/h',
       plantData.image_url || null,
       null, // sensor_port - will be assigned by Pi
       null, // valve_id - will be assigned by Pi

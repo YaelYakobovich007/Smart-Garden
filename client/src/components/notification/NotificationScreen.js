@@ -1,3 +1,9 @@
+/**
+ * Notification Screen - Irrigation Events and Alerts
+ *
+ * Fetches recent irrigation results per plant and presents them
+ * as readable notifications with status, time, and details.
+ */
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Animated, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,7 +16,7 @@ const STATUS_COLORS = {
   error: '#EF4444', // red
   skipped: '#F59E42', // yellow
   done: '#22C55E', // green
-  success: '#22C55E', // green (למקרה שיש status כזה)
+  success: '#22C55E', // green
 };
 const STATUS_SOFT_BG = {
   error: '#FEE2E2',
@@ -64,7 +70,7 @@ const NotificationScreen = () => {
             if (isMounted) {
               setLoading(false);
             }
-          }, 500); // Small delay to show completion
+          }, 500);
         }
 
         return newProgress;

@@ -12,7 +12,6 @@ async function register(email, password, fullName, country, city) {
   const hashed = await bcrypt.hash(password, 10);
   const created = await userModel.createUser(normalizedEmail, hashed, fullName, country, city);
   if (!created) return false;
-  // Return the user object after creation
   return await userModel.getUser(normalizedEmail);
 }
 

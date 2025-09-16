@@ -1,3 +1,9 @@
+/**
+ * SmartIrrigationLoader - Overlay while computing irrigation need
+ *
+ * Displays a branded loading card while the backend evaluates
+ * smart irrigation, then disappears when not visible.
+ */
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';

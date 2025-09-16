@@ -1,3 +1,9 @@
+/**
+ * Valve Troubleshooting Screen - Guided Diagnostics
+ *
+ * Walks users through checking sensor connection, valve mechanism,
+ * and power supply with interactive steps and WebSocket-driven actions.
+ */
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -9,15 +15,15 @@ import {
   Dimensions
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { 
-  ArrowLeft, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle, 
-  Wifi, 
-  Droplets, 
-  Settings, 
-  Wrench, 
+import {
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Wifi,
+  Droplets,
+  Settings,
+  Wrench,
   RefreshCw,
   Zap,
   Shield,
@@ -33,7 +39,7 @@ const ValveTroubleshootingScreen = ({ route }) => {
   // Support both { plant } and { plantName } payloads
   const plantParam = route?.params?.plant;
   const plantName = route?.params?.plantName || plantParam?.name;
-  
+
   const [diagnosticSteps, setDiagnosticSteps] = useState([
     {
       id: 'sensor',
@@ -70,7 +76,7 @@ const ValveTroubleshootingScreen = ({ route }) => {
 
   const DELAY_BEFORE_STEP_MS = 800;
   const DELAY_BETWEEN_STEPS_MS = 1800;
-  const RESPONSE_TIMEOUT_MS = 6000; // safety net per step
+  const RESPONSE_TIMEOUT_MS = 6000;
 
   // Await one success/fail message type once (with timeout)
   const waitForMessage = (successType, failType) => new Promise((resolve) => {
@@ -195,7 +201,7 @@ const ValveTroubleshootingScreen = ({ route }) => {
   };
 
   const resetDiagnostics = () => {
-    setDiagnosticSteps(prev => 
+    setDiagnosticSteps(prev =>
       prev.map(step => ({ ...step, status: 'pending' }))
     );
     setCurrentStep(0);
@@ -244,7 +250,7 @@ const ValveTroubleshootingScreen = ({ route }) => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
@@ -279,7 +285,7 @@ const ValveTroubleshootingScreen = ({ route }) => {
           <Text style={styles.sectionDescription}>
             Please verify these manual checks before running automated diagnostics
           </Text>
-          
+
           <View style={styles.manualChecksContainer}>
             <TouchableOpacity
               style={[
@@ -350,7 +356,7 @@ const ValveTroubleshootingScreen = ({ route }) => {
                 <View style={styles.stepIconContainer}>
                   {renderIcon(step)}
                 </View>
-                
+
                 <View style={styles.stepContent}>
                   <Text style={[
                     styles.stepTitle,
@@ -363,22 +369,24 @@ const ValveTroubleshootingScreen = ({ route }) => {
                     { color: getStepTextColor(step.status) }
                   ]}>
                     {step.status === 'checking' ? 'Running test...' :
-                     step.status === 'passed' ? 'Test completed successfully' :
-                     step.status === 'failed' ? 'Test failed - manual intervention needed' :
-                     step.description}
+                      step.status === 'passed' ? 'Test completed successfully' :
+                        step.status === 'failed' ? 'Test failed - manual intervention needed' :
+                          step.description}
                   </Text>
                 </View>
 
                 <View style={[
                   styles.stepStatusBadge,
-                  { backgroundColor: step.status === 'passed' ? '#10B981' : 
-                                   step.status === 'failed' ? '#EF4444' :
-                                   step.status === 'checking' ? '#3B82F6' : '#9CA3AF' }
+                  {
+                    backgroundColor: step.status === 'passed' ? '#10B981' :
+                      step.status === 'failed' ? '#EF4444' :
+                        step.status === 'checking' ? '#3B82F6' : '#9CA3AF'
+                  }
                 ]}>
                   <Text style={styles.stepStatusText}>
                     {step.status === 'checking' ? 'Testing' :
-                     step.status === 'passed' ? 'Passed' :
-                     step.status === 'failed' ? 'Failed' : 'Pending'}
+                      step.status === 'passed' ? 'Passed' :
+                        step.status === 'failed' ? 'Failed' : 'Pending'}
                   </Text>
                 </View>
               </View>
@@ -423,7 +431,7 @@ const ValveTroubleshootingScreen = ({ route }) => {
                   </Text>
                 </View>
               </View>
-              
+
               <TouchableOpacity
                 style={styles.successButton}
                 onPress={handleUnblockValve}
@@ -447,7 +455,7 @@ const ValveTroubleshootingScreen = ({ route }) => {
                   </Text>
                 </View>
               </View>
-              
+
               <TouchableOpacity
                 style={styles.warningButton}
                 onPress={handleUnblockValve}

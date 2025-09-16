@@ -1,3 +1,9 @@
+/**
+ * StatusPopup - Reusable Themed Modal for Alerts
+ *
+ * Displays status messages with icon, title, description and actions.
+ * Supports variants: success, error, info, and custom icon overrides.
+ */
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';

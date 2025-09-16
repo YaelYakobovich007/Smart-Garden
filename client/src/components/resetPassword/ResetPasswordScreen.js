@@ -1,3 +1,9 @@
+/**
+ * Reset Password Screen - Set New Password
+ *
+ * Validates reset token and allows setting a new password with
+ * confirmation and basic validations, connected via WebSocket.
+ */
 import React, { useState, useEffect } from 'react';
 import {
     Text,

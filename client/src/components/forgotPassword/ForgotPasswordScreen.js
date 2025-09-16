@@ -1,3 +1,9 @@
+/**
+ * Forgot Password Screen - Request Reset Code
+ *
+ * Lets users enter their email to request a password reset code.
+ * Handles connection status, validation, and backend communication.
+ */
 import React, { useState, useEffect } from 'react';
 import {
     Text,

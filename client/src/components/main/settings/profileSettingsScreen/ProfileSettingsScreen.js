@@ -1,3 +1,9 @@
+/**
+ * Profile Settings Screen - Manage user profile details
+ *
+ * Allows updating full name, password, and location with
+ * inline pickers and WebSocket-backed requests.
+ */
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -145,7 +151,6 @@ const ProfileSettingsScreen = () => {
         setLoadingAction(null);
         setCurrentPassword('');
         setNewPassword('');
-        // Silent success
       },
       (err) => {
         setLoadingAction(null);

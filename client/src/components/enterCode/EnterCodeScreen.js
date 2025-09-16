@@ -1,3 +1,9 @@
+/**
+ * Enter Code Screen - Verify Reset Code
+ *
+ * Accepts and validates the password reset code sent via email,
+ * then navigates to the reset password flow.
+ */
 import React, { useState, useEffect } from 'react';
 import {
     Text,
@@ -104,7 +110,6 @@ const EnterCodeScreen = () => {
         setCodeError(false);
         setCodeErrorMessage('');
         console.log('handleSubmitCode called with:', resetCode);
-        // Validate code format
         if (!resetCode || resetCode.length !== 6) {
             setCodeError(true);
             setCodeErrorMessage('Please enter a 6-digit code');

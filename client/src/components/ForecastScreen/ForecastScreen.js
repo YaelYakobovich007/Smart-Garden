@@ -26,20 +26,17 @@ import styles from './styles';
 
 // Layout constants
 const { width } = Dimensions.get('window');
-const CARD_WIDTH_SINGLE = width - 30; // card width with margins
-const CURVE_HEIGHT = 40;              // height of the line's arc
-const CURVE_GAP = 20;                 // gap between line and white area
-const FORECAST_HEIGHT = 400;          // height of the white forecast area (increased for details)
+const CARD_WIDTH_SINGLE = width - 30;
+const CURVE_HEIGHT = 40;
+const CURVE_GAP = 20;
+const FORECAST_HEIGHT = 400;
 
 /**
  * ForecastScreen component
  * Beautiful full-screen weather display with gradient and SVG curves
  */
 const ForecastScreen = ({ navigation, route }) => {
-  // Get weather data from navigation params
   const { weatherData } = route.params || {};
-
-  // Removed simulation mode UI/state
 
   /**
    * Toggle simulation mode on/off
@@ -62,7 +59,6 @@ const ForecastScreen = ({ navigation, route }) => {
    */
   const getSunTimes = () => {
     if (weatherData?.sunrise && weatherData?.sunset) {
-      // API provides Unix timestamps - convert to time strings for display
       const sunriseTime = new Date(weatherData.sunrise * 1000).toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
@@ -74,9 +70,7 @@ const ForecastScreen = ({ navigation, route }) => {
         hour12: false
       });
 
-      // Debug: Show what the API is providing
       console.log('ForecastScreen: Using OpenWeatherMap sunrise/sunset:', `${sunriseTime} -> ${sunsetTime}`);
-
       return {
         sunrise: weatherData.sunrise,
         sunset: weatherData.sunset,
@@ -135,7 +129,6 @@ const ForecastScreen = ({ navigation, route }) => {
    */
   useEffect(() => {
     let interval;
-    // Simulation removed
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -155,11 +148,11 @@ const ForecastScreen = ({ navigation, route }) => {
     sunset = sunTimes.sunset;
 
     // Calculate time periods
-    const earlyMorning = sunrise - 1800; // 30 min before sunrise
-    const midMorning = sunrise + 1800;   // 30 min after sunrise
-    const midDay = sunrise + (sunset - sunrise) / 2; // Noon
-    const lateAfternoon = sunset - 3600; // 1 hour before sunset
-    const lateEvening = sunset + 1800;   // 30 min after sunset
+    const earlyMorning = sunrise - 1800;
+    const midMorning = sunrise + 1800;
+    const midDay = sunrise + (sunset - sunrise) / 2;
+    const lateAfternoon = sunset - 3600;
+    const lateEvening = sunset + 1800;
 
     if (currentTime < earlyMorning) {
       // Deep Night - Purple with stars

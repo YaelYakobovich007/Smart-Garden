@@ -1,3 +1,9 @@
+/**
+ * StatusPopupExample - Demo usage of StatusPopup
+ *
+ * Shows example buttons to trigger success and error popups
+ * demonstrating the reusable modal component.
+ */
 import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import StatusPopup from './StatusPopup';
@@ -21,16 +27,16 @@ const StatusPopupExample = () => {
   return (
     <View style={styles.container}>
       {/* Success Button */}
-      <TouchableOpacity 
-        style={[styles.button, styles.successButton]} 
+      <TouchableOpacity
+        style={[styles.button, styles.successButton]}
         onPress={() => setShowSuccess(true)}
       >
         <Text style={styles.buttonText}>Show Success Popup</Text>
       </TouchableOpacity>
 
       {/* Error Button */}
-      <TouchableOpacity 
-        style={[styles.button, styles.errorButton]} 
+      <TouchableOpacity
+        style={[styles.button, styles.errorButton]}
         onPress={() => setShowError(true)}
       >
         <Text style={styles.buttonText}>Show Error Popup</Text>

@@ -1,3 +1,9 @@
+/**
+ * Article Details - Detailed article view
+ *
+ * Renders a single article with image and rich text, handling
+ * simple inline bold markup and back navigation.
+ */
 import React from 'react';
 import {
   View,
@@ -18,9 +24,7 @@ const ArticleDetails = () => {
   const route = useRoute();
   const { article } = route.params;
 
-  // Render inline markdown-like bold (**text**)
   const renderInline = (text, baseStyle) => {
-    // Split by **...** while keeping the delimiters' content
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
     return (
       <Text style={baseStyle}>
@@ -40,7 +44,6 @@ const ArticleDetails = () => {
   };
 
   const formatContent = (content) => {
-    // Simple markdown-like formatting
     const lines = content.split('\n');
     return lines.map((line, index) => {
       if (line.startsWith('# ')) {

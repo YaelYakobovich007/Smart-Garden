@@ -1,4 +1,9 @@
-// Service to fetch countries and cities using country-state-city package
+/**
+ * Location Service - Countries and Cities utilities
+ *
+ * Wraps country-state-city package with caching and sane fallbacks
+ * to provide sorted countries list and cities per country.
+ */
 import { Country, State, City } from 'country-state-city';
 
 class LocationService {
@@ -22,7 +27,7 @@ class LocationService {
           phoneCode: country.phonecode
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
-      
+
       this.countriesCache = sortedCountries;
       return sortedCountries;
     } catch (error) {
@@ -51,31 +56,25 @@ class LocationService {
 
   // Get cities for a specific country
   getCitiesForCountry(countryName) {
-    // Check cache first
     if (this.citiesCache[countryName]) {
       return this.citiesCache[countryName];
     }
 
     try {
-      // Find country by name
       const country = Country.getAllCountries().find(c => c.name === countryName);
       if (!country) {
         return this.getFallbackCities(countryName);
       }
 
-      // Get states for the country
       const states = State.getStatesOfCountry(country.isoCode);
-      
-      // Get cities from all states
       let allCities = [];
       states.forEach(state => {
         const cities = City.getCitiesOfState(country.isoCode, state.isoCode);
         allCities = allCities.concat(cities.map(city => city.name));
       });
 
-      // Remove duplicates and sort
       const uniqueCities = [...new Set(allCities)].sort();
-      
+
       this.citiesCache[countryName] = uniqueCities;
       return uniqueCities;
     } catch (error) {

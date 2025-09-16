@@ -83,14 +83,14 @@ class Sensor:
 
             # Connect to the Modbus client
             async with client as modbus_client:
-                print(f"🔗 Connection status: {'✅ CONNECTED' if modbus_client.connected else '❌ FAILED'}")
+                print(f"Connection status: {'CONNECTED' if modbus_client.connected else '❌ FAILED'}")
                 
                 if not modbus_client.connected:
-                    print(f"❌ Could not connect to Modbus sensor on {self.port}")
+                    print(f"Could not connect to Modbus sensor on {self.port}")
                     return None
                 
                 try:
-                    print(f"📖 Reading registers from sensor 1...")
+                    print(f"Reading registers from sensor 1...")
                     print(f"   Register address: 1")
                     print(f"   Register count: 2")
                     
@@ -102,16 +102,16 @@ class Sensor:
                     )
                     
                     if result.isError():
-                        print(f"❌ Modbus error: {result}")
+                        print(f"Modbus error: {result}")
                         return None
                     
-                    print(f"✅ Register read successful!")
+                    print(f"Register read successful!")
                     
                     # Process raw register values (matching mbpoll output)
                     register_1 = result.registers[0]
                     register_2 = result.registers[1]
                     
-                    print(f"📊 Raw register values:")
+                    print(f"Raw register values:")
                     print(f"   Register 1: {register_1}")
                     print(f"   Register 2: {register_2}")
                     
@@ -120,14 +120,14 @@ class Sensor:
                     moisture = register_1 / 10.0 if register_1 > 0 else 0.0
                     temperature = register_2 / 10.0 if register_2 > 0 else 0.0
                     
-                    print(f"🌱 Processed values:")
+                    print(f"Processed values:")
                     print(f"   Moisture: {moisture:.1f}%")
                     print(f"   Temperature: {temperature:.1f}°C")
                     
                     return moisture, temperature
                 
                 except ModbusException as e:
-                    print(f"❌ Modbus exception: {e}")
+                    print(f"Modbus exception: {e}")
                     return None
             
 

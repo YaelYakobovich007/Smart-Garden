@@ -1,3 +1,9 @@
+/**
+ * Articles List - Full articles browsing screen
+ *
+ * Fetches and displays all gardening articles with thumbnails
+ * and supports navigation to article details.
+ */
 import React, { useState, useEffect } from 'react';
 import {
   View,

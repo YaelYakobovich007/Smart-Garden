@@ -1,3 +1,13 @@
+/**
+ * Bottom Toolbar Component - Primary App Navigation Bar
+ *
+ * Provides quick navigation actions at the bottom of the screen:
+ * - Garden access
+ * - Add plant flow
+ * - Identify plant (camera/gallery)
+ * - Settings
+ * - Notifications/alerts
+ */
 import React from 'react';
 import {
   View,

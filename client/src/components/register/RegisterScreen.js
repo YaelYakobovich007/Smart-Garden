@@ -1,3 +1,9 @@
+/**
+ * Register Screen - Account Creation Form
+ *
+ * Provides user registration with name, email, password and location
+ * selection, including server-side validation via WebSocket.
+ */
 import React, { useState, useEffect } from 'react';
 import {
   Text,

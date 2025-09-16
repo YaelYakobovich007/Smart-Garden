@@ -32,7 +32,7 @@ async function broadcastToGarden(gardenId, messageType, data, excludeEmail = nul
             }
 
             const ws = getSocketByEmail(member.email);
-            if (ws && ws.readyState === 1) { // WebSocket.OPEN
+            if (ws && ws.readyState === 1) {
                 sendSuccess(ws, messageType, data);
                 broadcastCount++;
                 console.log(`[BROADCAST] Sent: type=${messageType} email=${member.email} garden=${gardenId}`);

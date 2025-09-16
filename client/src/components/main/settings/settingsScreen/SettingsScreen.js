@@ -1,3 +1,9 @@
+/**
+ * Settings Screen - App and account settings hub
+ *
+ * Provides navigation to profile settings, onboarding reset,
+ * session management, and logout.
+ */
 import React, { useEffect, useState } from 'react';
 import {
     View,
@@ -18,8 +24,6 @@ import onboardingService from '../../../../services/onboardingService';
 const SettingsScreen = () => {
     const navigation = useNavigation();
 
-    // No inline profile form; use dedicated screens
-
     const handleLogout = async () => {
         Alert.alert(
             'Logout',
@@ -30,9 +34,7 @@ const SettingsScreen = () => {
                     text: 'Logout',
                     style: 'destructive',
                     onPress: async () => {
-                        // Clear user session
                         await sessionService.clearSession();
-                        // Navigate to login screen
                         navigation.navigate('Login');
                     }
                 }
@@ -50,9 +52,7 @@ const SettingsScreen = () => {
                     text: 'Clear Session',
                     style: 'destructive',
                     onPress: async () => {
-                        // Clear user session
                         await sessionService.clearSession();
-                        // Navigate to login screen
                         navigation.navigate('Login');
                     }
                 }

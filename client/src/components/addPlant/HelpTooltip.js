@@ -1,3 +1,9 @@
+/**
+ * HelpTooltip - Inline contextual help trigger
+ *
+ * Renders a small icon button that opens a themed popup with
+ * title and description to guide users through form fields.
+ */
 import React, { useState } from 'react';
 import {
     View,

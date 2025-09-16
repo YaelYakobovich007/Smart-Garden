@@ -4,14 +4,12 @@
  * This component provides the primary authentication interface for the Smart Garden app.
  * It handles:
  * - Email/password authentication
- * - Google OAuth integration
  * - Form validation and error handling
  * - WebSocket connection management
  * - Session creation and storage
  * - Navigation to registration and main app
  * 
- * The component supports both traditional email/password login and
- * modern Google OAuth authentication for enhanced user experience.
+ * The component supports email/password login.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -123,7 +121,6 @@ const LoginScreen = () => {
       };
       await sessionService.saveSession(userData);
 
-      // Brief delay to let the success message be visible
       setTimeout(() => {
         navigation.navigate('Main');
       }, 1200);
@@ -151,7 +148,6 @@ const LoginScreen = () => {
     setMessageType('');
     let hasError = false;
 
-    // Validate required fields
     if (!email.trim()) {
       setEmailError(true);
       setEmailErrorMessage('Email field is required');
@@ -168,13 +164,11 @@ const LoginScreen = () => {
       return;
     }
 
-    // Check connection status before sending request
     if (!isConnected) {
       setMessage('Not connected to server. Please wait...');
       return;
     }
 
-    // Send authentication request to server
     connectAndSend({ type: 'LOGIN', email, password }, handleAuthResponse, handleConnectionError);
   };
 

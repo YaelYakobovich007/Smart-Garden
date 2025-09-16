@@ -38,17 +38,14 @@ const ArticlesSection = () => {
     console.log('ArticlesSection: useEffect triggered');
     const fetchArticles = () => {
       console.log('ArticlesSection: fetchArticles called, WebSocket connected:', websocketService.isConnected());
-      // Check if WebSocket is connected before sending request
       if (!websocketService.isConnected()) {
         console.log('ArticlesSection: WebSocket not connected, retry count:', retryCount);
-        // Prevent infinite retries
         if (retryCount >= 10) {
           setError('Failed to connect to server. Please check your internet connection.');
           setLoading(false);
           return;
         }
 
-        // Wait for connection and retry
         setRetryCount(prev => prev + 1);
         setTimeout(fetchArticles, 1000);
         return;

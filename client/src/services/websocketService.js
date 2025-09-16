@@ -1,15 +1,15 @@
+/**
+ * WebSocket Service - Real-time client transport
+ *
+ * Handles real-time communication with the Smart Garden server
+ * 
+ */
 import Constants from 'expo-constants';
 import { AppState } from 'react-native';
 const BACKEND_URL = Constants.expoConfig.extra.BACKEND_URL;
-/**
- * WebSocket Service for Smart Garden Client
- * Handles real-time communication with the Smart Garden server
- */
-// Configuration for WebSocket connection
 
 const CONFIG = {
   SERVER_URL: 'wss://smart-garden-backend-1088783109508.europe-west1.run.app',
-  //SERVER_URL: 'ws://192.168.68.67:8080',
 };
 
 class WebSocketService {
@@ -24,7 +24,7 @@ class WebSocketService {
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 1000;
     this.messageHandlers = new Map();
-    this.connectionHandlers = []; // Initialize the array
+    this.connectionHandlers = [];
     this.connectionState = 'disconnected';
 
     // Auto-reconnect settings
@@ -33,7 +33,7 @@ class WebSocketService {
 
     // Heartbeat
     this.heartbeatTimer = null;
-    this.heartbeatIntervalMs = 25000; // 25s keep-alive
+    this.heartbeatIntervalMs = 25000;
     this.lastPongTs = 0;
 
     // App state listener to force reconnect on resume

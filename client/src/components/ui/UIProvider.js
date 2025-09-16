@@ -1,3 +1,9 @@
+/**
+ * UI Provider - Global Alert/Status Popup Context
+ *
+ * Exposes `showAlert`/`hideAlert` for unified, themed status dialogs
+ * across the app. Bridges native `Alert.alert` calls to custom UI.
+ */
 import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from 'react';
 import { registerAlertBridge } from '../../utils/alertBridge';
 import StatusPopup from './StatusPopup';
